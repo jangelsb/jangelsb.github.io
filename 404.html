@@ -10,14 +10,17 @@
         var url_after_hostname = window.location.pathname + window.location.search + window.location.hash 
         url_after_hostname = url_after_hostname.replace("/redirect_test/", "")
         document.getElementById('meta_content').content = `2; url = https://www.reddit.com/${url_after_hostname}`;
-        document.getElementById('demo').innerHTML = `Redirecting too... https://www.reddit.com/${url_after_hostname}`;
       </script>
    </head>
 <body>
 
-<h1>404 1</h1>
+<h1>404 2</h1>
 
 <p id="demo"></p>
+  
+<script> 
+  document.getElementById('demo').innerHTML = `Redirecting too... https://www.reddit.com/${url_after_hostname}`;
+</script>
 
 </body>
 </html> 
