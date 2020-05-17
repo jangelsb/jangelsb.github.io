@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
-      <title>Redirect Test</title>
+      <title>Reddit Redirect</title>
       
-      <meta id="meta_content" http-equiv = "refresh" content = "2; url = https://www.duckduckgo.com" />
+      <meta id="meta_content" http-equiv = "refresh" content = "2; url = https://www.reddit.com" />
       
       <script> 
         var url_after_hostname = window.location.pathname + window.location.search + window.location.hash;
@@ -14,13 +14,13 @@
    </head>
 <body>
 
-<h1>Test 17 - waits 2 seconds</h1>
+<h1>Redirecting to Reddit in 2 seconds</h1>
 
 <p id="demo"></p>
 <a id="aaa" href=""></a>
   
 <script> 
-  document.getElementById('demo').innerHTML = `Redirecting too... (Click to go now)`;
+  document.getElementById('demo').innerHTML = `Click to go now:`;
   
   var elem = document.getElementById('aaa');
   elem.innerHTML = `${the_url} `;
