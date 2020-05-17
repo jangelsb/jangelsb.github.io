@@ -4,7 +4,7 @@
     "details": [
     {
       "appID": "YFZ5LYLJPF.com.jangelsb.redirecttest",
-      "paths": ["*"]
+      "paths": ["/reddit_redirect/*"]
     }
     ]
   }
