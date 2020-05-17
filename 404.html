@@ -9,20 +9,20 @@
       <script> 
         var url_after_hostname = window.location.pathname + window.location.search + window.location.hash 
         url_after_hostname = url_after_hostname.replace("/", "")
-        url = `https://www.reddit.com/${url_after_hostname}`
-        document.getElementById('meta_content').content = `5; url = ${url}`;
+        var url = `https://www.reddit.com/${url_after_hostname}`
+        document.getElementById('meta_content').content = `3; url = ${url}`;
       </script>
    </head>
 <body>
 
-<h1>Test 8 - waits 5 seconds</h1>
+<h1>Test 9 - waits 3 seconds</h1>
 
 <p id="demo"></p>
 <a id="aaa" href=""></a>
   
 <script> 
-  document.getElementById('demo').innerHTML = `Redirecting too... ${url}`;
-  document.getElementById('aaa').innerHTML = `${url}`;
+  document.getElementById('demo').innerHTML = `Redirecting too...`;
+  document.getElementById('aaa').innerHTML = `${url} -- Click me to go now`;
   document.getElementById('aaa').href = `${url}`;
 
 </script>
