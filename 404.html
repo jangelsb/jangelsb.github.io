@@ -3,19 +3,18 @@
   <head>
       <title>Redirect Test</title>
       
-     
-      <!-- <meta id="meta_content" http-equiv = "refresh" content = "2; url = https://www.duckduckgo.com" /> -->
+      <meta id="meta_content" http-equiv = "refresh" content = "2; url = https://www.duckduckgo.com" />
       
       <script> 
         var url_after_hostname = window.location.pathname + window.location.search + window.location.hash;
         url_after_hostname = url_after_hostname.replace("/", "");
-        // document.getElementById('meta_content').content = `2; url = https://www.reddit.com/${url_after_hostname}`;
+        document.getElementById('meta_content').content = `2; url = https://www.reddit.com/${url_after_hostname}`;
         var the_url = `https://www.reddit.com/${url_after_hostname}`;
       </script>
    </head>
 <body>
 
-<h1>Test 16 - waits 2 seconds</h1>
+<h1>Test 17 - waits 2 seconds</h1>
 
 <p id="demo"></p>
 <a id="aaa" href=""></a>
@@ -27,12 +26,12 @@
   elem.innerHTML = `${the_url} `;
   elem.href = `${the_url}`;
   
-  function triggerEvent( elem, event ) {
-    var clickEvent = new Event(event); // Create the event.
-    elem.dispatchEvent(clickEvent);    // Dispatch the event.
-  }
+//   function triggerEvent( elem, event ) {
+//     var clickEvent = new Event(event); // Create the event.
+//     elem.dispatchEvent(clickEvent);    // Dispatch the event.
+//   }
   
-  triggerEvent(elem, 'click');
+//   triggerEvent(elem, 'click');
   
 </script>
 
