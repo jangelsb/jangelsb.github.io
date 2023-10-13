@@ -1,6 +1,6 @@
 ---
-layout: test
-title: About
+layout: subscreen_default
+title: Cool
 ---
 
 ## You are awesome!
