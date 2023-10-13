@@ -1,6 +1,12 @@
+---
+layout: default
+title: josh angelsberg
+appiconpath: images/source/jangelsb_profile_pic.png
+---
+
 ## My Apps
 - [next.calc](https://jangelsb.github.io/next.calc/)
-- [re:timer (beta)](https://jangelsb.github.io/retimer/)
+- [re:timer (beta)](https://jangelsb.github.io/retimer)
 - [Magic Device Switch (alpha)](https://youtu.be/fjPh_z38XdM)
 
 ## Apple Shortcuts
