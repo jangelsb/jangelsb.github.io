@@ -1,14 +1,14 @@
 ---
 layout: app_page_testflight
-title: re:timer
+title: re:timer (beta)
 description: A simple, and beautiful timer app powered by Apple Reminders
 appiconpath: images/source/retimer/appicon.png
 appstorelink: https://testflight.apple.com/join/iOrcB4f6
 ---
 
-|      |     |     |
-| --------|---------|-------|
-| ![](images/source/retimer/2.png)  | ![](images/source/retimer/3.png)    | ![](images/source/retimer/4.png)    |
+|      |     |     |     |
+| --------|---------|-------|-------|
+| ![](images/source/retimer/2.png)  | ![](images/source/retimer/3.png)    | ![](images/source/retimer/4.png)    | ![](images/source/retimer/5.png)    |
 
 Inspired by [Gestimer](https://maddin.io/gestimer/) on macOS.
 
