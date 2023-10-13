@@ -1,9 +1,3 @@
----
-title: josh angelsberg
-description: iOS Developer | Tech Enthusiast | Tinkerer
-appiconpath: images/source/jangelsb_profile_pic.png
----
-
 ## My Apps
 
 | next.calc      | re:timer (beta)    | Magic Device Switch (alpha)    |
@@ -12,7 +6,4 @@ appiconpath: images/source/jangelsb_profile_pic.png
 
 
 ## BetterTouchTools (BTT) Presets
-
-| Mouse Window Menu (MWM) - Window Management      |
-| --------|---------|-------|-------|
-| [![](images/source/btt/mwm/appicon.png)](https://community.folivora.ai/t/mouse-window-menu-mwm-window-management-via-floating-menu/33055)  |
+- [Mouse Window Menu (MWM) - Window Management](https://community.folivora.ai/t/mouse-window-menu-mwm-window-management-via-floating-menu/33055)
