@@ -9,6 +9,11 @@ appiconpath: images/source/jangelsb_profile_pic.png
 - [re:timer (beta)](https://jangelsb.github.io/retimer)
 - [Magic Device Switch (alpha)](https://youtu.be/fjPh_z38XdM)
 
+| next.calc      | re:timer (beta)    | Magic Device Switch (alpha)    |
+| --------|---------|-------|-------|
+| ![](images/source/nexticon/appicon.png)  | ![](images/source/retimer/appicon.png)    | ![](images/source/mds/appicon.png)    |
+
+
 ## Apple Shortcuts
 - TBD
 
