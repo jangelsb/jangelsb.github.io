@@ -30,5 +30,9 @@ It will unpair the devices
 - When the computer goes to sleep and is not connected to power
 
 
+## Known Caveats 
+* If Magic Devices are not connected to a computer for 2 minutes, they will exit pairing mode and will need to be power cycled.
+
+
 ## Demos
 - [October 2, 2023](https://youtu.be/fjPh_z38XdM)
