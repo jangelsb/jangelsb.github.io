@@ -1,16 +1,16 @@
 ---
-layout: app_page
+layout: app_page_testflight
 title: re:timer
-description: Simple, intutive timer app 
-appstorelink: https://www.apple.com
+description: A simple, and beautiful timer app powered by Apple Reminders
+appiconpath: images/source/retimer/appicon.png
+appstorelink: https://testflight.apple.com/join/iOrcB4f6
 ---
-
-A simple and intuitive timer powered by Apple Reminders on iOS - inspired by [Gestimer](https://maddin.io/gestimer/) 
 
 |      |     |     |
 | --------|---------|-------|
 | ![](images/source/retimer/2.png)  | ![](images/source/retimer/3.png)    | ![](images/source/retimer/4.png)    |
 
+Inspired by [Gestimer](https://maddin.io/gestimer/) on macOS.
 
 
 ## Support
