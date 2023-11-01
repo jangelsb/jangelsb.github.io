@@ -5,6 +5,11 @@ description: Easily switch your magic devices between macs
 appiconpath: images/source/mds/appicon.png
 ---
 
+## October 2, 2023 Demo 
+[![October 2, 2023 Demo]
+(https://img.youtube.com/vi/fjPh_z38XdM/maxresdefault.jpg)]
+(https://www.youtube.com/watch?v=fjPh_z38XdM)
+
 ## Idea
 
 I have a work MacBook Pro and a personal MacBook Pro. I have a Magic Keyboard and a Magic Trackpad that I want to use on both comptuers but at different times.
@@ -32,7 +37,3 @@ It will unpair the devices
 
 ## Known Caveats 
 * If Magic Devices are not connected to a computer for 2 minutes, they will exit pairing mode and will need to be power cycled.
-
-
-## Demos
-- [October 2, 2023](https://youtu.be/fjPh_z38XdM)
