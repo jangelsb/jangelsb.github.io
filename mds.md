@@ -20,7 +20,7 @@ When the app thinks you are docking your MacBook to your desk - use the desk per
 When the app thinks you are undocking your MacBook from your desk - unpair and don't use the desk periphals. 
 
 
-## October 2, 2023 Demo 
+## Demo - October 2, 2023  
 
 {% include youtube.html id="fjPh_z38XdM" %}
 
