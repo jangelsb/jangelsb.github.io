@@ -39,4 +39,3 @@ It will unpair the devices
 * If Magic Devices are not connected to a computer for 2 minutes, they will exit pairing mode and will need to be power cycled.
 
 
-[Latest Alpha Build](mds/v1/Magic%20Switch.app.zip)
