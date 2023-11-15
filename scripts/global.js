@@ -22,22 +22,7 @@ var MYLIBRARY = MYLIBRARY || (function(){
             _dargs = Args;
             // some other initialising
 
-            var baseCSSId = 'base_css'; 
-            if (!document.getElementById(baseCSSId))
-            {
-                var head  = document.getElementsByTagName('head')[0];
-                var link  = document.createElement('link');
-                link.id   = baseCSSId;
-                link.rel  = 'stylesheet';
-                link.type = 'text/css';
-                link.media = 'all';
-
-                link.href = '/assets/css/base.css';
-
-                head.appendChild(link);
-            }
-
-            var themeCSSId = 'custom_css'; 
+            var themeCSSId = 'theme_css'; 
             if (!document.getElementById(themeCSSId))
             {
                 var head  = document.getElementsByTagName('head')[0];
