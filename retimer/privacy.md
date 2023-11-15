@@ -10,6 +10,8 @@ effective_date: 2023-11-14
 
 ## Privacy Policy
 
+{{full_url}}
+
 {{app_name}} does not collect, store, or transmit any personal information. All data is processed on device. 
 
 Apple Reminders are handled by Apple. 
