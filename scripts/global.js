@@ -20,9 +20,6 @@ var MYLIBRARY = MYLIBRARY || (function(){
     return {
         init : function(Args) {
             _dargs = Args;
-            // some other initialising
-        },
-        helloWorld : function() {
             
             var cssId = 'custom_css';  // you could encode the css path itself to generate id..
             if (!document.getElementById(cssId))
