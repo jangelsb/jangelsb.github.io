@@ -1,7 +1,3 @@
----
-appiconpath: images/source/jangelsb_profile_pic.png
----
-
 ## Apps
 
 | next.calc      | re:timer (beta)    | Magic Device Switch (alpha)    |
