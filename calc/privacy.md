@@ -3,7 +3,7 @@ layout: subscreen_default
 theme: orange
 title: next.calc
 description: the calculator. reimagined.
-appiconpath: /images/source/nextcalc/appicon.png
+appiconpath: /assets/images/source/nextcalc/appicon.png
 effective_date: 2022-04-14
 ---
 

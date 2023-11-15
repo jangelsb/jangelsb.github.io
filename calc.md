@@ -4,16 +4,16 @@ theme: orange
 title: next.calc
 description: the calculator. reimagined.
 appstorelink: https://apps.apple.com/us/app/next-calc/id1470313161
-appiconpath: images/source/nextcalc/appicon.png
+appiconpath: assets/images/source/nextcalc/appicon.png
 ---
 
 |      |     |     |
 | --------|---------|-------|
-| ![](images/source/nextcalc/1.jpg)  | ![](images/source/nextcalc/2.jpg)    | ![](images/source/nextcalc/3.jpg)    |
+| ![](assets/images/source/nextcalc/1.jpg)  | ![](assets/images/source/nextcalc/2.jpg)    | ![](assets/images/source/nextcalc/3.jpg)    |
 
 |      |     |     |
 | --------|---------|-------|
-| ![](images/source/nextcalc/4.jpg)    | ![](images/source/nextcalc/5.jpg)   | ![](images/source/nextcalc/6.jpg)    |
+| ![](assets/images/source/nextcalc/4.jpg)    | ![](assets/images/source/nextcalc/5.jpg)   | ![](assets/images/source/nextcalc/6.jpg)    |
 
 
 

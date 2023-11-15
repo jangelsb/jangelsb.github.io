@@ -3,7 +3,7 @@ layout: app_page_alpha
 theme: gray
 title: Magic Device Switch (alpha)
 description: Easily switch your magic devices between macs
-appiconpath: images/source/mds/appicon.png
+appiconpath: assets/images/source/mds/appicon.png
 ---
 
 {% include youtube.html id="fjPh_z38XdM" %}
