@@ -21,10 +21,8 @@ var MYLIBRARY = MYLIBRARY || (function(){
         init : function(Args) {
             _dargs = Args;
             // some other initialising
-        },
-        helloWorld : function() {
-            
-            var cssId = 'custom_css';  // you could encode the css path itself to generate id..
+
+            var cssId = 'custom_css'; 
             if (!document.getElementById(cssId))
             {
                 var head  = document.getElementsByTagName('head')[0];
@@ -45,6 +43,10 @@ var MYLIBRARY = MYLIBRARY || (function(){
 
                 head.appendChild(link);
             }
+
+        },
+        helloWorld : function() {
+            // do something async later - example: http://plnkr.co/edit/iE0Vr7sszfqrrDIsR8Wi?p=preview
         }
     };
 }());
