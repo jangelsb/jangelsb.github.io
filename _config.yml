@@ -1,3 +1,2 @@
 theme: jekyll-theme-cayman
-
-baseurl: https://jangelsb.github.io
+baseurl: "https://jangelsb.github.io"
