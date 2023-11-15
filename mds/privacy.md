@@ -1,7 +1,7 @@
 ---
 layout: subscreen_default
 title: Magic Device Switch
-description: Privacy Policy
+description: Easily switch your magic devices between macs
 appiconpath: /images/source/mds/appicon.png
 ---
 

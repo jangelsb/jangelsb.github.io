@@ -1,5 +1,3 @@
-# My Projects
-
 ## Apps
 
 | next.calc      | re:timer (beta)    | Magic Device Switch (alpha)    |

@@ -1,7 +1,7 @@
 ---
 layout: subscreen_default
 title: next.calc
-description: Privacy Policy
+description: the calculator. reimagined.
 appiconpath: /images/source/nextcalc/appicon.png
 ---
 
