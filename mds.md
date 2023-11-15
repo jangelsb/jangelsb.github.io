@@ -6,6 +6,8 @@ description: Easily switch your magic devices between macs
 appiconpath: images/source/mds/appicon.png
 ---
 
+{% include youtube.html id="fjPh_z38XdM" %}
+
 ## Idea
 
 I have a work MacBook Pro and a personal MacBook Pro. I have a Magic Keyboard and a Magic Trackpad that I want to use on both comptuers but at different times.
@@ -19,11 +21,6 @@ Unlike Universal Control, this app will work on macs with different Apple Ids. I
 When the app thinks you are docking your MacBook to your desk - use the desk periphals.
 
 When the app thinks you are undocking your MacBook from your desk - unpair and don't use the desk periphals. 
-
-
-## Demo - October 2, 2023  
-
-{% include youtube.html id="fjPh_z38XdM" %}
 
 
 ## How it works
