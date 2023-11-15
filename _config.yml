@@ -4,4 +4,6 @@ defaults: # defaults that fit the criteria - ref: https://jekyllrb.com/docs/conf
     scope:
       path: "" # an empty string here means all files in the project
     values:
+      title: josh angelsberg
+      appiconpath: images/source/jangelsb_profile_pic.png
       email: "nextcalc.feedback@gmail@@@com"

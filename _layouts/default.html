@@ -19,7 +19,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <!-- https://stackoverflow.com/a/49285900 -->
-    <link rel="shortcut icon" type="image/png" href="images/source/jangelsb_profile_pic.png">
+    <link rel="shortcut icon" type="image/png" href="{{ page.appiconpath  | absolute_url }}">
 
     <script src="/scripts/global.js"></script>
     <script type="text/javascript">
@@ -32,8 +32,8 @@
   <body>
     
     <header class="page-header" role="banner">
-      <img src="images/source/jangelsb_profile_pic.png" width="200">
-      <h1 class="project-name">josh angelsberg</h1>
+      <img src={{page.appiconpath}} width="200">
+      <h1 class="project-name">{{page.title}}</h1>
       <h2 class="project-tagline">{{ page.description | default: site.description | default: site.github.project_tagline }}</h2>
       <h2> </h2>
 
