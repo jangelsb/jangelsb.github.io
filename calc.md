@@ -42,7 +42,7 @@ appiconpath: /images/source/nextcalc/appicon.png
 - [Privacy Policy](https://jangelsb.github.io/calc/privacy)
 - [Feature Requests](https://github.com/jangelsb/next.calc-issues/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement+sort%3Areactions-%2B1-desc)
 - [Known Bugs](https://github.com/jangelsb/next.calc-issues/issues?q=is%3Aopen+is%3Aissue+label%3Abug+sort%3Areactions-%2B1-desc)
-- <a href="mailto:nextcalc.feedback@gmail@@com?subject=next.calc support website"
+- <a href="mailto:nextcalc.feedback@gmail@@com?subject=next.calc Website"
    onmouseover="this.href=this.href.replace('@@','.')">
    Support Email
 </a>

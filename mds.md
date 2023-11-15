@@ -39,3 +39,9 @@ It will unpair the devices
 * If Magic Devices are not connected to a computer for 2 minutes, they will exit pairing mode and will need to be power cycled.
 
 
+## Support
+- [Privacy Policy](https://jangelsb.github.io/mds/privacy)
+- <a href="mailto:nextcalc.feedback@gmail@@com?subject=MDS Website"
+   onmouseover="this.href=this.href.replace('@@','.')">
+   Support Email
+</a>

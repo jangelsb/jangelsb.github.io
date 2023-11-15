@@ -14,5 +14,8 @@ Inspired by [Gestimer](https://maddin.io/gestimer/) on macOS.
 
 
 ## Support
-
 - [Privacy Policy](https://jangelsb.github.io/retimer/privacy)
+- <a href="mailto:nextcalc.feedback@gmail@@com?subject=re:timer Website"
+   onmouseover="this.href=this.href.replace('@@','.')">
+   Support Email
+</a>
