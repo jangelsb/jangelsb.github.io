@@ -3,6 +3,7 @@ layout: subscreen_default
 title: next.calc
 description: the calculator. reimagined.
 appiconpath: /images/source/nextcalc/appicon.png
+theme: blue
 ---
 
 ## Privacy Policy
