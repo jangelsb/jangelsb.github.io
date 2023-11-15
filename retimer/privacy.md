@@ -2,7 +2,7 @@
 layout: subscreen_default
 title: re:timer
 description: Privacy Policy
-appiconpath: images/source/retimer/appicon.png
+appiconpath: https://jangelsb.github.io/images/source/retimer/appicon.png
 app_name: re:timer
 effective_date: 2023-11-14
 ---
