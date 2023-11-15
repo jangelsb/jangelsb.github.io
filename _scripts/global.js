@@ -1,29 +1,27 @@
-<script type="text/javascript">
-    // var server = "172.28.###.##";
-    // var url = "http://" + server + ":102/videostream.cgi?user=username&pwd=password";
+// var server = "172.28.###.##";
+// var url = "http://" + server + ":102/videostream.cgi?user=username&pwd=password";
 
-    // document.getElementById("home_icon").href = "https://jangelsb.github.io/";
+// document.getElementById("home_icon").href = "https://jangelsb.github.io/";
 
-    // <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
-
+// <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
 
 
+var cssId = 'custom_css';  // you could encode the css path itself to generate id..
+if (!document.getElementById(cssId))
+{
+    var head  = document.getElementsByTagName('head')[0];
+    var link  = document.createElement('link');
+    link.id   = cssId;
+    link.rel  = 'stylesheet';
+    link.type = 'text/css';
+    link.media = 'all';
 
-        let link = document.createElement('link');
+    if ("{{page.theme}}" == "blue") {
+        link.href = '/assets/css/style-blue.css';
+    } else {
+        link.href = '/assets/css/style.css';
+    }
 
-        link.rel = 'stylesheet';
+    head.appendChild(link);
+}
 
-
-        link.type = 'text/css';
-
-
-        if ("{{page.theme}}" == "blue") {
-            link.href = '/assets/css/style-blue.css';
-        } else {
-            link.href = '/assets/css/style.css';
-        }
-
-  
-        document.getElementsByTagName('head')[0].appendChild(link);
-
-</script>
