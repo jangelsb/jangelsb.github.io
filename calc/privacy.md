@@ -9,6 +9,8 @@ theme: blue
 
 ## Privacy Policy
 
+email: {{page.email}}
+
 Your privacy is very important to me. **I do not collect any data whatsoever** and all processing is done on-device.
 
 
