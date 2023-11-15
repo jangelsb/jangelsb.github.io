@@ -3,6 +3,7 @@ layout: subscreen_default
 title: re:timer
 description: A simple, and beautiful timer app powered by Apple Reminders
 appiconpath: /images/source/retimer/appicon.png
+effective_date: 2023-11-14
 ---
 
 
@@ -17,12 +18,12 @@ Apple Reminders are handled by Apple.
 
 I may update this Privacy Policy from time to time. Thus, you are advised to review this page periodically for any changes. I will notify you of any changes by posting the new Privacy Policy on this page.
 
-This policy is effective as of 2023-11-14.
+This policy is effective as of **{{page.effective_date}}**.
 
 
 ## Contact Us
 
-If you have any questions or suggestions about this Privacy Policy, do not hesitate to contact me <a href="mailto:nextcalc.feedback@gmail@@@com?subject=re:timer Website"
+If you have any questions or suggestions about this Privacy Policy, do not hesitate to contact me <a href="mailto:{{page.email}}?subject={{page.title}} Website"
    onmouseover="this.href=this.href.replace('@@@','.')">
    via email.
 </a>

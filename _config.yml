@@ -1,7 +1,7 @@
 theme: jekyll-theme-cayman
-defaults:
+defaults: # defaults that fit the criteria - ref: https://jekyllrb.com/docs/configuration/front-matter-defaults/
   -
     scope:
       path: "" # an empty string here means all files in the project
     values:
-      email: "josh@email.com"
+      email: "nextcalc.feedback@gmail@@@com"

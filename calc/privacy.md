@@ -9,8 +9,6 @@ theme: blue
 
 ## Privacy Policy
 
-email: {{page.email}}
-
 Your privacy is very important to me. **I do not collect any data whatsoever** and all processing is done on-device.
 
 
@@ -23,7 +21,7 @@ This policy is effective as of **{{page.effective_date}}**.
 
 ## Contact
 
-If you have any questions or suggestions about this Privacy Policy, do not hesitate to contact me <a href="mailto:nextcalc.feedback@gmail@@@com?subject=next.calc Website"
+If you have any questions or suggestions about this Privacy Policy, do not hesitate to contact me <a href="mailto:{{page.email}}?subject={{page.title}} Website"
    onmouseover="this.href=this.href.replace('@@@','.')">
    via email.
 </a>
