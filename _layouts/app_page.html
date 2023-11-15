@@ -22,15 +22,16 @@
   <body>
     
     <header class="page-header" role="banner">
+      <link rel="icon" type="image/x-icon" href="{{page.appiconpath}}">
       <img src={{page.appiconpath}} width="200">
       <h1 class="project-name">{{page.title}}</h1>
       <h2 class="project-tagline">{{ page.description | default: site.description | default: site.github.project_tagline }}</h2>
       <h2> </h2>
 
-      <a id="home_icon" href="{{repository_url}}">
-        <img alt="Home" src="{{repository_url}}/images/source/jangelsb_profile_pic.png" width=64>
+      <a id="home_icon" href="">
+        <img alt="Home" src="{{baseurl}}/images/source/jangelsb_profile_pic.png" width=64>
       </a>
-      
+
       <a id="coffee_clear" href="https://www.buymeacoffee.com/jangelsb">
         <img alt="Buy me a coffee" src="images/source/coffee_clear.png" width=180>
       </a>
