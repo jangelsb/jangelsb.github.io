@@ -12,22 +12,36 @@
 // <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
 
 
-var cssId = 'custom_css';  // you could encode the css path itself to generate id..
-if (!document.getElementById(cssId))
-{
-    var head  = document.getElementsByTagName('head')[0];
-    var link  = document.createElement('link');
-    link.id   = cssId;
-    link.rel  = 'stylesheet';
-    link.type = 'text/css';
-    link.media = 'all';
 
-    if ("{{page.theme}}" == "blue") {
-        link.href = '/assets/css/style-blue.css';
-    } else {
-        link.href = '/assets/css/style.css';
-    }
+// ref: https://stackoverflow.com/a/2190927/9605061
+var MYLIBRARY = MYLIBRARY || (function(){
+    var _args = {}; // private
 
-    head.appendChild(link);
-}
+    return {
+        init : function(Args) {
+            _args = Args;
+            // some other initialising
+        },
+        helloWorld : function() {
+            
+            var cssId = 'custom_css';  // you could encode the css path itself to generate id..
+            if (!document.getElementById(cssId))
+            {
+                var head  = document.getElementsByTagName('head')[0];
+                var link  = document.createElement('link');
+                link.id   = cssId;
+                link.rel  = 'stylesheet';
+                link.type = 'text/css';
+                link.media = 'all';
 
+                if (_args[0] == "blue") {
+                    link.href = '/assets/css/style-blue.css';
+                } else {
+                    link.href = '/assets/css/style.css';
+                }
+
+                head.appendChild(link);
+            }
+        }
+    };
+}());
