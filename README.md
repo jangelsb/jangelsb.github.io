@@ -1,6 +1,6 @@
 # Portfolio
 
-| next.calc      | re:timer (beta)    | Magic Device Switch (alpha)    |
+| next.calc      | re:timer    | mds   |
 | --------|---------|-------|-------|
 | [![](assets/images/source/nextcalc/appicon.png)](https://jangelsb.github.io/calc)  | [![](assets/images/source/retimer/appicon.png)](https://jangelsb.github.io/timer)    | [![](assets/images/source/mds/appicon.png)](https://jangelsb.github.io/mds)    |
 
