@@ -1,22 +1,24 @@
 @import url("/assets/css/base.css");
 
-/* Orange header image */
+/* Teal header image */
 
 .page-header {
 background-color: #010101;
-background-image: linear-gradient(0deg, #000000, #ED6F00);
+background-image: linear-gradient(0deg, #000000, #007788);
 padding: 64px 64px 24px 64px;
 }
 
-/* BLUE header text */
+
+/* White text */
 
 .main-content h1, .main-content h2, .main-content h3, .main-content h4, .main-content h5, .main-content h6 {
-color: #007EED;
+color: #FFFFFF;
 }
 
+/* Teal hyperlink text */
 
-/* BLUE Hyperlink text */
 
 a {
-  color: #007EED;
+  color: #007788;
 }
+

@@ -1,27 +1,7 @@
----
----
-
 @import "{{ site.theme }}";
-
-.page-header {
-background-color: #010101;
-background-image: linear-gradient(0deg, #000000, #007788);
-padding: 64px 64px 24px 64px;
-}
 
 .project-tagline {
 margin-bottom: 0rem;
-}
-
-
-/* White TEXT */
-
-.main-content h1, .main-content h2, .main-content h3, .main-content h4, .main-content h5, .main-content h6 {
-color: #FFFFFF;
-}
-
-a {
-  color: #007788;
 }
 
 

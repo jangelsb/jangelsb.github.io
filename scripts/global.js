@@ -40,7 +40,7 @@ var MYLIBRARY = MYLIBRARY || (function(){
                         link.href = '/assets/css/style-gray.css';
                         break;
                     default:
-                        link.href = '/assets/css/style.css';
+                        link.href = '/assets/css/style-default.css';
 
                 }
 

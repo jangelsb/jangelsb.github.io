@@ -1,16 +1,12 @@
----
----
+@import url("/assets/css/base.css");
 
-@import "{{ site.theme }}";
+
+/* GRAY */
 
 .page-header {
 background-color: #010101;
 background-image: linear-gradient(0deg, #000000, #7e7f86);
 padding: 64px 64px 24px 64px;
-}
-
-.project-tagline {
-margin-bottom: 0rem;
 }
 
 
@@ -21,61 +17,11 @@ color: #7E7F86;
 }
 
 
+/* GRAY */
+
 a {
   color: #7e7f86;
 }
 
-
-
-body {
-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-color: #FFFFFF;
-background-color: #000000;
-}
-
-.main-content table th, .main-content table td {
-border: 0px solid #e9ebec;
-}
-
-#coming-soon-get-ready {
- text-align: center; 
-}
-
-.site-footer {
-border-top: solid 0px #eff0f1;
-}
-
-.banner_link {
-  margin: 6px;
-}
-
- #coffee_banner {
-   display: block;
- }
-
- #coffee_clear {
-   display: none;
- }
-
- #home_icon {
-    display: block;
-    position: absolute;
-    top: 14px;
-    left: 14px;
-}
-
-@media (min-width: 550px) {
- 
-  #coffee_banner {
-   display: none;
- }
-
-  #coffee_clear {
-    display: block;
-    position: absolute;
-    top: 14px;
-    right: 14px;
-  }
-}
 
 
