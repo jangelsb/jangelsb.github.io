@@ -1,3 +1,9 @@
+---
+---
+//rest of your JavaScript - ref https://stackoverflow.com/a/39853997/9605061
+// frontmatter docs: https://jekyllrb.com/docs/front-matter/
+
+
 // var server = "172.28.###.##";
 // var url = "http://" + server + ":102/videostream.cgi?user=username&pwd=password";
 
