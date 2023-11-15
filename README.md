@@ -1,4 +1,4 @@
-## Apps
+# Portfolio
 
 | next.calc      | re:timer (beta)    | Magic Device Switch (alpha)    |
 | --------|---------|-------|-------|
