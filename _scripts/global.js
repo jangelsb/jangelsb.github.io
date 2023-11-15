@@ -24,6 +24,6 @@
         }
 
   
-        document.getElementsByTagName('HEAD')[0].appendChild(link);
+        document.getElementsByTagName('head')[0].appendChild(link);
 
 </script>
