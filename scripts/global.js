@@ -33,8 +33,11 @@ var MYLIBRARY = MYLIBRARY || (function(){
                 link.media = 'all';
 
                 switch (_dargs["theme"]) {
-                    case "blue":
-                        link.href = '/assets/css/style-blue.css';
+                    case "orange":
+                        link.href = '/assets/css/style-orange.css';
+                        break;
+                    case "gray":
+                        link.href = '/assets/css/style-gray.css';
                         break;
                     default:
                         link.href = '/assets/css/style.css';

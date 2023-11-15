@@ -1,5 +1,6 @@
 ---
 layout: app_page
+theme: orange
 title: next.calc
 description: the calculator. reimagined.
 appstorelink: https://apps.apple.com/us/app/next-calc/id1470313161

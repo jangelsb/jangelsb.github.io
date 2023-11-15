@@ -1,5 +1,6 @@
 ---
 layout: subscreen_default
+theme: gray
 title: Magic Device Switch
 description: Easily switch your magic devices between macs
 appiconpath: /images/source/mds/appicon.png
