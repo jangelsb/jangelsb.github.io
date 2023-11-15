@@ -15,11 +15,11 @@
 
 // ref: https://stackoverflow.com/a/2190927/9605061
 var MYLIBRARY = MYLIBRARY || (function(){
-    var _args = {}; // private
+    var _dargs = {}; // private
 
     return {
         init : function(Args) {
-            _args = Args;
+            _dargs = Args;
             // some other initialising
         },
         helloWorld : function() {
@@ -34,10 +34,13 @@ var MYLIBRARY = MYLIBRARY || (function(){
                 link.type = 'text/css';
                 link.media = 'all';
 
-                if (_args[0] == "blue") {
-                    link.href = '/assets/css/style-blue.css';
-                } else {
-                    link.href = '/assets/css/style.css';
+                switch (_dargs["theme"]) {
+                    case "blue":
+                        link.href = '/assets/css/style-blue.css';
+                        break;
+                    default:
+                        link.href = '/assets/css/style.css';
+
                 }
 
                 head.appendChild(link);

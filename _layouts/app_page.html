@@ -52,8 +52,10 @@
     </main>
     <script src="/scripts/global.js"></script>
     <script type="text/javascript">
-       MYLIBRARY.init(["{{page.theme}}"]);
-       MYLIBRARY.helloWorld();
+      var dict = {};
+      dict['theme'] = "{{page.theme}}";
+      MYLIBRARY.init(dict);
+      MYLIBRARY.helloWorld();
     </script>
   </body>
 </html>
