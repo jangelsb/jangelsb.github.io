@@ -1,12 +1,12 @@
 ---
 layout: subscreen_default
 theme: gray
-title: MDS (Alpha) Releases
+title: Magic Device Switch (alpha)
 description: Easily switch your magic devices between macs
-appiconpath: assets/images/source/mds/appicon.png
+appiconpath: /assets/images/source/mds/appicon.png
 ---
 
-### Friday, February 9, 2024 - [v40](./v40/mds.zip)
+### Friday, February 9, 2024 - [v40](/mds/releases/v40/mds.zip)
 
 * Fix weird layout issues in Xcode 15
 
