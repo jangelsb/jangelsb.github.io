@@ -6,7 +6,7 @@ description: Easily switch your magic devices between macs
 appiconpath: assets/images/source/mds/appicon.png
 ---
 
-### Saturday, February 10, 2024 - [v40](./v40/mds.zip)
+### Friday, February 9, 2024 - [v40](./v40/mds.zip)
 
 * Fix weird layout issues in Xcode 15
 
