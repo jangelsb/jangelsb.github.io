@@ -6,7 +6,8 @@ description: Easily switch your magic devices between macs
 appiconpath: /assets/images/source/mds/appicon.png
 ---
 
-### v41\nSaturday, February 10, 2024
+### v41
+### Saturday, February 10, 2024
 
 * Move list of unwatched devices to a scroll view
 * limit the height of each item
@@ -21,7 +22,7 @@ appiconpath: /assets/images/source/mds/appicon.png
 
 ---
 
-### v40\nFriday, February 9, 2024
+### v40<br>Friday, February 9, 2024
 
 * Fix weird layout issues in Xcode 15
 * Add a new "Helpful Tips" view
