@@ -1,7 +1,7 @@
 ---
 layout: subscreen_default
 theme: gray
-title: Magic Device Switch (alpha)
+title: MDS Release Notes
 description: Easily switch your magic devices between macs
 appiconpath: /assets/images/source/mds/appicon.png
 ---
