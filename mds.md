@@ -9,10 +9,6 @@ appiconpath: assets/images/source/mds/appicon.png
 {% include youtube.html id="fjPh_z38XdM" %}
 
 
-[Latest Releases](./mds/releases)
-
----
-
 ## Idea
 
 I have a work MacBook Pro and a personal MacBook Pro. I have a Magic Keyboard and a Magic Trackpad that I want to use on both comptuers but at different times.
@@ -43,6 +39,7 @@ It will unpair the devices
 
 
 ## Support
+- [Change Log](./mds/releases)
 - [Privacy Policy](https://jangelsb.github.io/mds/privacy)
 - <a href="mailto:nextcalc.feedback@gmail@@com?subject=MDS Website"
    onmouseover="this.href=this.href.replace('@@','.')">
