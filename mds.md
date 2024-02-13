@@ -8,6 +8,11 @@ appiconpath: assets/images/source/mds/appicon.png
 
 {% include youtube.html id="fjPh_z38XdM" %}
 
+
+[Latest Releases](./mds/releases)
+
+---
+
 ## Idea
 
 I have a work MacBook Pro and a personal MacBook Pro. I have a Magic Keyboard and a Magic Trackpad that I want to use on both comptuers but at different times.
