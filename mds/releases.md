@@ -6,6 +6,16 @@ description: Easily switch your magic devices between macs
 appiconpath: /assets/images/source/mds/appicon.png
 ---
 
+### **v42**<br>Tuesday, February 13, 2024
+
+* Update "Helpful Tips" to have a direct link to the System Settings > Battery > options... screen
+* Add the ability to open releases page and download the new zip at the same time - support new folder structure
+* Update on start logic to correctly set the menu bar icon (if you have a paired device that is not connected at that time)
+
+
+---
+
+
 ### **v41**<br>Saturday, February 10, 2024
 
 * Move list of unwatched devices to a scroll view
