@@ -6,6 +6,15 @@ description: Easily switch your magic devices between macs
 appiconpath: /assets/images/source/mds/appicon.png
 ---
 
+### **v43**<br>Thursday, March 14, 2024
+
+* Recreate Bluetooth Pairers each time before attempting to pair devices (to hopefully preemptively fix the Bluetooth pairing hanging issue that usually needs a restart after 20 seconds)
+* Add the ability to pause for just one disconnect
+* Minor clean up
+
+
+---
+
 ### **v42**<br>Tuesday, February 13, 2024
 
 * Update "Helpful Tips" to have a direct link to the System Settings > Battery > options... screen
