@@ -2,7 +2,7 @@
 layout: app_page_testflight
 theme: gray
 title: re:timer (beta)
-description: A simple, intuitive, and beautiful timer app powered by Apple Reminders, ensuring your timers are always in sync across your devices.
+description: A simple, intuitive, and beautiful timer app powered by Apple Reminders
 appiconpath: assets/images/source/retimer/appicon.png
 appstorelink: https://testflight.apple.com/join/iOrcB4f6
 ---
@@ -10,6 +10,7 @@ appstorelink: https://testflight.apple.com/join/iOrcB4f6
 
 {% include youtube.html id="752wFYT9B9c" %}
 
+A simple, intuitive, and beautiful timer app powered by Apple Reminders, ensuring your timers are always in sync across all your devices.
 
 ## Features include
 - Intuitive swipe gestures
