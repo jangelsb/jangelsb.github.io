@@ -13,3 +13,6 @@
 - [Spotlight-like Theme](https://www.alfredforum.com/topic/22462-spotlight-like-theme/)
 - [ Folder Navigation X](https://www.alfredforum.com/topic/22461-folder-navigation-x/)
 
+
+## Newsletter
+- [Follow my journey 👨‍💻](https://forms.gle/ZxvjMGiSwkbU3mtf8)
