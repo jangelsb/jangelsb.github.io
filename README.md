@@ -10,7 +10,7 @@
 
 
 ## Alfred Workflows & Themes
-- [gitx - a customizable git interface for Alfred](https://www.alfredforum.com/topic/22463-gitx-a-customizable-git-interface-for-alfred/)
+- [git+ - a customizable git interface for Alfred](https://www.alfredforum.com/topic/22463-gitx-a-customizable-git-interface-for-alfred/)
 - [Spotlight-like Theme](https://www.alfredforum.com/topic/22462-spotlight-like-theme/)
 - [ Folder Navigation X](https://www.alfredforum.com/topic/22461-folder-navigation-x/)
 
