@@ -11,6 +11,8 @@
 
 ## Alfred Workflows & Themes
 - [git+ for Alfred: a fully customized git & zsh interface](https://github.com/jangelsb/git-plus-alfred-workflow)
+- [Boop for Alfred](https://github.com/jangelsb/boop-for-alfred-workflow)
+- [AutoTagger: Quickly Run URL Schemes](https://github.com/jangelsb/auto-tagger-alfred-workflow)
 - [Spotlight-like Theme](https://www.alfredforum.com/topic/22462-spotlight-like-theme/)
 - [Folder Navigation X](https://www.alfredforum.com/topic/22461-folder-navigation-x/)
 
