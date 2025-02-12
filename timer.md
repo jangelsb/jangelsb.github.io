@@ -1,10 +1,10 @@
 ---
-layout: app_page_testflight
+layout: app_page # app_page_testflight
 theme: gray
-title: re:timer (beta)
+title: re:timer
 description: A simple, intuitive, and beautiful timer app powered by Apple Reminders
 appiconpath: assets/images/source/retimer/appicon.png
-appstorelink: https://testflight.apple.com/join/iOrcB4f6
+appstorelink: https://apps.apple.com/us/app/re-timer-a-modern-timer/id1665280809
 ---
 
 
@@ -22,13 +22,13 @@ A simple, intuitive, and beautiful timer app powered by Apple Reminders, ensurin
 - Easily edit timers
 - Name timers
 - Favorite timers
-- Timer history
+- Infinite timer history
+
+Coming soon
 - Live Activities
-- Dynamic Island
 - Widgets
 - Colors
-- And more!
-
+- Apple Watch app
 
 Inspired by the amazing [Gestimer](https://maddin.io/gestimer/) app on macOS.
 
