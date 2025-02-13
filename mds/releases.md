@@ -6,6 +6,16 @@ description: Easily switch your magic devices between macs
 appiconpath: /assets/images/source/mds/appicon.png
 ---
 
+### **v44**<br>Thursday, Feb 13, 2025
+
+* Added support for restarting mds if new trigger is after 20 mins
+* Added support for auto launching mds on log in
+* Update restartMDS to not show the menu automatically if restarted programmatically
+
+
+---
+
+
 ### **v43**<br>Thursday, March 14, 2024
 
 * Recreate Bluetooth Pairers each time before attempting to pair devices (to hopefully preemptively fix the Bluetooth pairing hanging issue that usually needs a restart after 20 seconds)
