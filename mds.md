@@ -1,8 +1,9 @@
 ---
-layout: app_page_alpha
+layout: app_page_gumroad
 theme: gray
-title: Magic Device Switch (alpha)
-description: Easily switch your magic devices between macs
+title: Magic Device Switch
+description: Easily switch your magic devices between macs automagically
+gumroadlink: https://jangelsb.gumroad.com/l/liknbj
 appiconpath: assets/images/source/mds/appicon.png
 ---
 
