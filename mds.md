@@ -4,7 +4,7 @@ theme: gray
 title: Magic Device Switch
 description: Easily switch your magic devices between macs automagically
 gumroadlink: https://jangelsb.gumroad.com/l/liknbj
-appiconpath: assets/images/source/mds/appicon.png
+appiconpath: assets/images/source/mds/appicon.webp
 ---
 
 {% include youtube.html id="fjPh_z38XdM" %}

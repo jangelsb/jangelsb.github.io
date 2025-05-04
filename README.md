@@ -2,7 +2,7 @@
 
 | next.calc      | re:timer (NEW)    | m.d.s.(NEW)  |
 | --------|---------|-------|-------|
-| [![](assets/images/source/nextcalc/appicon.png)](https://jangelsb.github.io/calc)  | [![](assets/images/source/retimer/appicon.png)](https://jangelsb.github.io/timer)    | [![](assets/images/source/mds/appicon.png)](https://jangelsb.github.io/mds)    |
+| [![](assets/images/source/nextcalc/appicon.webp)](https://jangelsb.github.io/calc)  | [![](assets/images/source/retimer/appicon.webp)](https://jangelsb.github.io/timer)    | [![](assets/images/source/mds/appicon.webp)](https://jangelsb.github.io/mds)    |
 
 
 ## BetterTouchTools Presets

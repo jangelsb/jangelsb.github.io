@@ -3,7 +3,7 @@ layout: subscreen_default
 theme: gray
 title: Magic Device Switch
 description: Easily switch your magic devices between macs
-appiconpath: /assets/images/source/mds/appicon.png
+appiconpath: /assets/images/source/mds/appicon.webp
 effective_date: 2023-11-14
 ---
 

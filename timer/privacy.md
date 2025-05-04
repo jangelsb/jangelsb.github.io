@@ -3,7 +3,7 @@ layout: subscreen_default
 theme: gray
 title: re:timer
 description: A simple, and beautiful timer app powered by Apple Reminders
-appiconpath: /assets/images/source/retimer/appicon.png
+appiconpath: /assets/images/source/retimer/appicon.webp
 effective_date: 2023-11-14
 ---
 

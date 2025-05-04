@@ -3,7 +3,7 @@ layout: app_page # app_page_testflight
 theme: gray
 title: re:timer
 description: A simple, intuitive, and beautiful timer app powered by Apple Reminders
-appiconpath: assets/images/source/retimer/appicon.png
+appiconpath: assets/images/source/retimer/appicon.webp
 appstorelink: https://apps.apple.com/us/app/re-timer-a-modern-timer/id1665280809
 ---
 
