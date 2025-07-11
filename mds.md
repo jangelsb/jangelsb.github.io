@@ -42,6 +42,12 @@ If a nearby Mac (e.g., MacBook B) is found with paired devices,
 If devices are found in discovery mode,
 - MDS will pair to them one by one until all devices are connected or the search times out.
 
+
+**Pro Tips 💯** 
+- When "docking" press a button on one of your Magic devices (e.g., your spacebar), this will wake up your other MacBook and MDS will then be able to find it (even if it is sleeping and in clamshell mode!!)
+- Make sure to always have both MacBooks near each other when "docking"
+- If anything ever goes wrong, power cycle your devices (without pressing any buttons on them) to have them enter discovery mode, and then "dock" your computer again (easiest solution is to open / close the MacBook lid)
+
 > **Note:** In versions before 2.0, devices would unpair when a Mac went to sleep. Now, devices only unpair when MDS receives an unpair command over Bluetooth or when manually unpaired in the UI. This means you no longer need to worry about your devices being unpaired when undocking! 🎉
 
 
