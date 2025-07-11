@@ -2,7 +2,7 @@
 layout: app_page_gumroad
 theme: gray
 title: Magic Device Switch
-description: Easily switch your magic devices between macs automagically
+description: Easily switch your magic devices between Macs automagically
 gumroadlink: https://jangelsb.gumroad.com/l/liknbj
 appiconpath: assets/images/source/mds/appicon.webp
 ---
@@ -11,45 +11,44 @@ appiconpath: assets/images/source/mds/appicon.webp
 
 ## Idea
 
-I have a work MacBook Pro and a personal MacBook Pro. I have a Magic Keyboard and a Magic Trackpad that I want to use on both computers but at different times.
+I have both a work and a personal MacBook Pro, and I want to use my Magic Keyboard and Magic Trackpad with both—just not at the same time.
 
-This app allows me to easily "move" my Magic devices between both computers.
+**Magic Device Switch (MDS)** lets you easily "move" your Magic devices between Macs.
 
-Unlike Universal Control, this app will work on Macs with different Apple IDs. This is because it will actually pair the devices with the computer, so it acts like a device switcher for Magic devices.
+Unlike Universal Control, MDS works across Macs with different Apple IDs. It actually pairs and unpairs devices, acting as a true device switcher for Magic devices.
+
 
 ## Goal
 
-Whenever I "dock" my MacBook to my desk, I want to use the devices at my desk.
+Whenever I "dock" my MacBook at my desk, I want my Magic devices to connect automatically.
 
 
-## How it works
+## How It Works
 
-First let's define 
-**"devices"**
-- any Magic device: Magic Keyboard, Magic Trackpad, Magic Mouse that is enabled in MDS
+But first, let's define: 
+- **Devices:** Any Magic Keyboard, Magic Trackpad, or Magic Mouse enabled in MDS.
+- **Docking:** When your MacBook is connected to power, an external monitor, or wakes up while one of these conditions is active.
 
-**"docking"**
-- Whenever the computer is connected to power
-- Or whenever an external montior is connect
-- Or whenever the computer wakes up and one of the above options is active
+**The 'Docking' Process:**
 
-When I "dock" my MackBook (let's say MacBook A), if there are devices that are not currently connected to the MacBook it will attempt to pair to the known devices
+When you "dock" your MacBook (e.g., MacBook A), and MDS sees that you have devices that are not currently connected, MDS will beging searching for:
+   - Nearby Macs running MDS with paired devices.
+   - Known devices in discovery mode.
 
-It does this by searching for nearby MacBooks with paired devices with MDS running OR known devices that are in discovery mode
+If a nearby Mac (e.g., MacBook B) is found with paired devices,
+- MDS will send an unpair command to MacBook B. This will cause those devices to be unpaired and enter discovery mode.
+- Then MacBook A will attempt to pair to the list of devices that were unpaired from MacBook B
 
-If MDS finds a MacBook with paired devices (say MacBook B), it will send an unpair command to that device. Which will cause MacBook B to unpair from those devices, which will causes the devices to automatically go into discovery mode. Then MacBook A will attempt to pair to those devices.
+If devices are found in discovery mode,
+- MDS will pair to them one by one until all devices are connected or the search times out.
 
-If MDS finds devices in discovery mode, it will pair to those devices as they are found one by one until all devices are found or the searching timesout.
-
-
-In previous versions (below 2.0) unpairing would happen when the MacBook went to sleep, but now there is no worries about sleep or "undocking" because devices are only unpaired when MDS recieves an 'unpair'
- command over Bluetooth OR manually unpaired in the UI
+> **Note:** In versions before 2.0, devices would unpair when a Mac went to sleep. Now, devices only unpair when MDS receives an unpair command over Bluetooth or when manually unpaired in the UI. This means you no longer need to worry about your devices being unpaired when undocking! 🎉
 
 
 ## Known Caveats
 
-* If Magic devices are not connected to any computer for 2 minutes, they will exit discovery mode and will need to be power-cycled to reenter discovery mode.  
-  _Note: This should rarely happen, since devices only unpair automatically when another Mac is actively trying to pair._
+- If Magic devices are not connected to any computer for 2 minutes, they exit discovery mode and must be power-cycled to re-enter discovery mode.  
+  _NOTE: This should rarely happen, since devices only unpair automatically when another Mac is actively trying to pair._
 
 
 ## Support
