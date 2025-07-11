@@ -25,18 +25,23 @@ Whenever I "dock" my MacBook at my desk, I want my Magic devices to connect auto
 
 ## How It Works
 
-But first, let's define: 
+**TL;DR**
+
+Use your MacBooks as you normally would, when you "dock", press the spacebar a few times: BOOM 😎
+
+
+**Definitions**
 - **Devices:** Any Magic Keyboard, Magic Trackpad, or Magic Mouse enabled in MDS.
 - **Docking:** When your MacBook is connected to power, an external monitor, or wakes up while one of these conditions is active.
 
 **The 'Docking' Process:**
 
 When you "dock" your MacBook (e.g., MacBook A), and MDS sees that you have devices that are not currently connected, MDS will beging searching for:
-   - Nearby Macs running MDS with paired devices.
-   - Known devices in discovery mode.
+   - Nearby Macs with connected devices
+   - Or known devices in discovery mode
 
-If a nearby Mac (e.g., MacBook B) is found with paired devices,
-- MDS will send an unpair command to MacBook B. This will cause those devices to be unpaired and enter discovery mode.
+If a nearby Mac (e.g., MacBook B) is found with connected devices,
+- MDS will send an unpair command to MacBook B. This will cause those devices to enter discovery mode.
 - Then MacBook A will attempt to pair to the list of devices that were unpaired from MacBook B
 
 If devices are found in discovery mode,
@@ -44,11 +49,20 @@ If devices are found in discovery mode,
 
 
 **Pro Tips 💯** 
-- When "docking" press a button on one of your Magic devices (e.g., your spacebar), this will wake up your other MacBook and MDS will then be able to find it (even if it is sleeping and in clamshell mode!!)
+- When "docking" you Mac, press a button on one of your Magic devices (e.g., your spacebar) a few times. This will wake up your sleeping MacBook and MDS will then be able to find it (even if it is sleeping!!)
 - Make sure to always have both MacBooks near each other when "docking"
 - If anything ever goes wrong, power cycle your devices (without pressing any buttons on them) to have them enter discovery mode, and then "dock" your computer again (easiest solution is to open / close the MacBook lid)
 
 > **Note:** In versions before 2.0, devices would unpair when a Mac went to sleep. Now, devices only unpair when MDS receives an unpair command over Bluetooth or when manually unpaired in the UI. This means you no longer need to worry about your devices being unpaired when undocking! 🎉
+
+
+## How To Set Up:
+1. Install MDS on each Macbook that you want to switch devices between (up to 5 devices per license)
+2. Then add the devices you want to move between computers to all instances of the app
+
+
+## Trial & License
+I have included a 30 day trial of the app for free! And if you want to use it for longer than that you can buy a license key that you can use on up to 5 different Macs!
 
 
 ## Known Caveats
