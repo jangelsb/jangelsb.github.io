@@ -7,7 +7,7 @@ gumroadlink: https://jangelsb.gumroad.com/l/liknbj
 appiconpath: assets/images/source/mds/appicon.webp
 ---
 
-{% include youtube.html id="fjPh_z38XdM" %}
+{% include youtube.html id="qW9lVXVLDR8" %}
 
 ## Idea
 
@@ -48,7 +48,8 @@ If devices are found in discovery mode,
 ## Known Caveats
 
 - If Magic devices are not connected to any computer for 2 minutes, they exit discovery mode and must be power-cycled to re-enter discovery mode.  
-  _NOTE: This should rarely happen, since devices only unpair automatically when another Mac is actively trying to pair._
+
+  _This should rarely happen, since devices only unpair automatically when another Mac is actively trying to pair._
 
 
 ## Support
