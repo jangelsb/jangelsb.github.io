@@ -11,11 +11,11 @@ appiconpath: assets/images/source/mds/appicon.webp
 
 ## Idea
 
+I want to easily "move" my Magic devices between Macs.
+
 I have both a work and a personal MacBook Pro, and I want to use my Magic Keyboard and Magic Trackpad with both—just not at the same time.
 
-**Magic Device Switch (MDS)** lets you easily "move" your Magic devices between Macs.
-
-Unlike Universal Control, MDS works across Macs with different Apple IDs. It actually pairs and unpairs devices, acting as a true device switcher for Magic devices.
+Unlike Universal Control, Magic Device Switch (MDS) works across Macs with different Apple IDs. It actually pairs and unpairs devices, acting as a true device switcher for Magic devices.
 
 
 ## Goal
@@ -30,11 +30,10 @@ Whenever I "dock" my MacBook at my desk, I want my Magic devices to connect auto
 Use your MacBooks as you normally would, when you "dock", press the spacebar a few times: BOOM 😎
 
 
-**Definitions**
-- **Devices:** Any Magic Keyboard, Magic Trackpad, or Magic Mouse enabled in MDS.
-- **Docking:** When your MacBook is connected to power, an external monitor, or wakes up while one of these conditions is active.
-
 **The 'Docking' Process:**
+
+First, let's define "docking"
+- **Docking:** When your MacBook is connected to power, an external monitor, or wakes up while one of these conditions is active.
 
 When you "dock" your MacBook (e.g., MacBook A), and MDS sees that you have devices that are not currently connected, MDS will beging searching for:
    - Nearby Macs with connected devices
