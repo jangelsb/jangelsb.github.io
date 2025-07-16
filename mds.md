@@ -36,10 +36,10 @@ First, let's define "docking"
 - **Docking:** When your MacBook is connected to power, an external monitor, or wakes up while one of these conditions is active.
 
 When you "dock" your MacBook (e.g., MacBook A), and MDS sees that you have devices that are not currently connected, MDS will beging searching for:
-   - Nearby Macs with connected devices
+   - Nearby Macs (that are not already docked) with connected devices
    - Or known devices in discovery mode
 
-If a nearby Mac (e.g., MacBook B) is found with connected devices,
+If a nearby Mac (e.g., MacBook B) that is not already docked is found with connected devices,
 - MDS will send an unpair command to MacBook B. This will cause those devices to enter discovery mode.
 - Then MacBook A will attempt to pair to the list of devices that were unpaired from MacBook B
 
@@ -65,18 +65,20 @@ If devices are found in discovery mode,
 
 
 ## How To Set Up:
-1. Install MDS on each Macbook that you want to switch devices between (up to 5 devices per license)
+1. Install MDS on each Macbook that you want to switch devices between (up to 5 computers per license)
 2. Then add the devices you want to move between computers to all instances of the app
 
 
 
 ## Trial & License
-I have included a 30 day trial of the app for free! And if you want to use it for longer than that you can buy a license key that you can use on up to 5 different Macs!
+I have included a 30 day trial of the app for free, so feel free to see if this app works for you. 
+
+And if you want to use it for longer, you can [buy a license key](https://jangelsb.gumroad.com/l/liknbj) that supports up to 5 active computers. If you switch computers, simply deregister one and then you can use that key again on another device — super easy!
 
 Thank you so much for checking out my app. I hope you have a wonderful day and God bless!
 
 ## Support
-- [Change Log](./mds/releases)
+- [Change Log](https://sparkle.mds.jangelsb.dev/changelog.html)
 - [Privacy Policy](https://jangelsb.github.io/mds/privacy)
 - <a href="mailto:nextcalc.feedback@gmail@@com?subject=MDS Website"
    onmouseover="this.href=this.href.replace('@@','.')">
