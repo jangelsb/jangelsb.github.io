@@ -25,10 +25,11 @@ Whenever I "dock" my MacBook at my desk, I want my Magic devices to connect auto
 
 ## How It Works
 
-**TL;DR**
-
-Use your MacBooks as you normally would, when you "dock", press the spacebar a few times: BOOM 😎
-
+> 
+> **TL;DR**
+> 
+> Use your MacBooks as you normally would, when you "dock", press the spacebar a few times: BOOM 😎
+> 
 
 **The 'Docking' Process:**
 
