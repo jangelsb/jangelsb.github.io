@@ -1,7 +1,7 @@
 ---
 layout: app_page_gumroad
 theme: gray
-title: Magic Device Switch
+title: Magic Device Switch 2.0 🔥
 description: Easily switch your magic devices between Macs automagically
 gumroadlink: https://jangelsb.gumroad.com/l/liknbj
 appiconpath: assets/images/source/mds/appicon.webp
