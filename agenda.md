@@ -1,37 +1,33 @@
 ---
-layout: app_page # app_page_testflight
+layout: app_page_testflight # soon -> app_page
 theme: gray
-title: re:timer
-description: A simple, intuitive, and beautiful timer app powered by Apple Reminders
-appiconpath: assets/images/source/retimer/appicon.webp
-appstorelink: https://apps.apple.com/us/app/re-timer-a-modern-timer/id1665280809
+title: re:view
+description: An elegant and powerful agenda app powered by Apple Reminders
+appiconpath: assets/images/source/agenda/appicon.webp
+appstorelink: https://testflight.apple.com/join/7WqDJKum
 ---
 
 
-{% include youtube.html id="752wFYT9B9c" %}
+|      |     |     |
+| --------|---------|-------|
+| ![](assets/images/source/agenda/1.webp)    | ![](assets/images/source/agenda/2.webp)   | ![](assets/images/source/agenda/3.webp)    |
 
-A simple, intuitive, and beautiful timer app powered by Apple Reminders, ensuring your timers are always in sync across all your devices.
 
-## Features include
-- Intuitive swipe gestures
-- Multiple timers
-- Timers synced on all devices
-- Track time between timers
-- Full screen progress animations
-- Minimal mode
-- Easily edit timers
-- Name timers
-- Favorite timers
-- Infinite timer history
 
-Coming soon
-- Live Activities
-- Widgets
-- Colors
-- Apple Watch app
+Inspired by Things3 and Sorted3 and Apple Reminders - comes a modern and elegant way to view your schedule, all powered by Apple Reminders and Calendars!
 
-Inspired by the amazing [Gestimer](https://maddin.io/gestimer/) app on macOS.
+Some features include
+– Supports a countdown to the next task or event
+– Supports seeing events and tasks inline or separated 
+– Supports natural language date input (English only)
+– Keyboard shortcuts to add and save events
+– Upcoming week breakdown
+– Upcoming month breakdowns
+– The ability create a reminder or event very quickly 
+– The ability to open reminders in the Reminders app
+– and more (with more coming!)
 
+The goal of this app is not to replace your Calendar or Reminders app but to enhance it with quick creation and beautiful and digestible overviews of your schedule. Enjoy!
 
 ## Support
 - [Privacy Policy](https://jangelsb.github.io/timer/privacy)
