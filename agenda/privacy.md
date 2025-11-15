@@ -2,9 +2,9 @@
 layout: subscreen_default
 theme: gray
 title: re:view
-description: A simple, and beautiful timer app powered by Apple Reminders
-appiconpath: /assets/images/source/retimer/appicon.webp
-effective_date: 2023-11-14
+description: An elegant and powerful agenda app powered by Apple Reminders
+appiconpath: /assets/images/source/agenda/appicon.webp
+effective_date: 2025-11-15
 ---
 
 
