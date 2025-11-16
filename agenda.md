@@ -19,8 +19,8 @@ Inspired by Things3 and Sorted3 and Apple Reminders - comes a modern and elegant
 **Some features include**
 * Supports a countdown to the next task or event
 * Supports seeing events and tasks inline or separated 
-* Supports natural language date input (English only)
-* Keyboard shortcuts to add and save events
+* Supports natural language date input (English only - press enter with cursor touching blue date)
+* Keyboard shortcuts to add and save events (cmd + n, cmd + s, cmd + enter, esc)
 * Upcoming week breakdown
 * Upcoming month breakdowns
 * The ability create a reminder or event very quickly 
