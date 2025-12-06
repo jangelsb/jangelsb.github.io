@@ -1,10 +1,10 @@
 ---
-layout: app_page_testflight # soon -> app_page
+layout: app_page # before -> app_page_testflight
 theme: gray
 title: re:view
-description: An elegant and powerful agenda app powered by Apple Reminders
+description: An elegant and powerful agenda app powered by Apple Reminders and Calendars
 appiconpath: assets/images/source/agenda/appicon.webp
-appstorelink: https://testflight.apple.com/join/7WqDJKum
+appstorelink: https://apps.apple.com/us/app/re-view-reminders-events/id6755032328
 ---
 
 
@@ -31,7 +31,7 @@ The goal of this app is not to replace your Calendar or Reminders app but to enh
 
 ## Support
 - [Privacy Policy](https://jangelsb.github.io/timer/privacy)
-- <a href="mailto:nextcalc.feedback@gmail@@com?subject=re:timer Website"
+- <a href="mailto:nextcalc.feedback@gmail@@com?subject=re:view Website"
    onmouseover="this.href=this.href.replace('@@','.')">
    Support Email
 </a>
