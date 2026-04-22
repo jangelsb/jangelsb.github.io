@@ -459,8 +459,8 @@
     <h3>Die</h3>
     <div class="s-row">
       <span class="s-label">Size</span>
-      <input type="range" id="c-size" min="0.5" max="2" step="0.05" value="1">
-      <span class="val" id="v-size">1.0</span>
+      <input type="range" id="c-size" min="0.1" max="2" step="0.05" value="0.7">
+      <span class="val" id="v-size">0.70</span>
     </div>
     <div class="s-row">
       <span class="s-label">Shininess</span>
@@ -594,7 +594,7 @@ const DEFAULTS = {
   glowColor:       '#c8a84a',
   fontFamily:      'Georgia, serif',
   fontBold:        true,
-  dieScale:        1.0,
+  dieScale:        0.7,
   shininess:       70,
   tumbleDur:       1.9,
   settleDur:       1.95,
@@ -1023,7 +1023,7 @@ function bind(id, configKey, transform, callback) {
 function bindVal(sliderId, valId, suffix = '') {
   const slider = document.getElementById(sliderId);
   const disp   = document.getElementById(valId);
-  slider.addEventListener('input', () => { disp.textContent = parseFloat(slider.value).toFixed(suffix === 's' ? 2 : 1) + suffix; });
+  slider.addEventListener('input', () => { disp.textContent = parseFloat(slider.value).toFixed(suffix === 's' ? 2 : sliderId === 'c-size' ? 2 : 1) + suffix; });
 }
 
 // Colors
@@ -1083,7 +1083,7 @@ function syncInputsFromConfig() {
   document.getElementById('c-spinMin').value  = CONFIG.spinMin;
   document.getElementById('c-chaos').value    = CONFIG.chaosMag;
   document.getElementById('c-decay').value    = CONFIG.decayRate;
-  document.getElementById('v-size').textContent    = CONFIG.dieScale.toFixed(1);
+  document.getElementById('v-size').textContent    = CONFIG.dieScale.toFixed(2);
   document.getElementById('v-shine').textContent   = CONFIG.shininess;
   document.getElementById('v-tumble').textContent  = CONFIG.tumbleDur.toFixed(1) + 's';
   document.getElementById('v-settle').textContent  = CONFIG.settleDur.toFixed(2) + 's';
@@ -1103,7 +1103,7 @@ const BUILT_IN_THEMES = {
     glowColor:       '#3355aa',
     fontFamily:      'Cinzel, Georgia, serif',
     fontBold:        true,
-    dieScale:        1.0,
+    dieScale:        0.7,
     shininess:       150,
     tumbleDur:       1.9,
     settleDur:       1.95,
@@ -1123,7 +1123,7 @@ const BUILT_IN_THEMES = {
     glowColor:       '#dd3333',
     fontFamily:      'Georgia, serif',
     fontBold:        true,
-    dieScale:        1.0,
+    dieScale:        0.7,
     shininess:       120,
     tumbleDur:       1.9,
     settleDur:       1.95,
@@ -1142,7 +1142,7 @@ const BUILT_IN_THEMES = {
     glowColor:       '#9b33f0',
     fontFamily:      'Cinzel, Georgia, serif',
     fontBold:        true,
-    dieScale:        1.0,
+    dieScale:        0.7,
     shininess:       160,
     tumbleDur:       1.9,
     settleDur:       1.95,
@@ -1161,7 +1161,7 @@ const BUILT_IN_THEMES = {
     glowColor:       '#2d8a50',
     fontFamily:      'Georgia, serif',
     fontBold:        true,
-    dieScale:        1.0,
+    dieScale:        0.7,
     shininess:       80,
     tumbleDur:       1.9,
     settleDur:       1.95,
@@ -1180,7 +1180,7 @@ const BUILT_IN_THEMES = {
     glowColor:       '#33aa55',
     fontFamily:      'Cinzel, Georgia, serif',
     fontBold:        false,
-    dieScale:        1.0,
+    dieScale:        0.7,
     shininess:       30,
     tumbleDur:       1.9,
     settleDur:       1.95,
@@ -1199,7 +1199,7 @@ const BUILT_IN_THEMES = {
     glowColor:       '#dd7722',
     fontFamily:      'Georgia, serif',
     fontBold:        true,
-    dieScale:        1.0,
+    dieScale:        0.7,
     shininess:       200,
     tumbleDur:       1.9,
     settleDur:       1.95,
@@ -1211,6 +1211,7 @@ const BUILT_IN_THEMES = {
 
 function applyTheme(themeObj) {
   Object.assign(CONFIG, themeObj);
+  delete CONFIG.name; // don't let a theme's name pollute CONFIG
   TUMBLE_DUR = CONFIG.tumbleDur;
   SETTLE_DUR = CONFIG.settleDur;
   document.body.style.background = CONFIG.bgColor;
@@ -1227,7 +1228,7 @@ function loadUserThemes() {
 function saveUserTheme(name) {
   const themes = loadUserThemes();
   const existing = themes.findIndex(t => t.name === name);
-  const entry = { name, ...CONFIG };
+  const entry = { ...CONFIG, name };  // name last so it always wins over CONFIG.name
   if (existing >= 0) themes[existing] = entry;
   else themes.push(entry);
   localStorage.setItem('d20-themes', JSON.stringify(themes));
