@@ -550,7 +550,7 @@
         <div id="facePicker"></div>
       </div>
     </div>
-    <button id="exportBtn" style="margin-top:10px">⬇ Export All 20 WebMs</button>
+    <button id="exportBtn" style="margin-top:10px">⬇ Export All 20 Videos</button>
   </div>
 
   <button id="resetBtn">↺ Reset Defaults</button>
@@ -1531,8 +1531,8 @@ function updateExportBtnLabel() {
   const n = exportNumbers.size;
   document.getElementById('exportBtn').textContent =
     n === 0  ? '\u2b07 Export (select numbers)' :
-    n === 20 ? '\u2b07 Export All 20 WebMs' :
-               `\u2b07 Export ${n} WebM${n > 1 ? 's' : ''}`;
+    n === 20 ? '\u2b07 Export All 20 Videos' :
+               `\u2b07 Export ${n} Video${n > 1 ? 's' : ''}`;
 }
 
 (function buildFacePicker() {
