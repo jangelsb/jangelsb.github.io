@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>D20 Roll</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Uncial+Antiqua&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="result"></div>
+
+<button id="settingsToggle" title="Customize">⚙</button>
+
+<div id="settingsPanel">
+
+  <div class="s-section">
+    <h3>Themes</h3>
+    <div id="theme-presets">
+      <button class="theme-btn" data-theme="bg3">⚔ BG3</button>
+      <button class="theme-btn" data-theme="classic">Classic</button>
+      <button class="theme-btn" data-theme="bloodmoon">🩸 Blood Moon</button>
+      <button class="theme-btn" data-theme="arcane">🔮 Arcane</button>
+      <button class="theme-btn" data-theme="emerald">🌿 Emerald</button>
+      <button class="theme-btn" data-theme="undead">💀 Undead</button>
+      <button class="theme-btn" data-theme="forge">⚒ Forge</button>
+    </div>
+    <div id="saved-themes"></div>
+    <div class="s-row" style="margin-top:8px;gap:8px">
+      <input type="text" id="theme-name-input" placeholder="Save current as…">
+      <button id="saveThemeBtn">Save</button>
+    </div>
+    <div id="theme-io">
+      <button class="io-btn" id="exportThemesBtn">⬇ Export JSON</button>
+      <button class="io-btn" id="importThemesBtn">⬆ Import JSON</button>
+    </div>
+    <input type="file" id="importThemesFile" accept=".json,application/json" style="display:none">
+  </div>
+
+  <div class="s-section">
+    <h3>Face Colors</h3>
+    <div class="s-row"><span class="s-label">Top gradient</span>    <input type="color" id="c-faceTop"  value="#1e1e46"></div>
+    <div class="s-row"><span class="s-label">Bottom gradient</span> <input type="color" id="c-faceBot"  value="#0c0c24"></div>
+    <div class="s-row"><span class="s-label">Edge / border</span>   <input type="color" id="c-border"   value="#c8a84a"></div>
+    <div class="s-row"><span class="s-label">Background</span>      <input type="color" id="c-bg"       value="#0d0d1a"></div>
+  </div>
+
+  <div class="s-section">
+    <h3>Numbers</h3>
+    <div class="s-row"><span class="s-label">Number color</span>    <input type="color" id="c-numColor" value="#f5e8c0"></div>
+    <div class="s-row"><span class="s-label">Glow color</span>      <input type="color" id="c-numGlow"  value="#c8a84a"></div>
+    <div class="s-row">
+      <span class="s-label">Font</span>
+      <select id="c-font">
+        <option value="Cinzel, Georgia, serif">Cinzel (Fantasy)</option>
+        <option value="Georgia, serif" selected>Georgia</option>
+        <option value="'Times New Roman', serif">Times New Roman</option>
+        <option value="Palatino, serif">Palatino</option>
+        <option value="Impact, sans-serif">Impact</option>
+        <option value="'Arial Black', sans-serif">Arial Black</option>
+      </select>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Bold</span>
+      <input type="checkbox" id="c-bold" checked style="width:20px;height:20px;accent-color:#c8a84a;cursor:pointer">
+    </div>
+  </div>
+
+  <div class="s-section">
+    <h3>Die</h3>
+    <div class="s-row">
+      <span class="s-label">Size</span>
+      <input type="range" id="c-size" min="0.1" max="2" step="0.05" value="0.7">
+      <span class="val" id="v-size">0.70</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Shininess</span>
+      <input type="range" id="c-shine" min="0" max="200" step="5" value="70">
+      <span class="val" id="v-shine">70</span>
+    </div>
+  </div>
+
+  <div class="s-section">
+    <h3>Animation</h3>
+    <div class="s-row">
+      <span class="s-label">Roll speed</span>
+      <input type="range" id="c-tumble" min="0.6" max="3.5" step="0.1" value="1.9">
+      <span class="val" id="v-tumble">1.9s</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Settle speed</span>
+      <input type="range" id="c-settle" min="0.1" max="2.5" step="0.05" value="0.4">
+      <span class="val" id="v-settle">0.40s</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Spins</span>
+      <input type="range" id="c-spinMin" min="1" max="5" step="0.5" value="2">
+      <span class="val" id="v-spinMin">2.0</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Chaos</span>
+      <input type="range" id="c-chaos" min="0" max="0.15" step="0.005" value="0.04">
+      <span class="val" id="v-chaos">4%</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Decay</span>
+      <input type="range" id="c-decay" min="1.5" max="6" step="0.1" value="3.8">
+      <span class="val" id="v-decay">3.8</span>
+    </div>
+  </div>
+
+  <div class="s-section">
+    <h3>Export</h3>
+    <p style="font-size:11px;color:#f5e8c0aa;line-height:1.6;margin-bottom:14px">Saves selected rolls as video. MediaRecorder cannot capture real alpha — pick a background below and chroma-key it in your editor.</p>
+    <div class="s-row">
+      <span class="s-label">Format</span>
+      <select id="exp-format"></select>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Resolution</span>
+      <select id="exp-res">
+        <option value="1">1× screen</option>
+        <option value="2" selected>2× screen</option>
+        <option value="3">3× screen</option>
+      </select>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Background</span>
+      <select id="exp-bg">
+        <option value="chroma">🟩 Chroma green</option>
+        <option value="magenta">🟥 Magenta</option>
+        <option value="black">Black</option>
+        <option value="current">Current theme bg</option>
+      </select>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Bitrate</span>
+      <select id="exp-bitrate">
+        <option value="8000000">8 Mbps</option>
+        <option value="20000000" selected>20 Mbps</option>
+        <option value="40000000">40 Mbps</option>
+      </select>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Lead-in</span>
+      <input type="range" id="exp-leadin" min="0" max="2" step="0.1" value="0.5">
+      <span class="val" id="exp-leadin-val">0.5s</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Hold</span>
+      <input type="range" id="exp-hold" min="0.2" max="4" step="0.1" value="0.6">
+      <span class="val" id="exp-hold-val">0.6s</span>
+    </div>
+    <div class="s-row" style="align-items:flex-start">
+      <span class="s-label">Numbers</span>
+      <div style="flex:1">
+        <div class="picker-acts">
+          <button class="picker-act" id="pickAll">All</button>
+          <button class="picker-act" id="pickNone">None</button>
+        </div>
+        <div id="facePicker"></div>
+      </div>
+    </div>
+    <button id="exportBtn" style="margin-top:10px">⬇ Export All 20 Videos</button>
+  </div>
+
+  <button id="resetBtn">↺ Reset Defaults</button>
+</div>
+
+<div id="exportOverlay">
+  <div id="exportModal">
+    <div id="exportTitle">Generating WebMs</div>
+    <div id="exportProgress"></div>
+    <div id="exportBarTrack"><div id="exportBarFill"></div></div>
+    <button id="exportCancelBtn">Cancel</button>
+  </div>
+</div>
+
+<div id="ui">
+  <input type="number" id="rollInput" min="1" max="20" value="20" />
+  <button id="rollBtn">ROLL</button>
+  <button id="randomBtn">RANDOM</button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.162.0/build/three.module.js"
+  }
+}
+</script>
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>
