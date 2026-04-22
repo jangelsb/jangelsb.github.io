@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>D20 Roll</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Uncial+Antiqua&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0d0d1a; overflow: hidden; width: 100vw; height: 100vh; }
+    canvas { display: block; }
+
+    #ui {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      font-family: Georgia, serif;
+    }
+
+    input[type=number] {
+      width: 84px;
+      padding: 10px;
+      font-size: 22px;
+      text-align: center;
+      border-radius: 8px;
+      border: 2px solid #c8a84a;
+      background: #12122a;
+      color: #f5e8c0;
+      outline: none;
+    }
+    /* hide number spinner arrows */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    button {
+      padding: 10px 30px;
+      font-size: 22px;
+      font-family: Georgia, serif;
+      border-radius: 8px;
+      border: 2px solid #c8a84a;
+      background: #1a140a;
+      color: #f5e8c0;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: background 0.15s;
+    }
+    button:hover { background: #2a200e; }
+    button:active { background: #3a2e14; }
+
+    #result {
+      position: fixed;
+      top: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 30px;
+      font-family: Georgia, serif;
+      letter-spacing: 3px;
+      color: #f5e8c0;
+      text-shadow: 0 0 16px #c8a84a;
+      opacity: 0;
+      transition: opacity 0.6s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #result.show { opacity: 1; }
+
+    /* ── Settings Gear Button ───────────────────────────── */
+    #settingsToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid #c8a84a;
+      background: #12122a;
+      color: #c8a84a;
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: background 0.15s, transform 0.3s;
+    }
+    #settingsToggle:hover { background: #1e1e46; }
+    #settingsToggle.open { transform: rotate(60deg); }
+
+    /* ── Settings Panel ─────────────────────────────────── */
+    #settingsPanel {
+      position: fixed;
+      top: 0; right: 0;
+      width: 320px;
+      height: 100vh;
+      background: #0d0d22ee;
+      border-left: 1px solid #c8a84a44;
+      backdrop-filter: blur(12px);
+      overflow-y: auto;
+      z-index: 99;
+      padding: 72px 22px 32px;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      font-family: Georgia, serif;
+      color: #f5e8c0;
+    }
+    #settingsPanel.open { transform: translateX(0); }
+
+    .s-section {
+      margin-bottom: 24px;
+    }
+    .s-section h3 {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #c8a84a;
+      border-bottom: 1px solid #c8a84a33;
+      padding-bottom: 6px;
+      margin-bottom: 14px;
+    }
+    .s-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 10px;
+    }
+    .s-label {
+      font-size: 13px;
+      flex: 1;
+      white-space: nowrap;
+    }
+    .s-row input[type=color] {
+      width: 44px;
+      height: 30px;
+      border: 1px solid #c8a84a66;
+      border-radius: 4px;
+      background: none;
+      cursor: pointer;
+      padding: 1px 2px;
+    }
+    .s-row input[type=range] {
+      flex: 1;
+      accent-color: #c8a84a;
+      cursor: pointer;
+    }
+    .s-row select {
+      flex: 1;
+      background: #12122a;
+      color: #f5e8c0;
+      border: 1px solid #c8a84a66;
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .s-row .val {
+      font-size: 12px;
+      color: #c8a84a;
+      width: 32px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    /* ── Theme Presets ──────────────────────────────────────────────────────── */
+    #theme-presets, #saved-themes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .theme-btn {
+      padding: 5px 12px;
+      font-size: 11px;
+      font-family: Georgia, serif;
+      border-radius: 20px;
+      border: 1px solid #c8a84a55;
+      background: #12122a;
+      color: #f5e8c0;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .theme-btn:hover { background: #1e1e46; border-color: #c8a84a; }
+    .theme-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px 4px 10px;
+      font-size: 11px;
+      font-family: Georgia, serif;
+      border-radius: 20px;
+      border: 1px solid #c8a84a44;
+      background: #12122a;
+      color: #f5e8c0;
+      transition: background 0.15s;
+    }
+    .theme-pill:hover { background: #1e1e46; }
+    .pill-label { cursor: pointer; letter-spacing: 1px; }
+    .pill-del {
+      font-size: 9px;
+      color: #c8a84a66;
+      cursor: pointer;
+      padding: 1px 3px;
+      transition: color 0.1s;
+    }
+    .pill-del:hover { color: #ff6666; }
+    #theme-name-input {
+      flex: 1;
+      background: #12122a;
+      color: #f5e8c0;
+      border: 1px solid #c8a84a44;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      font-family: Georgia, serif;
+      outline: none;
+    }
+    #theme-name-input:focus { border-color: #c8a84a88; }
+    #saveThemeBtn {
+      padding: 6px 12px;
+      font-size: 11px;
+      font-family: Georgia, serif;
+      border-radius: 6px;
+      border: 1px solid #c8a84a66;
+      background: #1a140a;
+      color: #c8a84a;
+      cursor: pointer;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    #saveThemeBtn:hover { background: #2a200e; }
+
+    #theme-io {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .io-btn {
+      flex: 1;
+      padding: 5px 8px;
+      font-size: 11px;
+      font-family: Georgia, serif;
+      border-radius: 6px;
+      border: 1px solid #c8a84a44;
+      background: #12122a;
+      color: #f5e8c0aa;
+      cursor: pointer;
+      letter-spacing: 1px;
+      text-align: center;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .io-btn:hover { background: #1e1e46; color: #f5e8c0; border-color: #c8a84a88; }
+
+    /* ── Export Overlay ─────────────────────────────────────────────────────── */
+    #exportOverlay {
+      position: fixed;
+      inset: 0;
+      background: #000000cc;
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    #exportOverlay.show { opacity: 1; pointer-events: all; }
+    #exportModal {
+      background: #0d0d22;
+      border: 1px solid #c8a84a44;
+      border-radius: 14px;
+      padding: 36px 44px;
+      text-align: center;
+      color: #f5e8c0;
+      font-family: Georgia, serif;
+      min-width: 300px;
+    }
+    #exportTitle {
+      font-size: 15px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #c8a84a;
+      margin-bottom: 20px;
+    }
+    #exportProgress {
+      font-size: 13px;
+      color: #f5e8c0aa;
+      margin-bottom: 16px;
+      min-height: 18px;
+    }
+    #exportBarTrack {
+      width: 100%;
+      height: 3px;
+      background: #ffffff15;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    #exportBarFill {
+      height: 100%;
+      background: #c8a84a;
+      width: 0%;
+      transition: width 0.5s ease;
+      border-radius: 2px;
+    }
+    #exportCancelBtn {
+      padding: 7px 22px;
+      font-size: 11px;
+      font-family: Georgia, serif;
+      border-radius: 6px;
+      border: 1px solid #c8a84a44;
+      background: transparent;
+      color: #f5e8c0aa;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    #exportCancelBtn:hover { color: #f5e8c0; border-color: #c8a84a; }
+    #exportBtn {
+      width: 100%;
+      padding: 9px;
+      background: #0d1a14;
+      border: 1px solid #4a8a6644;
+      border-radius: 6px;
+      color: #7acca0;
+      font-family: Georgia, serif;
+      font-size: 12px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.15s;
+    }
+    #exportBtn:hover { background: #142a1e; }
+
+    /* ── Face number picker ──────────────────────────────────────────────────── */
+    #facePicker {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 4px;
+      margin-top: 5px;
+    }
+    .face-btn {
+      padding: 5px 0;
+      font-size: 11px;
+      line-height: 1;
+      font-family: Georgia, serif;
+      border-radius: 5px;
+      border: 1px solid #c8a84a44;
+      background: #12122a;
+      color: #f5e8c0aa;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .face-btn.selected { background: #2a1e06; color: #f5e8c0; border-color: #c8a84a; }
+    .face-btn:hover { background: #1e1e46; }
+    .picker-acts { display: flex; gap: 5px; margin-bottom: 4px; }
+    .picker-act {
+      flex: 1;
+      padding: 3px 6px;
+      font-size: 10px;
+      font-family: Georgia, serif;
+      border-radius: 5px;
+      border: 1px solid #c8a84a44;
+      background: #12122a;
+      color: #f5e8c0aa;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.12s, color 0.12s;
+    }
+    .picker-act:hover { background: #1e1e46; color: #f5e8c0; }
+
+    #resetBtn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 8px;
+      background: #1a140a;
+      border: 1px solid #c8a84a66;
+      border-radius: 6px;
+      color: #c8a84a;
+      font-family: Georgia, serif;
+      font-size: 13px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    #resetBtn:hover { background: #2a200e; }
+  </style>
+</head>
+<body>
+
+<div id="result"></div>
+
+<!-- Settings toggle -->
+<button id="settingsToggle" title="Customize">⚙</button>
+
+<!-- Settings panel -->
+<div id="settingsPanel">
+
+  <div class="s-section">
+    <h3>Themes</h3>
+    <div id="theme-presets">
+      <button class="theme-btn" data-theme="default">Default</button>
+      <button class="theme-btn" data-theme="bg3">⚔ BG3</button>
+    </div>
+    <div id="saved-themes"></div>
+    <div class="s-row" style="margin-top:8px;gap:8px">
+      <input type="text" id="theme-name-input" placeholder="Save current as…">
+      <button id="saveThemeBtn">Save</button>
+    </div>
+    <div id="theme-io">
+      <button class="io-btn" id="exportThemesBtn">⬇ Export JSON</button>
+      <button class="io-btn" id="importThemesBtn">⬆ Import JSON</button>
+    </div>
+    <input type="file" id="importThemesFile" accept=".json,application/json" style="display:none">
+  </div>
+
+  <div class="s-section">
+    <h3>Face Colors</h3>
+    <div class="s-row"><span class="s-label">Top gradient</span>    <input type="color" id="c-faceTop"    value="#1e1e46"></div>
+    <div class="s-row"><span class="s-label">Bottom gradient</span> <input type="color" id="c-faceBot"    value="#0c0c24"></div>
+    <div class="s-row"><span class="s-label">Edge / border</span>   <input type="color" id="c-border"     value="#c8a84a"></div>
+    <div class="s-row"><span class="s-label">Background</span>      <input type="color" id="c-bg"         value="#0d0d1a"></div>
+  </div>
+
+  <div class="s-section">
+    <h3>Numbers</h3>
+    <div class="s-row"><span class="s-label">Number color</span>    <input type="color" id="c-numColor"   value="#f5e8c0"></div>
+    <div class="s-row"><span class="s-label">Glow color</span>      <input type="color" id="c-numGlow"    value="#c8a84a"></div>
+    <div class="s-row">
+      <span class="s-label">Font</span>
+      <select id="c-font">
+        <option value="Cinzel, Georgia, serif">Cinzel (Fantasy)</option>
+        <option value="Georgia, serif" selected>Georgia</option>
+        <option value="'Times New Roman', serif">Times New Roman</option>
+        <option value="Palatino, serif">Palatino</option>
+        <option value="Impact, sans-serif">Impact</option>
+        <option value="'Arial Black', sans-serif">Arial Black</option>
+      </select>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Bold</span>
+      <input type="checkbox" id="c-bold" checked style="width:20px;height:20px;accent-color:#c8a84a;cursor:pointer">
+    </div>
+  </div>
+
+  <div class="s-section">
+    <h3>Die</h3>
+    <div class="s-row">
+      <span class="s-label">Size</span>
+      <input type="range" id="c-size" min="0.5" max="2" step="0.05" value="1">
+      <span class="val" id="v-size">1.0</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Shininess</span>
+      <input type="range" id="c-shine" min="0" max="200" step="5" value="70">
+      <span class="val" id="v-shine">70</span>
+    </div>
+  </div>
+
+  <div class="s-section">
+    <h3>Animation</h3>
+    <div class="s-row">
+      <span class="s-label">Roll speed</span>
+      <input type="range" id="c-tumble" min="0.6" max="3.5" step="0.1" value="1.9">
+      <span class="val" id="v-tumble">1.9s</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Settle speed</span>
+      <input type="range" id="c-settle" min="0.1" max="2.5" step="0.05" value="0.4">
+      <span class="val" id="v-settle">0.40s</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Spins</span>
+      <input type="range" id="c-spinMin" min="1" max="5" step="0.5" value="2">
+      <span class="val" id="v-spinMin">2.0</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Chaos</span>
+      <input type="range" id="c-chaos" min="0" max="0.15" step="0.005" value="0.04">
+      <span class="val" id="v-chaos">4%</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Decay</span>
+      <input type="range" id="c-decay" min="1.5" max="6" step="0.1" value="3.8">
+      <span class="val" id="v-decay">3.8</span>
+    </div>
+  </div>
+
+  <div class="s-section">
+    <h3>Export</h3>
+    <p style="font-size:11px;color:#f5e8c0aa;line-height:1.6;margin-bottom:14px">Saves selected rolls as video. MediaRecorder cannot capture real alpha — pick a background below and chroma-key it in your editor.</p>
+    <div class="s-row">
+      <span class="s-label">Format</span>
+      <select id="exp-format"></select>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Resolution</span>
+      <select id="exp-res">
+        <option value="1">1× screen</option>
+        <option value="2" selected>2× screen</option>
+        <option value="3">3× screen</option>
+      </select>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Background</span>
+      <select id="exp-bg">
+        <option value="chroma">🟩 Chroma green</option>
+        <option value="magenta">🟥 Magenta</option>
+        <option value="black">Black</option>
+        <option value="current">Current theme bg</option>
+      </select>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Bitrate</span>
+      <select id="exp-bitrate">
+        <option value="8000000">8 Mbps</option>
+        <option value="20000000" selected>20 Mbps</option>
+        <option value="40000000">40 Mbps</option>
+      </select>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Lead-in</span>
+      <input type="range" id="exp-leadin" min="0" max="2" step="0.1" value="0.5">
+      <span class="val" id="exp-leadin-val">0.5s</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Hold</span>
+      <input type="range" id="exp-hold" min="0.2" max="4" step="0.1" value="0.6">
+      <span class="val" id="exp-hold-val">0.6s</span>
+    </div>
+    <div class="s-row" style="align-items:flex-start">
+      <span class="s-label">Numbers</span>
+      <div style="flex:1">
+        <div class="picker-acts">
+          <button class="picker-act" id="pickAll">All</button>
+          <button class="picker-act" id="pickNone">None</button>
+        </div>
+        <div id="facePicker"></div>
+      </div>
+    </div>
+    <button id="exportBtn" style="margin-top:10px">⬇ Export All 20 WebMs</button>
+  </div>
+
+  <button id="resetBtn">↺ Reset Defaults</button>
+</div>
+
+<!-- Export progress overlay -->
+<div id="exportOverlay">
+  <div id="exportModal">
+    <div id="exportTitle">Generating WebMs</div>
+    <div id="exportProgress"></div>
+    <div id="exportBarTrack"><div id="exportBarFill"></div></div>
+    <button id="exportCancelBtn">Cancel</button>
+  </div>
+</div>
+
+<div id="ui">
+  <input type="number" id="rollInput" min="1" max="20" value="20" />
+  <button id="rollBtn">ROLL</button>
+  <button id="randomBtn">RANDOM</button>
+</div>
+
+<!-- Three.js via CDN (ES module) -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.162.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ─── Config (all customizable values in one place) ─────────────────────────────
+const DEFAULTS = {
+  faceColorTop:    '#1e1e46',
+  faceColorBottom: '#0c0c24',
+  borderColor:     '#c8a84a',
+  bgColor:         '#0d0d1a',
+  numberColor:     '#f5e8c0',
+  glowColor:       '#c8a84a',
+  fontFamily:      'Georgia, serif',
+  fontBold:        true,
+  dieScale:        1.0,
+  shininess:       70,
+  tumbleDur:       1.9,
+  settleDur:       0.95,
+  spinMin:         2.0,   // base rotation count (+ up to 1.5 random on top)
+  chaosMag:        0.04,  // secondary-axis wobble fraction (0 = clean, 0.15 = wild)
+  decayRate:       3.8,   // exponential deceleration constant
+};
+const CONFIG = { ...DEFAULTS };
+
+// ─── Renderer ──────────────────────────────────────────────────────────────────
+// preserveDrawingBuffer is required for captureStream() — without it the
+// WebGL back-buffer may be cleared before MediaRecorder reads the frame.
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 0); // transparent background for compositing
+document.body.appendChild(renderer.domElement);
+
+// ─── Scene & Camera ────────────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 0, 7);
+
+// ─── Lighting ──────────────────────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+const keyLight = new THREE.DirectionalLight(0xfff8e8, 1.5);
+keyLight.position.set(4, 8, 6);
+scene.add(keyLight);
+
+const rimLight = new THREE.DirectionalLight(0x6070ff, 0.5);
+rimLight.position.set(-5, -3, -4);
+scene.add(rimLight);
+
+// ─── Per-face Texture Generator ────────────────────────────────────────────────
+function makeTexture(number, apexDown = false) {
+  const S = 512;
+  const cvs = document.createElement('canvas');
+  cvs.width = cvs.height = S;
+  const ctx = cvs.getContext('2d');
+
+  // Background (transparent so renderer bg / body bg shows through edges)
+  ctx.fillStyle = '#00000000';
+  ctx.fillRect(0, 0, S, S);
+
+  const M = 28;
+  const triVerts = apexDown
+    ? [[S / 2, S - M - 6], [S - M, M], [M, M]]
+    : [[S / 2, M + 6],     [S - M, S - M], [M, S - M]];
+
+  ctx.beginPath();
+  ctx.moveTo(...triVerts[0]);
+  ctx.lineTo(...triVerts[1]);
+  ctx.lineTo(...triVerts[2]);
+  ctx.closePath();
+
+  const grad = ctx.createLinearGradient(0, M, S, S);
+  grad.addColorStop(0, CONFIG.faceColorTop);
+  grad.addColorStop(1, CONFIG.faceColorBottom);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  ctx.strokeStyle = CONFIG.borderColor;
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  const cx = (triVerts[0][0] + triVerts[1][0] + triVerts[2][0]) / 3;
+  const cy = (triVerts[0][1] + triVerts[1][1] + triVerts[2][1]) / 3;
+
+  // Glow: semi-transparent version of the glow color
+  ctx.shadowColor = CONFIG.glowColor + '99';
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = CONFIG.numberColor;
+  const weight = CONFIG.fontBold ? 'bold' : 'normal';
+  ctx.font = `${weight} ${number >= 10 ? 150 : 172}px ${CONFIG.fontFamily}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(number), cx, cy + 4);
+  ctx.shadowBlur = 0;
+
+  return new THREE.CanvasTexture(cvs);
+}
+
+// ─── Geometry (Icosahedron = D20) ──────────────────────────────────────────────
+const geo = new THREE.IcosahedronGeometry(2.0, 0).toNonIndexed();
+geo.computeVertexNormals();
+
+const posAttr = geo.attributes.position;
+const FACES = posAttr.count / 3; // 20
+
+// ─── UV assignment: correctly orient each face texture ────────────────────────
+//
+// Icosahedron faces come in two types:
+//   Δ (apex up)   – one vertex at top, two at bottom
+//   ▽ (apex down) – two vertices at top, one at bottom
+//
+// For each face we:
+//  1. Project world-up onto the face plane to get an approximate "up" axis.
+//  2. Detect Δ vs ▽ by comparing the y-gaps between sorted vertices.
+//  3. Δ faces: UV_APEX(0.5,0.97) → apex vertex; BL/BR → base vertices.
+//     ▽ faces: UV_APEX(0.5,0.03) → bottom vertex; upper-L/R → (0.03,0.97)/(0.97,0.97).
+//  4. Store faceUp = direction the number's "top" points in 3D:
+//       Δ → centroid→apex vertex
+//       ▽ → centroid→midpoint-of-top-edge
+//     This is what faceTowardCamera uses to lock the number upright.
+
+const wUp = new THREE.Vector3(0, 1, 0);
+const uvFlat   = new Float32Array(FACES * 3 * 2);
+const faceNormals = [];
+const faceUps     = [];
+const faceIsDown  = []; // true = ▽ face
+
+for (let f = 0; f < FACES; f++) {
+  const vA = new THREE.Vector3().fromBufferAttribute(posAttr, f * 3);
+  const vB = new THREE.Vector3().fromBufferAttribute(posAttr, f * 3 + 1);
+  const vC = new THREE.Vector3().fromBufferAttribute(posAttr, f * 3 + 2);
+  const verts = [vA, vB, vC];
+
+  const centroid = vA.clone().add(vB).add(vC).divideScalar(3);
+  const normal   = centroid.clone().normalize();
+  faceNormals.push(normal.clone());
+
+  // Approximate up axis for projecting into 2D face space
+  let approxUp = wUp.clone().addScaledVector(normal, -wUp.dot(normal));
+  if (approxUp.lengthSq() < 1e-6) {
+    const fwd = new THREE.Vector3(0, 0, 1);
+    approxUp = fwd.clone().addScaledVector(normal, -fwd.dot(normal));
+  }
+  approxUp.normalize();
+  const approxRight = new THREE.Vector3().crossVectors(approxUp, normal).normalize();
+
+  const proj = verts.map(v => ({
+    x: v.clone().sub(centroid).dot(approxRight),
+    y: v.clone().sub(centroid).dot(approxUp),
+  }));
+
+  // Sort vertices by y descending
+  const byY = [0, 1, 2].sort((a, b) => proj[b].y - proj[a].y);
+  const yGapTop = proj[byY[0]].y - proj[byY[1]].y; // gap between 1st and 2nd highest
+  const yGapBot = proj[byY[1]].y - proj[byY[2]].y; // gap between 2nd and 3rd highest
+
+  const isDown = yGapBot > yGapTop; // ▽ if the single-apex vertex is at the BOTTOM
+  faceIsDown.push(isDown);
+
+  const uvAssign = new Array(3);
+  let faceUpActual;
+
+  if (!isDown) {
+    // ─── Δ face: apex at top ─────────────────────────────────────────────────
+    const apexIdx  = byY[0];
+    const baseIdxs = [byY[1], byY[2]];
+    const rIdx = proj[baseIdxs[0]].x >= proj[baseIdxs[1]].x ? baseIdxs[0] : baseIdxs[1];
+    const lIdx = baseIdxs.find(i => i !== rIdx);
+
+    uvAssign[apexIdx] = [0.5,  0.97]; // apex → UV top
+    uvAssign[rIdx]    = [0.97, 0.03]; // base-right
+    uvAssign[lIdx]    = [0.03, 0.03]; // base-left
+
+    // faceUp = direction from centroid toward apex vertex (= texture "up")
+    faceUpActual = verts[apexIdx].clone().sub(centroid).normalize();
+
+  } else {
+    // ─── ▽ face: apex at bottom ───────────────────────────────────────────────
+    const apexIdx   = byY[2]; // single lowest vertex
+    const upperIdxs = [byY[0], byY[1]];
+    const rIdx = proj[upperIdxs[0]].x >= proj[upperIdxs[1]].x ? upperIdxs[0] : upperIdxs[1];
+    const lIdx = upperIdxs.find(i => i !== rIdx);
+
+    uvAssign[apexIdx] = [0.5,  0.03]; // apex → UV bottom
+    uvAssign[rIdx]    = [0.97, 0.97]; // upper-right
+    uvAssign[lIdx]    = [0.03, 0.97]; // upper-left
+
+    // faceUp = direction from centroid toward midpoint of the top edge
+    // (not a single vertex — avoids left/right offset that would tilt the number)
+    const topMid = verts[upperIdxs[0]].clone().add(verts[upperIdxs[1]]).multiplyScalar(0.5);
+    faceUpActual = topMid.sub(centroid).normalize();
+  }
+
+  faceUps.push(faceUpActual);
+
+  for (let v = 0; v < 3; v++) {
+    uvFlat[(f * 3 + v) * 2]     = uvAssign[v][0];
+    uvFlat[(f * 3 + v) * 2 + 1] = uvAssign[v][1];
+  }
+}
+geo.setAttribute('uv', new THREE.BufferAttribute(uvFlat, 2));
+
+// One material group per face
+for (let f = 0; f < FACES; f++) geo.addGroup(f * 3, 3, f);
+
+const LABELS = Array.from({ length: 20 }, (_, i) => i + 1);
+
+// Use the correct triangle orientation (Δ or ▽) per face so borders match geometry
+const materials = LABELS.map((n, f) =>
+  new THREE.MeshPhongMaterial({
+    map: makeTexture(n, faceIsDown[f]),
+    shininess: CONFIG.shininess,
+    specular: new THREE.Color(CONFIG.borderColor).multiplyScalar(0.35),
+    side: THREE.FrontSide,
+  })
+);
+
+const dice = new THREE.Mesh(geo, materials);
+scene.add(dice);
+
+// ─── Rebuild textures + materials when config changes ──────────────────────────
+function rebuildTextures() {
+  LABELS.forEach((n, f) => {
+    materials[f].map.dispose();
+    materials[f].map       = makeTexture(n, faceIsDown[f]);
+    materials[f].shininess = CONFIG.shininess;
+    materials[f].specular  = new THREE.Color(CONFIG.borderColor).multiplyScalar(0.35);
+    materials[f].needsUpdate = true;
+  });
+  document.body.style.background = CONFIG.bgColor;
+  dice.scale.setScalar(CONFIG.dieScale);
+}
+
+// Lookup: number → face index
+const numToFace = Object.fromEntries(LABELS.map((n, i) => [n, i]));
+
+// Full orientation quaternion: face normal → +Z  AND  face up → +Y
+// This makes the number land perfectly upright after settling.
+function faceTowardCamera(faceIdx) {
+  const fNormal = faceNormals[faceIdx];
+  const fUp     = faceUps[faceIdx];
+  const fRight  = new THREE.Vector3().crossVectors(fUp, fNormal);
+  // Rows of the rotation matrix are the face's local axes.
+  // Applying this quaternion maps: fRight→+X, fUp→+Y, fNormal→+Z
+  const m = new THREE.Matrix4().set(
+    fRight.x,  fRight.y,  fRight.z,  0,
+    fUp.x,     fUp.y,     fUp.z,     0,
+    fNormal.x, fNormal.y, fNormal.z, 0,
+    0,         0,         0,         1
+  );
+  return new THREE.Quaternion().setFromRotationMatrix(m);
+}
+
+// ─── State Machine ─────────────────────────────────────────────────────────────
+//  idle      → slow multi-axis wobble on first load
+//  tumbling  → backwards-planned spin: Q_start is computed so the integration
+//              forward in time lands exactly on Q_target
+//  settling  → short cleanup slerp (<0.35 s) to absorb secondary-wobble residual
+//  done      → holds the result face toward the camera
+
+// These are kept as live vars that CONFIG drives
+let TUMBLE_DUR = CONFIG.tumbleDur;
+let SETTLE_DUR = CONFIG.settleDur;
+
+// NOTE: decay constant is now CONFIG.decayRate (settable from the panel)
+
+let state = 'idle';
+let tumbleStart   = 0;
+let settleStart   = 0;
+let settleFrom    = new THREE.Quaternion();
+let settleTo      = new THREE.Quaternion();
+let rollAxis      = new THREE.Vector3();   // primary planned spin axis
+let rollAngVelMag = 0;                     // rad/s magnitude of primary spin
+let chaoAxis      = new THREE.Vector3();   // secondary chaos axis
+let chaoMag       = 0;                     // magnitude of secondary wobble
+let pendingResult = 0;
+let idleT         = 0;
+
+function roll(n) {
+  n = Math.round(n);
+  if (n < 1 || n > 20) return;
+
+  pendingResult = n;
+  settleTo = faceTowardCamera(numToFace[n]);
+
+  // ── Primary axis: mostly horizontal so it reads like a throw ──────────────
+  rollAxis.set(
+    (Math.random() - 0.5) * 2,
+    (Math.random() - 0.5) * 0.3,   // minimal Y so it rolls, not tumbles
+    (Math.random() - 0.5) * 2
+  ).normalize();
+
+  // ── Secondary chaos axis (perpendicular-ish) ───────────────────────────────
+  chaoAxis.set(
+    rollAxis.z + (Math.random() - 0.5) * 0.4,
+    -(Math.random() * 0.5 + 0.2),
+    -rollAxis.x + (Math.random() - 0.5) * 0.4
+  ).normalize();
+
+  // ── Number of full primary rotations (spinMin to spinMin+1.5 turns) ─────────
+  const numSpins   = CONFIG.spinMin + Math.random() * 1.5;
+  const totalAngle = numSpins * Math.PI * 2;
+
+  // ∫₀¹ exp(-k·s) ds = (1-exp(-k))/k  → back-calculates the required angular velocity
+  const k          = CONFIG.decayRate;
+  const integral   = (1 - Math.exp(-k)) / k;
+  rollAngVelMag    = totalAngle / (integral * TUMBLE_DUR);
+  chaoMag          = rollAngVelMag * CONFIG.chaosMag * (0.8 + Math.random() * 0.4);
+
+  // ── Backwards-plan Q_start accounting for BOTH primary + chaos axes ─────────
+  //
+  // Chaos decays at 3× the primary rate, so its total angle is analytically:
+  //   totalChaosAngle = chaoMag * TUMBLE_DUR * ∫₀¹ exp(-3k·s) ds
+  //                   = chaoMag * TUMBLE_DUR * (1 - exp(-3k)) / (3k)
+  //
+  // Approximating cumulative order as Q_end ≈ Q_start × Q_primary × Q_chaos
+  // (valid because chaos << primary), we solve:
+  //   Q_start = Q_target × Q_chaos⁻¹ × Q_primary⁻¹
+  const kChaos         = k * 3.0;
+  const integralChaos  = (1 - Math.exp(-kChaos)) / kChaos;
+  const totalChaosAngle = chaoMag * TUMBLE_DUR * integralChaos;
+
+  const qPrimaryInv = new THREE.Quaternion().setFromAxisAngle(rollAxis,  -totalAngle);
+  const qChaosInv   = new THREE.Quaternion().setFromAxisAngle(chaoAxis,  -totalChaosAngle);
+  dice.quaternion.copy(settleTo).multiply(qChaosInv).multiply(qPrimaryInv);
+
+  state = 'tumbling';
+  tumbleStart = performance.now() / 1000;
+
+  const el = document.getElementById('result');
+  el.classList.remove('show');
+}
+
+window.roll = roll; // expose for URL param / console
+
+// ─── Easing ────────────────────────────────────────────────────────────────────
+function easeOutQuint(t) { return 1 - Math.pow(1 - t, 5); }
+
+// ─── Render Loop ───────────────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+
+renderer.setAnimationLoop(() => {
+  const dt  = clock.getDelta();
+  const now = performance.now() / 1000;
+
+  if (state === 'idle') {
+    // Slow wobble-spin so the die doesn't just sit flat
+    idleT += dt * 0.35;
+    dice.quaternion.setFromEuler(new THREE.Euler(
+      Math.sin(idleT * 0.7) * 0.45,
+      idleT,
+      Math.sin(idleT * 0.5) * 0.25
+    ));
+
+  } else if (state === 'tumbling') {
+    const elapsed = now - tumbleStart;
+    const s = elapsed / TUMBLE_DUR;  // normalised time 0→1
+
+    if (s >= 1.0) {
+      // Primary axis has delivered exactly Q_target (by construction).
+      // Hand off to a short settle to absorb any secondary-wobble residual.
+      settleFrom.copy(dice.quaternion);
+      settleStart = now;
+      state = 'settling';
+    } else {
+      // ── Primary spin (backwards-planned, lands exactly on Q_target) ─────────
+      const speed = Math.exp(-CONFIG.decayRate * s);
+      const primaryDQ = new THREE.Quaternion()
+        .setFromAxisAngle(rollAxis, rollAngVelMag * speed * dt);
+
+      // ── Secondary chaos wobble (decays 3× faster, dies out before landing) ──
+      const chaoSpeed = Math.exp(-CONFIG.decayRate * 3.0 * s);
+      const chaoDQ = new THREE.Quaternion()
+        .setFromAxisAngle(chaoAxis, chaoMag * chaoSpeed * dt);
+
+      dice.quaternion.multiply(primaryDQ).multiply(chaoDQ).normalize();
+    }
+
+  } else if (state === 'settling') {
+    // Short cleanup — absorbs secondary-wobble drift, locks the face precisely
+    const elapsed = now - settleStart;
+    const t = Math.min(elapsed / SETTLE_DUR, 1.0);
+    dice.quaternion.slerpQuaternions(settleFrom, settleTo, easeOutQuint(t));
+
+    if (t >= 1.0) {
+      dice.quaternion.copy(settleTo);
+      state = 'done';
+      const el = document.getElementById('result');
+      el.textContent = `Rolled: ${pendingResult}`;
+      el.classList.add('show');
+    }
+
+  } else if (state === 'done') {
+    // Hold perfectly still — the result face stares down the camera
+  }
+
+  renderer.render(scene, camera);
+});
+
+// ─── UI Wiring ─────────────────────────────────────────────────────────────────
+document.getElementById('rollBtn').addEventListener('click', () => {
+  const n = parseInt(document.getElementById('rollInput').value, 10);
+  roll(n);
+});
+
+document.getElementById('randomBtn').addEventListener('click', () => {
+  const n = Math.ceil(Math.random() * 20);
+  document.getElementById('rollInput').value = n;
+  roll(n);
+});
+
+// Also roll on Enter key inside the input
+document.getElementById('rollInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const n = parseInt(e.target.value, 10);
+    roll(n);
+  }
+});
+
+// URL param: ?roll=14 → auto-roll on load
+const urlRoll = new URLSearchParams(location.search).get('roll');
+if (urlRoll) setTimeout(() => roll(parseInt(urlRoll, 10)), 700);
+
+// ─── Settings Panel Wiring ─────────────────────────────────────────────────────
+const toggle = document.getElementById('settingsToggle');
+const panel  = document.getElementById('settingsPanel');
+toggle.addEventListener('click', () => {
+  toggle.classList.toggle('open');
+  panel.classList.toggle('open');
+});
+
+function bind(id, configKey, transform, callback) {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    CONFIG[configKey] = transform ? transform(el.value) : el.value;
+    if (callback) callback(el.value);
+    rebuildTextures();
+  });
+}
+
+function bindVal(sliderId, valId, suffix = '') {
+  const slider = document.getElementById(sliderId);
+  const disp   = document.getElementById(valId);
+  slider.addEventListener('input', () => { disp.textContent = parseFloat(slider.value).toFixed(suffix === 's' ? 2 : 1) + suffix; });
+}
+
+// Colors
+bind('c-faceTop',  'faceColorTop');
+bind('c-faceBot',  'faceColorBottom');
+bind('c-border',   'borderColor');
+bind('c-bg',       'bgColor', null, v => { document.body.style.background = v; });
+bind('c-numColor', 'numberColor');
+bind('c-numGlow',  'glowColor');
+// Font
+bind('c-font', 'fontFamily');
+document.getElementById('c-bold').addEventListener('change', e => {
+  CONFIG.fontBold = e.target.checked;
+  rebuildTextures();
+});
+// Die
+bind('c-size',  'dieScale',  v => { dice.scale.setScalar(parseFloat(v)); return parseFloat(v); });
+bind('c-shine', 'shininess', v => parseFloat(v));
+bindVal('c-size',   'v-size');
+bindVal('c-shine',  'v-shine');
+// Animation
+document.getElementById('c-tumble').addEventListener('input', e => {
+  TUMBLE_DUR = CONFIG.tumbleDur = parseFloat(e.target.value);
+  document.getElementById('v-tumble').textContent = TUMBLE_DUR.toFixed(1) + 's';
+});
+document.getElementById('c-settle').addEventListener('input', e => {
+  SETTLE_DUR = CONFIG.settleDur = parseFloat(e.target.value);
+  document.getElementById('v-settle').textContent = SETTLE_DUR.toFixed(2) + 's';
+});
+document.getElementById('c-spinMin').addEventListener('input', e => {
+  CONFIG.spinMin = parseFloat(e.target.value);
+  document.getElementById('v-spinMin').textContent = CONFIG.spinMin.toFixed(1);
+});
+document.getElementById('c-chaos').addEventListener('input', e => {
+  CONFIG.chaosMag = parseFloat(e.target.value);
+  document.getElementById('v-chaos').textContent = Math.round(CONFIG.chaosMag * 100) + '%';
+});
+document.getElementById('c-decay').addEventListener('input', e => {
+  CONFIG.decayRate = parseFloat(e.target.value);
+  document.getElementById('v-decay').textContent = CONFIG.decayRate.toFixed(1);
+});
+
+// ─── Sync all DOM inputs from CONFIG ──────────────────────────────────────────
+function syncInputsFromConfig() {
+  document.getElementById('c-faceTop').value  = CONFIG.faceColorTop;
+  document.getElementById('c-faceBot').value  = CONFIG.faceColorBottom;
+  document.getElementById('c-border').value   = CONFIG.borderColor;
+  document.getElementById('c-bg').value       = CONFIG.bgColor;
+  document.getElementById('c-numColor').value = CONFIG.numberColor;
+  document.getElementById('c-numGlow').value  = CONFIG.glowColor;
+  document.getElementById('c-font').value     = CONFIG.fontFamily;
+  document.getElementById('c-bold').checked   = CONFIG.fontBold;
+  document.getElementById('c-size').value     = CONFIG.dieScale;
+  document.getElementById('c-shine').value    = CONFIG.shininess;
+  document.getElementById('c-tumble').value   = CONFIG.tumbleDur;
+  document.getElementById('c-settle').value   = CONFIG.settleDur;
+  document.getElementById('c-spinMin').value  = CONFIG.spinMin;
+  document.getElementById('c-chaos').value    = CONFIG.chaosMag;
+  document.getElementById('c-decay').value    = CONFIG.decayRate;
+  document.getElementById('v-size').textContent    = CONFIG.dieScale.toFixed(1);
+  document.getElementById('v-shine').textContent   = CONFIG.shininess;
+  document.getElementById('v-tumble').textContent  = CONFIG.tumbleDur.toFixed(1) + 's';
+  document.getElementById('v-settle').textContent  = CONFIG.settleDur.toFixed(2) + 's';
+  document.getElementById('v-spinMin').textContent = CONFIG.spinMin.toFixed(1);
+  document.getElementById('v-chaos').textContent   = Math.round(CONFIG.chaosMag * 100) + '%';
+  document.getElementById('v-decay').textContent   = CONFIG.decayRate.toFixed(1);
+}
+
+// ─── Theme System ──────────────────────────────────────────────────────────────
+const BUILT_IN_THEMES = {
+  default: { ...DEFAULTS },
+  bg3: {
+    faceColorTop:    '#252535',
+    faceColorBottom: '#0f0f1c',
+    borderColor:     '#9aabcc',
+    bgColor:         '#06060f',
+    numberColor:     '#e0ecff',
+    glowColor:       '#3355aa',
+    fontFamily:      'Cinzel, Georgia, serif',
+    fontBold:        true,
+    dieScale:        1.0,
+    shininess:       150,
+    tumbleDur:       1.9,
+    settleDur:       1.95,
+    spinMin:         3.5,
+    chaosMag:        0.05,
+    decayRate:       3.8,
+  },
+};
+
+function applyTheme(themeObj) {
+  Object.assign(CONFIG, themeObj);
+  TUMBLE_DUR = CONFIG.tumbleDur;
+  SETTLE_DUR = CONFIG.settleDur;
+  document.body.style.background = CONFIG.bgColor;
+  dice.scale.setScalar(CONFIG.dieScale);
+  syncInputsFromConfig();
+  rebuildTextures();
+}
+
+function loadUserThemes() {
+  try { return JSON.parse(localStorage.getItem('d20-themes') || '[]'); }
+  catch { return []; }
+}
+
+function saveUserTheme(name) {
+  const themes = loadUserThemes();
+  const existing = themes.findIndex(t => t.name === name);
+  const entry = { name, ...CONFIG };
+  if (existing >= 0) themes[existing] = entry;
+  else themes.push(entry);
+  localStorage.setItem('d20-themes', JSON.stringify(themes));
+  renderUserThemes();
+}
+
+function deleteUserTheme(name) {
+  const themes = loadUserThemes().filter(t => t.name !== name);
+  localStorage.setItem('d20-themes', JSON.stringify(themes));
+  renderUserThemes();
+}
+
+function renderUserThemes() {
+  const container = document.getElementById('saved-themes');
+  container.innerHTML = '';
+  loadUserThemes().forEach(t => {
+    const pill = document.createElement('div');
+    pill.className = 'theme-pill';
+    const label = document.createElement('span');
+    label.className = 'pill-label';
+    label.textContent = t.name;
+    label.addEventListener('click', () => applyTheme(t));
+    const del = document.createElement('span');
+    del.className = 'pill-del';
+    del.textContent = '✕';
+    del.addEventListener('click', () => deleteUserTheme(t.name));
+    pill.appendChild(label);
+    pill.appendChild(del);
+    container.appendChild(pill);
+  });
+}
+
+// Built-in preset buttons
+document.querySelectorAll('.theme-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.theme;
+    if (BUILT_IN_THEMES[key]) applyTheme(BUILT_IN_THEMES[key]);
+  });
+});
+
+// Save theme button
+document.getElementById('saveThemeBtn').addEventListener('click', () => {
+  const nameEl = document.getElementById('theme-name-input');
+  const name = nameEl.value.trim();
+  if (!name) return;
+  saveUserTheme(name);
+  nameEl.value = '';
+});
+
+// Render saved themes on load
+renderUserThemes();
+
+// ─── Theme import / export ────────────────────────────────────────────────────
+document.getElementById('exportThemesBtn').addEventListener('click', () => {
+  const themes = loadUserThemes();
+  if (!themes.length) {
+    alert('No saved themes to export. Save at least one theme first.');
+    return;
+  }
+  const json = JSON.stringify(themes, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {
+    href: url,
+    download: 'd20-themes.json',
+  });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+});
+
+document.getElementById('importThemesBtn').addEventListener('click', () => {
+  document.getElementById('importThemesFile').click();
+});
+
+document.getElementById('importThemesFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    let imported;
+    try {
+      imported = JSON.parse(evt.target.result);
+    } catch {
+      alert('Invalid JSON file.');
+      return;
+    }
+    if (!Array.isArray(imported)) {
+      alert('Expected a JSON array of themes.');
+      return;
+    }
+    // Validate each entry has at minimum a name string
+    const valid = imported.filter(t => t && typeof t.name === 'string' && t.name.trim());
+    if (!valid.length) {
+      alert('No valid themes found in file.');
+      return;
+    }
+    // Merge: existing themes kept, imported entries overwrite same-named ones
+    const existing = loadUserThemes();
+    valid.forEach(imp => {
+      const idx = existing.findIndex(t => t.name === imp.name);
+      if (idx >= 0) existing[idx] = imp;
+      else existing.push(imp);
+    });
+    localStorage.setItem('d20-themes', JSON.stringify(existing));
+    renderUserThemes();
+    e.target.value = ''; // allow re-importing the same file
+  };
+  reader.readAsText(file);
+});
+
+// Reset
+document.getElementById('resetBtn').addEventListener('click', () => {
+  applyTheme(DEFAULTS);
+});
+
+// ─── WebM Export System ───────────────────────────────────────────────────────────
+let exportCancelled = false;
+let exportDirHandle = null;
+
+// Poll until state === 'done' (or cancelled / timed out)
+function waitForDoneState(timeoutMs = 25000) {
+  return new Promise(resolve => {
+    const deadline = Date.now() + timeoutMs;
+    (function check() {
+      if (state === 'done' || exportCancelled || Date.now() > deadline) return resolve();
+      requestAnimationFrame(check);
+    })();
+  });
+}
+
+async function saveBlob(blob, filename) {
+  if (exportDirHandle) {
+    // File System Access API — writes directly into the chosen folder
+    const fh = await exportDirHandle.getFileHandle(filename, { create: true });
+    const w  = await fh.createWritable();
+    await w.write(blob);
+    await w.close();
+  } else {
+    // Fallback: trigger browser download
+    const url = URL.createObjectURL(blob);
+    const a   = Object.assign(document.createElement('a'), { href: url, download: filename });
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+  }
+}
+
+// Read export settings from the panel
+function getExportSettings() {
+  const resMul   = parseInt(document.getElementById('exp-res').value, 10);
+  const bgKey    = document.getElementById('exp-bg').value;
+  const bitrate  = parseInt(document.getElementById('exp-bitrate').value, 10);
+  const bgColor  = {
+    chroma:  '#00FF00',
+    magenta: '#FF00FF',
+    black:   '#000000',
+    current: CONFIG.bgColor,
+  }[bgKey];
+  const fmtRaw   = document.getElementById('exp-format').value;
+  const { mime, ext } = fmtRaw ? JSON.parse(fmtRaw) : { mime: 'video/webm;codecs=vp9', ext: 'webm' };
+  const leadInMs = Math.round(parseFloat(document.getElementById('exp-leadin').value) * 1000);
+  const holdMs   = Math.round(parseFloat(document.getElementById('exp-hold').value) * 1000);
+  return { resMul, bgColor, bitrate, mime, ext, leadInMs, holdMs };
+}
+
+async function recordSingleRoll(n, exportSettings) {
+  const { resMul, bgColor, bitrate, mime, ext, leadInMs, holdMs } = exportSettings;
+
+  // ── Scale renderer up for the recording ─────────────────────────────────────
+  const origW = window.innerWidth;
+  const origH = window.innerHeight;
+  renderer.setSize(origW * resMul, origH * resMul);
+  renderer.setPixelRatio(1); // already scaling manually
+  camera.aspect = origW / origH;
+  camera.updateProjectionMatrix();
+
+  // ── Set export background ────────────────────────────────────────────────
+  const bgThree = new THREE.Color(bgColor);
+  renderer.setClearColor(bgThree, 1); // opaque — MediaRecorder can’t do alpha
+  document.body.style.background = bgColor;
+
+  // ── Reset to idle and let the die settle ──────────────────────────────
+  state = 'idle';
+  await new Promise(r => setTimeout(r, 350));
+
+  const restore = () => {
+    renderer.setClearColor(0x000000, 0);
+    document.body.style.background = CONFIG.bgColor;
+    renderer.setSize(origW, origH);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    camera.aspect = origW / origH;
+    camera.updateProjectionMatrix();
+  };
+
+  if (exportCancelled) { restore(); return; }
+
+  const stream = renderer.domElement.captureStream(60);
+
+  return new Promise(resolve => {
+    const chunks   = [];
+    const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bitrate });
+
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = async () => {
+      restore();
+      const mimeBase = mime.split(';')[0];
+      const blob = new Blob(chunks, { type: mimeBase });
+      await saveBlob(blob, `d20_roll_${String(n).padStart(2, '0')}.${ext}`);
+      resolve();
+    };
+
+    // Start capture then trigger roll after lead-in delay
+    recorder.start(50);
+    const rollTimer = setTimeout(() => { if (!exportCancelled) roll(n); }, leadInMs);
+
+    waitForDoneState().then(() => {
+      clearTimeout(rollTimer);
+      setTimeout(() => {
+        if (recorder.state === 'recording') recorder.stop();
+        else { restore(); resolve(); }
+      }, exportCancelled ? 0 : holdMs);
+    });
+  });
+}
+
+async function generateAllWebMs() {
+  if (!window.MediaRecorder) {
+    alert('MediaRecorder is not supported in this browser. Try Chrome.');
+    return;
+  }
+
+  exportCancelled = false;
+  exportDirHandle = null;
+
+  // Ask user to pick a folder so all 20 files land in one place
+  if (window.showDirectoryPicker) {
+    try {
+      exportDirHandle = await window.showDirectoryPicker({
+        id: 'd20-export', mode: 'readwrite', startIn: 'downloads',
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') return; // user cancelled — abort entirely
+      exportDirHandle = null;              // no API / permission — fall back to downloads
+    }
+  }
+
+  const overlay    = document.getElementById('exportOverlay');
+  const progressEl = document.getElementById('exportProgress');
+  const barFill    = document.getElementById('exportBarFill');
+  const cancelBtn  = document.getElementById('exportCancelBtn');
+
+  barFill.style.width   = '0%';
+  cancelBtn.disabled    = false;
+  cancelBtn.textContent = 'Cancel';
+  overlay.classList.add('show');
+
+  const exportSettings = getExportSettings();
+
+  const numbersToExport = [...exportNumbers].sort((a, b) => a - b);
+  const total = numbersToExport.length;
+  if (!total) {
+    overlay.classList.remove('show');
+    alert('Select at least one number to export.');
+    return;
+  }
+
+  for (let i = 0; i < total; i++) {
+    if (exportCancelled) break;
+    const n = numbersToExport[i];
+    progressEl.textContent = `Recording roll ${n}  (${i + 1} / ${total})\u2026`;
+    barFill.style.width    = `${(i / total) * 100}%`;
+    await recordSingleRoll(n, exportSettings);
+    if (!exportCancelled) await new Promise(r => setTimeout(r, 150));
+  }
+
+  barFill.style.width    = '100%';
+  progressEl.textContent = exportCancelled ? 'Cancelled.' : `Done! ${total} roll${total !== 1 ? 's' : ''} saved.`;
+  cancelBtn.disabled     = true;
+
+  await new Promise(r => setTimeout(r, 2000));
+  overlay.classList.remove('show');
+  state = 'idle';
+}
+
+document.getElementById('exportBtn').addEventListener('click', generateAllWebMs);
+document.getElementById('exportCancelBtn').addEventListener('click', () => {
+  exportCancelled = true;
+  document.getElementById('exportCancelBtn').textContent = 'Cancelling\u2026';
+});
+
+// ─── Face number picker ────────────────────────────────────────────────────────
+const exportNumbers = new Set(Array.from({ length: 20 }, (_, i) => i + 1));
+
+function updateExportBtnLabel() {
+  const n = exportNumbers.size;
+  document.getElementById('exportBtn').textContent =
+    n === 0  ? '\u2b07 Export (select numbers)' :
+    n === 20 ? '\u2b07 Export All 20 WebMs' :
+               `\u2b07 Export ${n} WebM${n > 1 ? 's' : ''}`;
+}
+
+(function buildFacePicker() {
+  const container = document.getElementById('facePicker');
+  for (let i = 1; i <= 20; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'face-btn selected';
+    btn.textContent = i;
+    btn.dataset.n = i;
+    btn.addEventListener('click', () => {
+      if (exportNumbers.has(i)) {
+        exportNumbers.delete(i);
+        btn.classList.remove('selected');
+      } else {
+        exportNumbers.add(i);
+        btn.classList.add('selected');
+      }
+      updateExportBtnLabel();
+    });
+    container.appendChild(btn);
+  }
+})();
+
+document.getElementById('pickAll').addEventListener('click', () => {
+  for (let i = 1; i <= 20; i++) exportNumbers.add(i);
+  document.querySelectorAll('.face-btn').forEach(b => b.classList.add('selected'));
+  updateExportBtnLabel();
+});
+
+document.getElementById('pickNone').addEventListener('click', () => {
+  exportNumbers.clear();
+  document.querySelectorAll('.face-btn').forEach(b => b.classList.remove('selected'));
+  updateExportBtnLabel();
+});
+
+// ─── Format picker (populated at runtime via isTypeSupported) ─────────────────
+(function buildFormatPicker() {
+  const formats = [
+    { label: 'MP4 — H.264 (QuickTime / Final Cut / Resolve)', mime: 'video/mp4;codecs=avc1', ext: 'mp4' },
+    { label: 'WebM — VP9 (Chrome / DaVinci Resolve)',         mime: 'video/webm;codecs=vp9', ext: 'webm' },
+    { label: 'WebM — VP8 (broad browser support)',            mime: 'video/webm;codecs=vp8', ext: 'webm' },
+  ];
+  const sel = document.getElementById('exp-format');
+  let firstSelected = false;
+  formats.forEach(({ label, mime, ext }) => {
+    const supported = window.MediaRecorder && MediaRecorder.isTypeSupported(mime);
+    const opt = document.createElement('option');
+    opt.value = JSON.stringify({ mime, ext });
+    opt.textContent = supported ? label : label + ' \u2014 unsupported';
+    opt.disabled = !supported;
+    if (supported && !firstSelected) { opt.selected = true; firstSelected = true; }
+    sel.appendChild(opt);
+  });
+  // If nothing supported (shouldn't happen), enable first as fallback
+  if (!firstSelected && sel.options.length) {
+    sel.options[0].disabled = false;
+    sel.options[0].selected = true;
+  }
+})();
+
+// ─── Lead-in / Hold slider labels ────────────────────────────────────────────
+['leadin', 'hold'].forEach(id => {
+  const slider = document.getElementById(`exp-${id}`);
+  const label  = document.getElementById(`exp-${id}-val`);
+  slider.addEventListener('input', () => { label.textContent = parseFloat(slider.value).toFixed(1) + 's'; });
+});
+
+// ─── Resize ────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
