@@ -406,8 +406,13 @@
   <div class="s-section">
     <h3>Themes</h3>
     <div id="theme-presets">
-      <button class="theme-btn" data-theme="default">Default</button>
       <button class="theme-btn" data-theme="bg3">⚔ BG3</button>
+      <button class="theme-btn" data-theme="classic">Classic</button>
+      <button class="theme-btn" data-theme="bloodmoon">🩸 Blood Moon</button>
+      <button class="theme-btn" data-theme="arcane">🔮 Arcane</button>
+      <button class="theme-btn" data-theme="emerald">🌿 Emerald</button>
+      <button class="theme-btn" data-theme="undead">💀 Undead</button>
+      <button class="theme-btn" data-theme="forge">⚒ Forge</button>
     </div>
     <div id="saved-themes"></div>
     <div class="s-row" style="margin-top:8px;gap:8px">
@@ -592,9 +597,9 @@ const DEFAULTS = {
   dieScale:        1.0,
   shininess:       70,
   tumbleDur:       1.9,
-  settleDur:       0.95,
-  spinMin:         2.0,   // base rotation count (+ up to 1.5 random on top)
-  chaosMag:        0.04,  // secondary-axis wobble fraction (0 = clean, 0.15 = wild)
+  settleDur:       1.95,
+  spinMin:         3.5,   // base rotation count (+ up to 1.5 random on top)
+  chaosMag:        0.05,  // secondary-axis wobble fraction (0 = clean, 0.15 = wild)
   decayRate:       3.8,   // exponential deceleration constant
 };
 const CONFIG = { ...DEFAULTS };
@@ -1089,7 +1094,6 @@ function syncInputsFromConfig() {
 
 // ─── Theme System ──────────────────────────────────────────────────────────────
 const BUILT_IN_THEMES = {
-  default: { ...DEFAULTS },
   bg3: {
     faceColorTop:    '#252535',
     faceColorBottom: '#0f0f1c',
@@ -1101,6 +1105,102 @@ const BUILT_IN_THEMES = {
     fontBold:        true,
     dieScale:        1.0,
     shininess:       150,
+    tumbleDur:       1.9,
+    settleDur:       1.95,
+    spinMin:         3.5,
+    chaosMag:        0.05,
+    decayRate:       3.8,
+  },
+  classic: { ...DEFAULTS },
+
+  // ── Blood Moon — Barbarian rage ──────────────────────────────────────────
+  bloodmoon: {
+    faceColorTop:    '#3a0c0c',
+    faceColorBottom: '#1a0404',
+    borderColor:     '#cc2020',
+    bgColor:         '#0f0303',
+    numberColor:     '#ffd0d0',
+    glowColor:       '#dd3333',
+    fontFamily:      'Georgia, serif',
+    fontBold:        true,
+    dieScale:        1.0,
+    shininess:       120,
+    tumbleDur:       1.9,
+    settleDur:       1.95,
+    spinMin:         3.5,
+    chaosMag:        0.05,
+    decayRate:       3.8,
+  },
+
+  // ── Arcane — Wizard / Sorcerer ───────────────────────────────────────────
+  arcane: {
+    faceColorTop:    '#2a1545',
+    faceColorBottom: '#130922',
+    borderColor:     '#a855f7',
+    bgColor:         '#090511',
+    numberColor:     '#ead4ff',
+    glowColor:       '#9b33f0',
+    fontFamily:      'Cinzel, Georgia, serif',
+    fontBold:        true,
+    dieScale:        1.0,
+    shininess:       160,
+    tumbleDur:       1.9,
+    settleDur:       1.95,
+    spinMin:         3.5,
+    chaosMag:        0.05,
+    decayRate:       3.8,
+  },
+
+  // ── Emerald — Druid / Ranger ─────────────────────────────────────────────
+  emerald: {
+    faceColorTop:    '#0d2b1a',
+    faceColorBottom: '#061409',
+    borderColor:     '#4a9a6a',
+    bgColor:         '#030e06',
+    numberColor:     '#c4f0c8',
+    glowColor:       '#2d8a50',
+    fontFamily:      'Georgia, serif',
+    fontBold:        true,
+    dieScale:        1.0,
+    shininess:       80,
+    tumbleDur:       1.9,
+    settleDur:       1.95,
+    spinMin:         3.5,
+    chaosMag:        0.05,
+    decayRate:       3.8,
+  },
+
+  // ── Undead — Necromancer ─────────────────────────────────────────────────
+  undead: {
+    faceColorTop:    '#1a1a1a',
+    faceColorBottom: '#0a0a0a',
+    borderColor:     '#44bb66',
+    bgColor:         '#050505',
+    numberColor:     '#aaffbb',
+    glowColor:       '#33aa55',
+    fontFamily:      'Cinzel, Georgia, serif',
+    fontBold:        false,
+    dieScale:        1.0,
+    shininess:       30,
+    tumbleDur:       1.9,
+    settleDur:       1.95,
+    spinMin:         3.5,
+    chaosMag:        0.05,
+    decayRate:       3.8,
+  },
+
+  // ── Forge — Dwarven smithcraft ───────────────────────────────────────────
+  forge: {
+    faceColorTop:    '#2a1a08',
+    faceColorBottom: '#150d04',
+    borderColor:     '#e07820',
+    bgColor:         '#0a0704',
+    numberColor:     '#ffe0a0',
+    glowColor:       '#dd7722',
+    fontFamily:      'Georgia, serif',
+    fontBold:        true,
+    dieScale:        1.0,
+    shininess:       200,
     tumbleDur:       1.9,
     settleDur:       1.95,
     spinMin:         3.5,
@@ -1179,6 +1279,9 @@ document.getElementById('saveThemeBtn').addEventListener('click', () => {
 
 // Render saved themes on load
 renderUserThemes();
+
+// Apply BG3 theme as the default on first load
+applyTheme(BUILT_IN_THEMES.bg3);
 
 // ─── Theme import / export ────────────────────────────────────────────────────
 document.getElementById('exportThemesBtn').addEventListener('click', () => {
