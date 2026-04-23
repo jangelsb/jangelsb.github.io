@@ -2,11 +2,30 @@ import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { renderer, camera } from './scene.js';
 import { roll, rollState } from './animation.js';
+import { modifierAnim, getOverlayCanvas, drawCardsToCanvas } from './modifiers.js';
 
 export const exportNumbers = new Set(Array.from({ length: 20 }, (_, i) => i + 1));
 
 let exportCancelled = false;
 let exportDirHandle = null;
+
+// Draws the #result text onto the composite canvas, mirroring its CSS style.
+function drawResultToCanvas(ctx, canvasW, canvasH) {
+  const el = document.getElementById('result');
+  if (!el || !el.classList.contains('show') || !el.textContent.trim()) return;
+  const scale    = canvasW / window.innerWidth;
+  const fontSize = Math.round(30 * scale);
+  const topY     = Math.round(36 * scale) + fontSize / 2;
+  ctx.save();
+  ctx.font         = `${fontSize}px Georgia, serif`;
+  ctx.fillStyle    = CONFIG.numberColor  || '#f5e8c0';
+  ctx.shadowColor  = CONFIG.glowColor    || '#c8a84a';
+  ctx.shadowBlur   = 16 * scale;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(el.textContent, canvasW / 2, topY);
+  ctx.restore();
+}
 
 function waitForDoneState(timeoutMs = 25000) {
   return new Promise(resolve => {
@@ -46,8 +65,17 @@ function getExportSettings() {
   return { resMul, bgColor, bitrate, mime, ext, leadInMs, holdMs };
 }
 
+function getExportVisibility() {
+  return {
+    showModifierAnim: document.getElementById('exp-show-modfx')?.checked  ?? true,
+    showCards:        document.getElementById('exp-show-cards')?.checked  ?? false,
+    showResult:       document.getElementById('exp-show-result')?.checked ?? false,
+  };
+}
+
 async function recordSingleRoll(n, settings) {
   const { resMul, bgColor, bitrate, mime, ext, leadInMs, holdMs } = settings;
+  const vis = getExportVisibility();
 
   const origW = window.innerWidth;
   const origH = window.innerHeight;
@@ -58,8 +86,16 @@ async function recordSingleRoll(n, settings) {
   renderer.setClearColor(new THREE.Color(bgColor), 1);
   document.body.style.background = bgColor;
 
+  // Apply export visibility settings
+  modifierAnim.skip = !vis.showModifierAnim;
+  if (!vis.showCards)  document.body.classList.add('export-no-cards');
+  // Always hide the DOM result element — we draw it on the canvas instead when needed
+  document.body.classList.add('export-no-result');
+
   rollState.current = 'idle';
   await new Promise(r => setTimeout(r, 350));
+
+  let stopComposite = () => {};
 
   const restore = () => {
     renderer.setClearColor(0x000000, 0);
@@ -68,11 +104,37 @@ async function recordSingleRoll(n, settings) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     camera.aspect = origW / origH;
     camera.updateProjectionMatrix();
+    document.body.classList.remove('export-no-cards', 'export-no-result');
+    modifierAnim.skip = false;
+    stopComposite();
   };
 
   if (exportCancelled) { restore(); return; }
 
-  const stream = renderer.domElement.captureStream(60);
+  // Always composite: WebGL die + overlay (modifier text/sparkles) + cards
+  const compCanvas  = document.createElement('canvas');
+  compCanvas.width  = origW * resMul;
+  compCanvas.height = origH * resMul;
+  const compCtx     = compCanvas.getContext('2d');
+  const overlay     = getOverlayCanvas();
+  let   compActive  = true;
+  stopComposite = () => { compActive = false; };
+  (function compFrame() {
+    if (!compActive) return;
+    compCtx.clearRect(0, 0, compCanvas.width, compCanvas.height);
+    compCtx.drawImage(renderer.domElement, 0, 0);
+    if (vis.showModifierAnim && overlay && overlay.width > 0) {
+      compCtx.drawImage(overlay, 0, 0, compCanvas.width, compCanvas.height);
+    }
+    if (vis.showCards) {
+      drawCardsToCanvas(compCtx, compCanvas.width, compCanvas.height);
+    }
+    if (vis.showResult) {
+      drawResultToCanvas(compCtx, compCanvas.width, compCanvas.height);
+    }
+    requestAnimationFrame(compFrame);
+  })();
+  const stream = compCanvas.captureStream(60);
 
   return new Promise(resolve => {
     const chunks   = [];

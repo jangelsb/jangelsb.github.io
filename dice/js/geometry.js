@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
-import { makeTexture } from './texture.js';
+import { makeTexture, drawFaceOnCanvas } from './texture.js';
 import { scene } from './scene.js';
+
+// Resting Y position of the die in world space — shifts it up so it sits
+// visually centered between the modifier cards and the top of the screen.
+export const DIE_RESTING_Y = 0.8;
 
 // ── Icosahedron geometry (D20) ────────────────────────────────────────────────
 const geo = new THREE.IcosahedronGeometry(2.0, 0).toNonIndexed();
@@ -9,6 +13,23 @@ geo.computeVertexNormals();
 
 const posAttr = geo.attributes.position;
 const FACES   = posAttr.count / 3; // always 20
+
+// Distance from die centre to the centre of a face (local units, before scale).
+// Used to project the front face centre—rather than the mesh centre—to screen
+// so that modifier text flies precisely to the visible number.
+export const FACE_INRADIUS = new THREE.Vector3()
+  .fromBufferAttribute(posAttr, 0)
+  .clone()
+  .add(new THREE.Vector3().fromBufferAttribute(posAttr, 1))
+  .add(new THREE.Vector3().fromBufferAttribute(posAttr, 2))
+  .divideScalar(3)
+  .length();
+
+// Edge length of the icosahedron face (local units, before scale).
+// Vertices 0 & 1 are adjacent on face 0 of the non-indexed geometry.
+export const FACE_EDGE = new THREE.Vector3()
+  .fromBufferAttribute(posAttr, 0)
+  .distanceTo(new THREE.Vector3().fromBufferAttribute(posAttr, 1));
 
 // ── UV assignment ─────────────────────────────────────────────────────────────
 // Faces come in two types:
@@ -106,6 +127,7 @@ export const materials = LABELS.map((n, f) =>
 );
 
 export const dice = new THREE.Mesh(geo, materials);
+dice.position.y = DIE_RESTING_Y;
 scene.add(dice);
 
 // number → face index lookup
@@ -131,12 +153,27 @@ export function faceTowardCamera(faceIdx) {
 // Regenerates all face textures and syncs material properties from CONFIG.
 export function rebuildTextures() {
   LABELS.forEach((n, f) => {
-    materials[f].map.dispose();
-    materials[f].map       = makeTexture(n, faceIsDown[f]);
+    drawFaceOnCanvas(materials[f].map.image, n, faceIsDown[f]);
+    materials[f].map.needsUpdate = true;
     materials[f].shininess = CONFIG.shininess;
     materials[f].specular  = new THREE.Color(CONFIG.borderColor).multiplyScalar(0.35);
     materials[f].needsUpdate = true;
   });
   document.body.style.background = CONFIG.bgColor;
   dice.scale.setScalar(CONFIG.dieScale);
+}
+
+// Updates the front-facing face's number in-place by redrawing on the existing
+// canvas (avoids dispose/recreate). Three.js re-uploads on the next frame.
+export function updateFaceNumber(faceIdx, newNumber) {
+  drawFaceOnCanvas(materials[faceIdx].map.image, newNumber, faceIsDown[faceIdx]);
+  materials[faceIdx].map.needsUpdate = true;
+}
+
+// Resets all 20 face textures to their original numbers (call before a new roll).
+export function resetFaceNumbers() {
+  LABELS.forEach((n, f) => {
+    drawFaceOnCanvas(materials[f].map.image, n, faceIsDown[f]);
+    materials[f].map.needsUpdate = true;
+  });
 }

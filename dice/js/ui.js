@@ -4,6 +4,38 @@ import { dice, rebuildTextures } from './geometry.js';
 import { roll } from './animation.js';
 import { BUILT_IN_THEMES, applyTheme, loadUserThemes, saveUserTheme, renderUserThemes } from './themes.js';
 import { generateAllWebMs, exportNumbers, initExportCancelBtn } from './export.js';
+import { addModifier, removeModifier, getModifiers } from './modifiers.js';
+
+// ── CSS custom-property helpers ───────────────────────────────────────────────
+function hexWithAlpha(hex, alpha) {
+  return hex + Math.round(alpha * 255).toString(16).padStart(2, '0');
+}
+
+function applyModCardStyles() {
+  const r   = document.documentElement.style;
+  const bd  = CONFIG.modCardBorder;
+  const lb  = CONFIG.modCardLabelColor;
+  const pos = CONFIG.modifierPositiveColor;
+  const neg = CONFIG.modifierNegativeColor;
+  r.setProperty('--mod-bg1',        CONFIG.modCardBg1 + 'ee');
+  r.setProperty('--mod-bg2',        CONFIG.modCardBg2 + 'ee');
+  r.setProperty('--mod-border',     bd);
+  r.setProperty('--mod-bd-dim',     hexWithAlpha(bd, 0.133));
+  r.setProperty('--mod-bd-mid',     hexWithAlpha(bd, 0.267));
+  r.setProperty('--mod-bd-soft',    hexWithAlpha(bd, 0.400));
+  r.setProperty('--mod-bd-shimmer', hexWithAlpha(bd, 0.533));
+  r.setProperty('--mod-bd-glow',    hexWithAlpha(bd, 0.600));
+  r.setProperty('--mod-label',      lb);
+  r.setProperty('--mod-label-dim',  hexWithAlpha(lb, 0.667));
+  r.setProperty('--mod-positive',   pos);
+  r.setProperty('--mod-pos-g1',     hexWithAlpha(pos, 0.533));
+  r.setProperty('--mod-pos-g2',     hexWithAlpha(pos, 0.267));
+  r.setProperty('--mod-negative',   neg);
+  r.setProperty('--mod-neg-g1',     hexWithAlpha(neg, 0.533));
+  r.setProperty('--mod-neg-g2',     hexWithAlpha(neg, 0.267));
+  r.setProperty('--cards-bottom',   (CONFIG.modCardsBottom ?? 108) + 'px');
+  r.setProperty('--card-scale',      (CONFIG.modCardScale  ?? 1.0));
+}
 
 // ── Sync all settings panel inputs from the current CONFIG values ─────────────
 function syncInputsFromConfig() {
@@ -30,6 +62,20 @@ function syncInputsFromConfig() {
   document.getElementById('v-spinMin').textContent = CONFIG.spinMin.toFixed(1);
   document.getElementById('v-chaos').textContent   = Math.round(CONFIG.chaosMag * 100) + '%';
   document.getElementById('v-decay').textContent   = CONFIG.decayRate.toFixed(1);
+
+  document.getElementById('c-modPos').value      = CONFIG.modifierPositiveColor;
+  document.getElementById('c-modNeg').value      = CONFIG.modifierNegativeColor;
+  document.getElementById('c-modParticle').value = CONFIG.modifierParticleColor;
+  document.getElementById('c-modImpact').value   = CONFIG.modifierImpactColor;
+  document.getElementById('c-modCardBg1').value    = CONFIG.modCardBg1;
+  document.getElementById('c-modCardBg2').value    = CONFIG.modCardBg2;
+  document.getElementById('c-modCardBorder').value = CONFIG.modCardBorder;
+  document.getElementById('c-modCardLabel').value  = CONFIG.modCardLabelColor;
+  document.getElementById('c-modCardScale').value  = CONFIG.modCardScale  ?? 1.0;
+  document.getElementById('v-modCardScale').textContent = (CONFIG.modCardScale ?? 1.0).toFixed(2);
+  document.getElementById('c-modCardsBottom').value = CONFIG.modCardsBottom ?? 108;
+  document.getElementById('v-modCardsBottom').textContent = (CONFIG.modCardsBottom ?? 108) + 'px';
+  applyModCardStyles();
 }
 
 // Binds a settings input to a CONFIG key, with optional transform and side-effect.
@@ -57,6 +103,49 @@ function updateExportBtnLabel() {
     n === 0  ? '\u2b07 Export (select numbers)' :
     n === 20 ? '\u2b07 Export All 20 Videos' :
                `\u2b07 Export ${n} Video${n > 1 ? 's' : ''}`;
+}
+
+// ── Modifier card rendering ───────────────────────────────────────────────────
+export function renderModifierCards() {
+  const container = document.getElementById('mod-cards');
+  if (!container) return;
+  container.innerHTML = '';
+  getModifiers().forEach(mod => {
+    const card = document.createElement('div');
+    card.className = 'mod-card';
+    card.dataset.id = mod.id;
+
+    const isPos = mod.value >= 0;
+    const valueStr = (isPos ? '+' : '') + mod.value;
+    const colorClass = isPos ? 'positive' : 'negative';
+
+    card.innerHTML = `
+      <span class="mod-label">${escapeHtml(mod.label)}</span>
+      <span class="mod-value ${colorClass}">${valueStr}</span>
+      <button class="mod-remove" title="Remove">✕</button>
+    `;
+    card.querySelector('.mod-remove').addEventListener('click', () => {
+      removeModifier(mod.id);
+      renderModifierCards();
+    });
+    container.appendChild(card);
+  });
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function addModifierFromInputs() {
+  const labelEl = document.getElementById('mod-label-input');
+  const valueEl = document.getElementById('mod-value-input');
+  const label   = labelEl.value.trim() || 'Modifier';
+  const value   = parseInt(valueEl.value, 10);
+  if (isNaN(value)) return;
+  addModifier(label, value);
+  renderModifierCards();
+  labelEl.value = '';
+  valueEl.value = '';
 }
 
 // ── initUI — call once from main.js ───────────────────────────────────────────
@@ -252,5 +341,61 @@ export function initUI() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    const ov = document.getElementById('mod-overlay-canvas');
+    if (ov) { ov.width = window.innerWidth; ov.height = window.innerHeight; }
   });
+
+  // ── Modifier color pickers ─────────────────────────────────────────────────
+  document.getElementById('c-modPos').addEventListener('input', e => {
+    CONFIG.modifierPositiveColor = e.target.value;
+    applyModCardStyles();
+    renderModifierCards();
+  });
+  document.getElementById('c-modNeg').addEventListener('input', e => {
+    CONFIG.modifierNegativeColor = e.target.value;
+    applyModCardStyles();
+    renderModifierCards();
+  });
+  document.getElementById('c-modParticle').addEventListener('input', e => {
+    CONFIG.modifierParticleColor = e.target.value;
+  });
+  document.getElementById('c-modImpact').addEventListener('input', e => {
+    CONFIG.modifierImpactColor = e.target.value;
+  });
+
+  // ── Modifier card appearance pickers ──────────────────────────────────────
+  document.getElementById('c-modCardBg1').addEventListener('input', e => {
+    CONFIG.modCardBg1 = e.target.value; applyModCardStyles();
+  });
+  document.getElementById('c-modCardBg2').addEventListener('input', e => {
+    CONFIG.modCardBg2 = e.target.value; applyModCardStyles();
+  });
+  document.getElementById('c-modCardBorder').addEventListener('input', e => {
+    CONFIG.modCardBorder = e.target.value; applyModCardStyles();
+  });
+  document.getElementById('c-modCardLabel').addEventListener('input', e => {
+    CONFIG.modCardLabelColor = e.target.value; applyModCardStyles();
+  });
+  document.getElementById('c-modCardScale').addEventListener('input', e => {
+    CONFIG.modCardScale = parseFloat(e.target.value);
+    document.getElementById('v-modCardScale').textContent = parseFloat(e.target.value).toFixed(2);
+    applyModCardStyles();
+  });
+  document.getElementById('c-modCardsBottom').addEventListener('input', e => {
+    CONFIG.modCardsBottom = parseInt(e.target.value, 10);
+    document.getElementById('v-modCardsBottom').textContent = e.target.value + 'px';
+    applyModCardStyles();
+  });
+
+  // ── Modifier card management ───────────────────────────────────────────────
+  document.getElementById('mod-add-btn').addEventListener('click', addModifierFromInputs);
+  document.getElementById('mod-value-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addModifierFromInputs();
+  });
+  document.getElementById('mod-label-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('mod-value-input').focus();
+  });
+
+  renderModifierCards();
+  applyModCardStyles();
 }

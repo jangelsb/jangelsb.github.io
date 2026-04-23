@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { renderer, scene, camera, clock } from './scene.js';
-import { dice, numToFace, faceTowardCamera } from './geometry.js';
+import { dice, numToFace, faceTowardCamera, updateFaceNumber, resetFaceNumbers, DIE_RESTING_Y } from './geometry.js';
+import { getModifiers, runModifiers } from './modifiers.js';
 
 // ── Shared state ──────────────────────────────────────────────────────────────
 // Use rollState.current (not a bare variable) so other modules (export.js) can
@@ -28,6 +29,9 @@ function easeOutQuint(t) { return 1 - Math.pow(1 - t, 5); }
 export function roll(n) {
   n = Math.round(n);
   if (n < 1 || n > 20) return;
+
+  resetFaceNumbers();            // restore all faces to original numbers
+  dice.position.set(0, DIE_RESTING_Y, 0); // clear any leftover shake offset
 
   pendingResult = n;
   settleTo = faceTowardCamera(numToFace[n]);
@@ -110,14 +114,50 @@ renderer.setAnimationLoop(() => {
     if (t >= 1.0) {
       dice.quaternion.copy(settleTo);
       rollState.current = 'done';
+
       const el = document.getElementById('result');
-      el.textContent = `Rolled: ${pendingResult}`;
-      el.classList.add('show');
+
+      const mods = getModifiers();
+      if (mods.length === 0) {
+        // No modifiers — show result immediately
+        el.textContent = `Rolled: ${pendingResult}`;
+        el.classList.add('show');
+      } else {
+        // Keep result hidden until all modifiers applied; die face shows running total
+        rollState.current = 'modifiers';
+
+        const frontFace = numToFace[pendingResult];
+        runModifiers(pendingResult, (runningTotal, _mod) => {
+          updateFaceNumber(frontFace, runningTotal);
+        }).then(finalTotal => {
+          el.textContent = `Rolled: ${finalTotal}`;
+          el.classList.add('show');
+          rollState.current = 'done';
+        });
+      }
     }
 
-  } else if (rollState.current === 'done') {
-    // Hold perfectly still
+  } else if (rollState.current === 'done' || rollState.current === 'modifiers') {
+    // Hold still — but apply shake offset when a modifier impacts
+    const now2 = performance.now() / 1000;
+    if (now2 < shakeEnd) {
+      const remaining = shakeEnd - now2;
+      const decay     = remaining / 0.35;
+      const offset    = Math.sin(now2 * 60) * shakeMag * decay;
+      dice.position.set(offset, DIE_RESTING_Y + offset * 0.5, 0);
+    } else {
+      dice.position.set(0, DIE_RESTING_Y, 0);
+    }
   }
 
   renderer.render(scene, camera);
+});
+
+// ── Die shake on modifier impact ──────────────────────────────────────────────
+let shakeEnd = 0;
+let shakeMag = 0;
+
+document.addEventListener('modifierimpact', () => {
+  shakeEnd = performance.now() / 1000 + 0.35;
+  shakeMag = 0.12;
 });

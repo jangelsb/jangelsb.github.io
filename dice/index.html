@@ -9,6 +9,9 @@
 </head>
 <body>
 
+<!-- Persistent overlay canvas: modifier fly-in text + sparkles (captured in export) -->
+<canvas id="mod-overlay-canvas" style="position:fixed;top:0;left:0;pointer-events:none;z-index:199"></canvas>
+
 <div id="result"></div>
 
 <button id="settingsToggle" title="Customize">⚙</button>
@@ -71,8 +74,8 @@
     <h3>Die</h3>
     <div class="s-row">
       <span class="s-label">Size</span>
-      <input type="range" id="c-size" min="0.1" max="2" step="0.05" value="0.7">
-      <span class="val" id="v-size">0.70</span>
+      <input type="range" id="c-size" min="0.1" max="2" step="0.05" value="0.45">
+      <span class="val" id="v-size">0.45</span>
     </div>
     <div class="s-row">
       <span class="s-label">Shininess</span>
@@ -107,6 +110,32 @@
       <span class="s-label">Decay</span>
       <input type="range" id="c-decay" min="1.5" max="6" step="0.1" value="3.8">
       <span class="val" id="v-decay">3.8</span>
+    </div>
+  </div>
+
+  <div class="s-section">
+    <h3>Modifier Colors</h3>
+    <div class="s-row"><span class="s-label">Positive (+)</span>  <input type="color" id="c-modPos"      value="#f0c040"></div>
+    <div class="s-row"><span class="s-label">Negative (−)</span>  <input type="color" id="c-modNeg"      value="#e05050"></div>
+    <div class="s-row"><span class="s-label">Sparkles</span>     <input type="color" id="c-modParticle" value="#f0c040"></div>
+    <div class="s-row"><span class="s-label">Impact flash</span> <input type="color" id="c-modImpact"   value="#ffffff"></div>
+  </div>
+
+  <div class="s-section">
+    <h3>Modifier Cards</h3>
+    <div class="s-row"><span class="s-label">Background top</span>    <input type="color" id="c-modCardBg1"   value="#1a1830"></div>
+    <div class="s-row"><span class="s-label">Background bottom</span> <input type="color" id="c-modCardBg2"   value="#0c0c1e"></div>
+    <div class="s-row"><span class="s-label">Border / accent</span>   <input type="color" id="c-modCardBorder" value="#c8a84a"></div>
+    <div class="s-row"><span class="s-label">Label color</span>       <input type="color" id="c-modCardLabel"  value="#c8a84a"></div>
+    <div class="s-row">
+      <span class="s-label">Card size</span>
+      <input type="range" id="c-modCardScale" min="0.5" max="2.0" step="0.05" value="1.0">
+      <span class="val" id="v-modCardScale">1.00</span>
+    </div>
+    <div class="s-row">
+      <span class="s-label">Cards distance</span>
+      <input type="range" id="c-modCardsBottom" min="80" max="400" step="4" value="108">
+      <span class="val" id="v-modCardsBottom">108px</span>
     </div>
   </div>
 
@@ -152,6 +181,19 @@
       <input type="range" id="exp-hold" min="0.2" max="4" step="0.1" value="0.6">
       <span class="val" id="exp-hold-val">0.6s</span>
     </div>
+    <div style="font-size:11px;color:#f5e8c0aa;letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">Visible in export</div>
+    <div class="s-row">
+      <span class="s-label">Modifier animations</span>
+      <input type="checkbox" id="exp-show-modfx" checked style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
+    </div>
+    <div class="s-row">
+      <span class="s-label">Modifier cards</span>
+      <input type="checkbox" id="exp-show-cards" checked style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
+    </div>
+    <div class="s-row">
+      <span class="s-label">Result text</span>
+      <input type="checkbox" id="exp-show-result" style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
+    </div>
     <div class="s-row" style="align-items:flex-start">
       <span class="s-label">Numbers</span>
       <div style="flex:1">
@@ -170,7 +212,7 @@
 
 <div id="exportOverlay">
   <div id="exportModal">
-    <div id="exportTitle">Generating WebMs</div>
+    <div id="exportTitle">Generating Videos</div>
     <div id="exportProgress"></div>
     <div id="exportBarTrack"><div id="exportBarFill"></div></div>
     <button id="exportCancelBtn">Cancel</button>
@@ -181,6 +223,15 @@
   <input type="number" id="rollInput" min="1" max="20" value="20" />
   <button id="rollBtn">ROLL</button>
   <button id="randomBtn">RANDOM</button>
+</div>
+
+<div id="modifiers-ui">
+  <div id="mod-cards"></div>
+  <div id="mod-add-row">
+    <input type="text"   id="mod-label-input" placeholder="Label (e.g. Dexterity)" maxlength="20">
+    <input type="number" id="mod-value-input" placeholder="+3" style="width:64px">
+    <button id="mod-add-btn">+ Add</button>
+  </div>
 </div>
 
 <script type="importmap">

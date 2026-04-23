@@ -1,16 +1,13 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 
-// Draws a triangular face texture onto a canvas and returns a THREE.CanvasTexture.
+// Draws a triangular face onto an existing canvas (clears it first).
 // apexDown = true for ▽ faces (apex at bottom), false for Δ faces (apex at top).
-export function makeTexture(number, apexDown = false) {
-  const S = 512;
-  const cvs = document.createElement('canvas');
-  cvs.width = cvs.height = S;
-  const ctx = cvs.getContext('2d');
+export function drawFaceOnCanvas(canvas, number, apexDown = false) {
+  const S   = canvas.width;
+  const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#00000000';
-  ctx.fillRect(0, 0, S, S);
+  ctx.clearRect(0, 0, S, S);
 
   const M = 28;
   const triVerts = apexDown
@@ -45,6 +42,12 @@ export function makeTexture(number, apexDown = false) {
   ctx.textBaseline = 'middle';
   ctx.fillText(String(number), cx, cy + 4);
   ctx.shadowBlur = 0;
+}
 
+// Creates a new canvas, draws a face on it, and wraps it in a THREE.CanvasTexture.
+export function makeTexture(number, apexDown = false) {
+  const cvs = document.createElement('canvas');
+  cvs.width = cvs.height = 512;
+  drawFaceOnCanvas(cvs, number, apexDown);
   return new THREE.CanvasTexture(cvs);
 }
