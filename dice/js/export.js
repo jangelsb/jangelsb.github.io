@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Output, Mp4OutputFormat, BufferTarget, CanvasSource } from 'mediabunny';
 import { CONFIG } from './config.js';
 import { renderer, camera } from './scene.js';
 import { roll, rollState } from './animation.js';
@@ -58,11 +59,9 @@ function getExportSettings() {
   const bgKey   = document.getElementById('exp-bg').value;
   const bitrate = parseInt(document.getElementById('exp-bitrate').value, 10);
   const bgColor = { chroma: '#00FF00', magenta: '#FF00FF', black: '#000000', current: CONFIG.bgColor }[bgKey];
-  const fmtRaw  = document.getElementById('exp-format').value;
-  const { mime, ext } = fmtRaw ? JSON.parse(fmtRaw) : { mime: 'video/webm;codecs=vp9', ext: 'webm' };
   const leadInMs = Math.round(parseFloat(document.getElementById('exp-leadin').value) * 1000);
   const holdMs   = Math.round(parseFloat(document.getElementById('exp-hold').value) * 1000);
-  return { resMul, bgColor, bitrate, mime, ext, leadInMs, holdMs };
+  return { resMul, bgColor, bitrate, leadInMs, holdMs };
 }
 
 function getExportVisibility() {
@@ -74,7 +73,7 @@ function getExportVisibility() {
 }
 
 async function recordSingleRoll(n, settings) {
-  const { resMul, bgColor, bitrate, mime, ext, leadInMs, holdMs } = settings;
+  const { resMul, bgColor, bitrate, leadInMs, holdMs } = settings;
   const vis = getExportVisibility();
 
   const origW = window.innerWidth;
@@ -86,16 +85,12 @@ async function recordSingleRoll(n, settings) {
   renderer.setClearColor(new THREE.Color(bgColor), 1);
   document.body.style.background = bgColor;
 
-  // Apply export visibility settings
   modifierAnim.skip = !vis.showModifierAnim;
   if (!vis.showCards)  document.body.classList.add('export-no-cards');
-  // Always hide the DOM result element — we draw it on the canvas instead when needed
   document.body.classList.add('export-no-result');
 
   rollState.current = 'idle';
   await new Promise(r => setTimeout(r, 350));
-
-  let stopComposite = () => {};
 
   const restore = () => {
     renderer.setClearColor(0x000000, 0);
@@ -106,67 +101,79 @@ async function recordSingleRoll(n, settings) {
     camera.updateProjectionMatrix();
     document.body.classList.remove('export-no-cards', 'export-no-result');
     modifierAnim.skip = false;
-    stopComposite();
   };
 
   if (exportCancelled) { restore(); return; }
 
-  // Always composite: WebGL die + overlay (modifier text/sparkles) + cards
   const compCanvas  = document.createElement('canvas');
   compCanvas.width  = origW * resMul;
   compCanvas.height = origH * resMul;
   const compCtx     = compCanvas.getContext('2d');
   const overlay     = getOverlayCanvas();
-  let   compActive  = true;
-  stopComposite = () => { compActive = false; };
-  (function compFrame() {
-    if (!compActive) return;
-    compCtx.clearRect(0, 0, compCanvas.width, compCanvas.height);
-    compCtx.drawImage(renderer.domElement, 0, 0);
-    if (vis.showModifierAnim && overlay && overlay.width > 0) {
-      compCtx.drawImage(overlay, 0, 0, compCanvas.width, compCanvas.height);
-    }
-    if (vis.showCards) {
-      drawCardsToCanvas(compCtx, compCanvas.width, compCanvas.height);
-    }
-    if (vis.showResult) {
-      drawResultToCanvas(compCtx, compCanvas.width, compCanvas.height);
-    }
-    requestAnimationFrame(compFrame);
-  })();
-  const stream = compCanvas.captureStream(60);
 
-  return new Promise(resolve => {
-    const chunks   = [];
-    const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bitrate });
-
-    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = async () => {
-      restore();
-      const blob = new Blob(chunks, { type: mime.split(';')[0] });
-      await saveBlob(blob, `d20_roll_${String(n).padStart(2, '0')}.${ext}`);
-      resolve();
-    };
-
-    recorder.start(50);
-    const rollTimer = setTimeout(() => { if (!exportCancelled) roll(n); }, leadInMs);
-
-    waitForDoneState().then(() => {
-      clearTimeout(rollTimer);
-      setTimeout(() => {
-        if (recorder.state === 'recording') recorder.stop();
-        else { restore(); resolve(); }
-      }, exportCancelled ? 0 : holdMs);
-    });
+  // Mediabunny: progressive MP4 with moov at the front (Fast Start).
+  // Produces a standard MP4 DaVinci Resolve / Premiere / FCP can import directly,
+  // unlike the fragmented fMP4 that MediaRecorder outputs.
+  const target = new BufferTarget();
+  const output = new Output({
+    format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
+    target,
   });
-}
+  const canvasSource = new CanvasSource(compCanvas, { codec: 'avc', bitrate });
+  output.addVideoTrack(canvasSource, { frameRate: 60 });
 
-export async function generateAllWebMs() {
-  if (!window.MediaRecorder) {
-    alert('MediaRecorder is not supported in this browser. Try Chrome.');
+  try {
+    await output.start();
+  } catch (err) {
+    restore();
+    alert(`H.264 encoding is not supported in this browser.\n${err.message ?? err}`);
     return;
   }
 
+  // Capture loop: composite WebGL + overlay + UI onto compCanvas each rAF tick,
+  // then hand the snapshot to Mediabunny. Three.js's animation loop is registered
+  // first, so renderer.domElement always holds the freshest rendered frame.
+  let captureActive = true;
+  let frameTimestamp = 0;
+  const runCapture = async () => {
+    while (captureActive && !exportCancelled) {
+      await new Promise(r => requestAnimationFrame(r));
+      if (!captureActive || exportCancelled) break;
+      compCtx.clearRect(0, 0, compCanvas.width, compCanvas.height);
+      compCtx.drawImage(renderer.domElement, 0, 0);
+      if (vis.showModifierAnim && overlay && overlay.width > 0) {
+        compCtx.drawImage(overlay, 0, 0, compCanvas.width, compCanvas.height);
+      }
+      if (vis.showCards)  drawCardsToCanvas(compCtx, compCanvas.width, compCanvas.height);
+      if (vis.showResult) drawResultToCanvas(compCtx, compCanvas.width, compCanvas.height);
+      await canvasSource.add(frameTimestamp, 1 / 60);
+      frameTimestamp += 1 / 60;
+    }
+  };
+
+  const capturePromise = runCapture();
+
+  await new Promise(r => setTimeout(r, leadInMs));
+  if (!exportCancelled) roll(n);
+
+  await waitForDoneState();
+  if (!exportCancelled) await new Promise(r => setTimeout(r, holdMs));
+
+  captureActive = false;
+  await capturePromise;
+  canvasSource.close();
+  restore();
+
+  if (!exportCancelled) {
+    await output.finalize();
+    const blob = new Blob([target.buffer], { type: 'video/mp4' });
+    await saveBlob(blob, `d20_roll_${String(n).padStart(2, '0')}.mp4`);
+  } else {
+    await output.cancel();
+  }
+}
+
+export async function generateAllWebMs() {
   exportCancelled = false;
   exportDirHandle = null;
 

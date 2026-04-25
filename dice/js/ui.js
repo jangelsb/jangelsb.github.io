@@ -307,28 +307,6 @@ export function initUI() {
     updateExportBtnLabel();
   });
 
-  // Video format picker (populated dynamically via MediaRecorder.isTypeSupported)
-  const formats = [
-    { label: 'MP4 \u2014 H.264 (QuickTime / Final Cut / Resolve)', mime: 'video/mp4;codecs=avc1', ext: 'mp4' },
-    { label: 'WebM \u2014 VP9 (Chrome / DaVinci Resolve)',         mime: 'video/webm;codecs=vp9', ext: 'webm' },
-    { label: 'WebM \u2014 VP8 (broad browser support)',            mime: 'video/webm;codecs=vp8', ext: 'webm' },
-  ];
-  const sel = document.getElementById('exp-format');
-  let firstSelected = false;
-  formats.forEach(({ label, mime, ext }) => {
-    const supported = window.MediaRecorder && MediaRecorder.isTypeSupported(mime);
-    const opt = document.createElement('option');
-    opt.value       = JSON.stringify({ mime, ext });
-    opt.textContent = supported ? label : label + ' \u2014 unsupported';
-    opt.disabled    = !supported;
-    if (supported && !firstSelected) { opt.selected = true; firstSelected = true; }
-    sel.appendChild(opt);
-  });
-  if (!firstSelected && sel.options.length) {
-    sel.options[0].disabled = false;
-    sel.options[0].selected = true;
-  }
-
   // Lead-in / hold slider labels
   ['leadin', 'hold'].forEach(id => {
     const slider = document.getElementById(`exp-${id}`);

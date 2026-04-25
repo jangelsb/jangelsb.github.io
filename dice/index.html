@@ -141,17 +141,12 @@
 
   <div class="s-section">
     <h3>Export</h3>
-    <p style="font-size:11px;color:#f5e8c0aa;line-height:1.6;margin-bottom:14px">Saves selected rolls as video. MediaRecorder cannot capture real alpha — pick a background below and chroma-key it in your editor.</p>
-    <div class="s-row">
-      <span class="s-label">Format</span>
-      <select id="exp-format"></select>
-    </div>
+    <p style="font-size:11px;color:#f5e8c0aa;line-height:1.6;margin-bottom:14px">Saves selected rolls as H.264 MP4 (DaVinci Resolve / Premiere / FCP compatible). H.264 has no alpha channel — pick a solid background below and chroma-key it in your editor.</p>
     <div class="s-row">
       <span class="s-label">Resolution</span>
       <select id="exp-res">
         <option value="1">1× screen</option>
         <option value="2" selected>2× screen</option>
-        <option value="3">3× screen</option>
       </select>
     </div>
     <div class="s-row">
@@ -167,8 +162,8 @@
       <span class="s-label">Bitrate</span>
       <select id="exp-bitrate">
         <option value="8000000">8 Mbps</option>
-        <option value="20000000" selected>20 Mbps</option>
-        <option value="40000000">40 Mbps</option>
+        <option value="20000000">20 Mbps</option>
+        <option value="40000000" selected>40 Mbps</option>
       </select>
     </div>
     <div class="s-row">
@@ -237,7 +232,8 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.162.0/build/three.module.js"
+    "three": "https://unpkg.com/three@0.162.0/build/three.module.js",
+    "mediabunny": "https://esm.sh/mediabunny@1.41.0"
   }
 }
 </script>
