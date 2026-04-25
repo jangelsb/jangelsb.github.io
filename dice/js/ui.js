@@ -1,7 +1,7 @@
-import { CONFIG, DEFAULTS } from './config.js';
+import { CONFIG, DEFAULTS, DIE_TYPES, loadUserPresets, saveUserPreset, deleteUserPreset } from './config.js';
 import { renderer, camera } from './scene.js';
-import { dice, rebuildTextures } from './geometry.js';
-import { roll } from './animation.js';
+import { dice, rebuildTextures, buildDie, activeDieState } from './geometry.js';
+import { roll, rollState } from './animation.js';
 import { BUILT_IN_THEMES, applyTheme, loadUserThemes, saveUserTheme, renderUserThemes } from './themes.js';
 import { generateAllWebMs, exportNumbers, initExportCancelBtn } from './export.js';
 import { addModifier, removeModifier, getModifiers } from './modifiers.js';
@@ -75,6 +75,14 @@ function syncInputsFromConfig() {
   document.getElementById('v-modCardScale').textContent = (CONFIG.modCardScale ?? 1.0).toFixed(2);
   document.getElementById('c-modCardsBottom').value = CONFIG.modCardsBottom ?? 108;
   document.getElementById('v-modCardsBottom').textContent = (CONFIG.modCardsBottom ?? 108) + 'px';
+
+  // Die type selector
+  const dieTypeEl = document.getElementById('c-dieType');
+  if (dieTypeEl) dieTypeEl.value = CONFIG.dieType || 'd20';
+
+  // Update roll input max
+  updateRollInputMax();
+
   applyModCardStyles();
 }
 
@@ -148,6 +156,52 @@ function addModifierFromInputs() {
   valueEl.value = '';
 }
 
+// ── Die type helpers ──────────────────────────────────────────────────────────
+export function updateRollInputMax() {
+  const labels = activeDieState.labels;
+  const max = labels.includes(0) ? 10 : labels.length;
+  const input = document.getElementById('rollInput');
+  if (input) { input.max = max; input.min = 1; }
+}
+
+export function renderUserPresets() {
+  const container = document.getElementById('user-presets');
+  if (!container) return;
+  container.innerHTML = '';
+  loadUserPresets().forEach(preset => {
+    const btn = document.createElement('button');
+    btn.className   = 'preset-btn';
+    btn.title       = `${preset.name}: ${(preset.dieType || 'd20').toUpperCase()}`;
+    btn.textContent = preset.name;
+    btn.addEventListener('click', () => {
+      const type = preset.dieType || 'd20';
+      CONFIG.dieType = type;
+      buildDie(type);
+      rebuildTextures();
+      updateRollInputMax();
+      rollState.current = 'idle';
+      const sel = document.getElementById('c-dieType');
+      if (sel) sel.value = type;
+    });
+
+    const del = document.createElement('button');
+    del.className   = 'preset-del';
+    del.textContent = '✕';
+    del.title       = 'Delete preset';
+    del.addEventListener('click', e => {
+      e.stopPropagation();
+      deleteUserPreset(preset.name);
+      renderUserPresets();
+    });
+
+    const wrap = document.createElement('div');
+    wrap.className = 'preset-item';
+    wrap.appendChild(btn);
+    wrap.appendChild(del);
+    container.appendChild(wrap);
+  });
+}
+
 // ── initUI — call once from main.js ───────────────────────────────────────────
 export function initUI() {
 
@@ -156,13 +210,37 @@ export function initUI() {
     roll(parseInt(document.getElementById('rollInput').value, 10));
   });
   document.getElementById('randomBtn').addEventListener('click', () => {
-    const n = Math.ceil(Math.random() * 20);
+    const labels = activeDieState.labels;
+    const max = labels.includes(0) ? 10 : labels.length;
+    const n = Math.ceil(Math.random() * max);
     document.getElementById('rollInput').value = n;
     roll(n);
   });
   document.getElementById('rollInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') roll(parseInt(e.target.value, 10));
   });
+
+  // Die type selector
+  document.getElementById('c-dieType').addEventListener('change', e => {
+    const type = e.target.value;
+    CONFIG.dieType = type;
+    buildDie(type);
+    rebuildTextures();
+    updateRollInputMax();
+    rollState.current = 'idle';
+  });
+
+  // User presets
+  document.getElementById('preset-save-btn').addEventListener('click', () => {
+    const nameEl = document.getElementById('preset-name-input');
+    const name   = nameEl.value.trim();
+    if (!name) return;
+    saveUserPreset(name, CONFIG.dieType || 'd20');
+    nameEl.value = '';
+    renderUserPresets();
+  });
+
+  renderUserPresets();
 
   // Settings panel toggle
   const toggle = document.getElementById('settingsToggle');

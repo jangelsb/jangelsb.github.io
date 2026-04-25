@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { renderer, scene, camera, clock } from './scene.js';
-import { dice, numToFace, faceTowardCamera, updateFaceNumber, resetFaceNumbers, DIE_RESTING_Y } from './geometry.js';
+import { activeDieState, dice, numToFace, faceTowardCamera, updateFaceNumber, resetFaceNumbers, DIE_RESTING_Y } from './geometry.js';
 import { getModifiers, runModifiers } from './modifiers.js';
 
 // ── Shared state ──────────────────────────────────────────────────────────────
@@ -27,14 +27,22 @@ function easeOutQuint(t) { return 1 - Math.pow(1 - t, 5); }
 // Backwards-plans the starting quaternion so that integrating the decaying
 // spin forward in time lands exactly on the target face orientation.
 export function roll(n) {
-  n = Math.round(n);
-  if (n < 1 || n > 20) return;
+  const currentDie = activeDieState.mesh;
+  const currentNumToFace = activeDieState.numToFace;
+  const currentLabels = activeDieState.labels;
+  const maxVal = currentLabels.includes(0) ? 10 : currentLabels.length; // D10: max is 10 (shown as 0)
 
-  resetFaceNumbers();            // restore all faces to original numbers
-  dice.position.set(0, DIE_RESTING_Y, 0); // clear any leftover shake offset
+  n = Math.round(n);
+  if (n < 1 || n > maxVal) return;
+
+  // For D10, face label 0 represents 10
+  const faceLabel = (CONFIG.dieType === 'd10' && n === 10) ? 0 : n;
+
+  resetFaceNumbers();
+  currentDie.position.set(0, DIE_RESTING_Y, 0);
 
   pendingResult = n;
-  settleTo = faceTowardCamera(numToFace[n]);
+  settleTo = faceTowardCamera(currentNumToFace[faceLabel]);
 
   // Primary axis: mostly horizontal so it reads like a throw
   rollAxis.set(
@@ -66,7 +74,7 @@ export function roll(n) {
   // Q_start = Q_target × Q_chaos⁻¹ × Q_primary⁻¹
   const qPrimaryInv = new THREE.Quaternion().setFromAxisAngle(rollAxis,  -totalAngle);
   const qChaosInv   = new THREE.Quaternion().setFromAxisAngle(chaoAxis,  -totalChaosAngle);
-  dice.quaternion.copy(settleTo).multiply(qChaosInv).multiply(qPrimaryInv);
+  currentDie.quaternion.copy(settleTo).multiply(qChaosInv).multiply(qPrimaryInv);
 
   rollState.current = 'tumbling';
   tumbleStart = performance.now() / 1000;
@@ -82,7 +90,8 @@ renderer.setAnimationLoop(() => {
 
   if (rollState.current === 'idle') {
     idleT += dt * 0.35;
-    dice.quaternion.setFromEuler(new THREE.Euler(
+    const m = activeDieState.mesh;
+    if (m) m.quaternion.setFromEuler(new THREE.Euler(
       Math.sin(idleT * 0.7) * 0.45,
       idleT,
       Math.sin(idleT * 0.5) * 0.25
@@ -90,9 +99,10 @@ renderer.setAnimationLoop(() => {
 
   } else if (rollState.current === 'tumbling') {
     const s = (now - tumbleStart) / CONFIG.tumbleDur;
+    const m = activeDieState.mesh;
 
     if (s >= 1.0) {
-      settleFrom.copy(dice.quaternion);
+      settleFrom.copy(m.quaternion);
       settleStart = now;
       rollState.current = 'settling';
     } else {
@@ -104,29 +114,29 @@ renderer.setAnimationLoop(() => {
       const chaoDQ = new THREE.Quaternion()
         .setFromAxisAngle(chaoAxis, chaoMag * chaoSpeed * dt);
 
-      dice.quaternion.multiply(primaryDQ).multiply(chaoDQ).normalize();
+      m.quaternion.multiply(primaryDQ).multiply(chaoDQ).normalize();
     }
 
   } else if (rollState.current === 'settling') {
     const t = Math.min((now - settleStart) / CONFIG.settleDur, 1.0);
-    dice.quaternion.slerpQuaternions(settleFrom, settleTo, easeOutQuint(t));
+    const m = activeDieState.mesh;
+    m.quaternion.slerpQuaternions(settleFrom, settleTo, easeOutQuint(t));
 
     if (t >= 1.0) {
-      dice.quaternion.copy(settleTo);
+      m.quaternion.copy(settleTo);
       rollState.current = 'done';
 
       const el = document.getElementById('result');
 
       const mods = getModifiers();
       if (mods.length === 0) {
-        // No modifiers — show result immediately
         el.textContent = `Rolled: ${pendingResult}`;
         el.classList.add('show');
       } else {
-        // Keep result hidden until all modifiers applied; die face shows running total
         rollState.current = 'modifiers';
 
-        const frontFace = numToFace[pendingResult];
+        const faceLabel = (CONFIG.dieType === 'd10' && pendingResult === 10) ? 0 : pendingResult;
+        const frontFace = activeDieState.numToFace[faceLabel];
         runModifiers(pendingResult, (runningTotal, _mod) => {
           updateFaceNumber(frontFace, runningTotal);
         }).then(finalTotal => {
@@ -138,15 +148,17 @@ renderer.setAnimationLoop(() => {
     }
 
   } else if (rollState.current === 'done' || rollState.current === 'modifiers') {
-    // Hold still — but apply shake offset when a modifier impacts
     const now2 = performance.now() / 1000;
-    if (now2 < shakeEnd) {
-      const remaining = shakeEnd - now2;
-      const decay     = remaining / 0.35;
-      const offset    = Math.sin(now2 * 60) * shakeMag * decay;
-      dice.position.set(offset, DIE_RESTING_Y + offset * 0.5, 0);
-    } else {
-      dice.position.set(0, DIE_RESTING_Y, 0);
+    const m = activeDieState.mesh;
+    if (m) {
+      if (now2 < shakeEnd) {
+        const remaining = shakeEnd - now2;
+        const decay     = remaining / 0.35;
+        const offset    = Math.sin(now2 * 60) * shakeMag * decay;
+        m.position.set(offset, DIE_RESTING_Y + offset * 0.5, 0);
+      } else {
+        m.position.set(0, DIE_RESTING_Y, 0);
+      }
     }
   }
 

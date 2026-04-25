@@ -318,6 +318,28 @@ button:active { background: #3a2e14; }
   transition: background 0.15s, border-color 0.15s;
 }
 .theme-btn:hover { background: #1e1e46; border-color: #c8a84a; }
+
+/* ── User Presets ──────────────────────────────────────── */
+#user-presets {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;
+}
+.preset-item {
+  display: flex; align-items: center; gap: 2px;
+}
+.preset-btn {
+  padding: 5px 12px; font-size: 11px; font-family: Georgia, serif;
+  border-radius: 20px 0 0 20px; border: 1px solid #c8a84a55; border-right: none;
+  background: #12122a; color: #f5e8c0; cursor: pointer; letter-spacing: 1px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.preset-btn:hover { background: #1e1e46; border-color: #c8a84a; }
+.preset-del {
+  padding: 5px 7px; font-size: 9px; font-family: Georgia, serif;
+  border-radius: 0 20px 20px 0; border: 1px solid #c8a84a55;
+  background: #12122a; color: #c8a84a66; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.preset-del:hover { background: #2a0a0a; color: #e05050; border-color: #e05050; }
 .theme-pill {
   display: flex; align-items: center; gap: 4px;
   padding: 4px 8px 4px 10px; font-size: 11px; font-family: Georgia, serif;
