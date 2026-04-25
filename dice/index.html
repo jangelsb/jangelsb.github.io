@@ -31,13 +31,6 @@
         <option value="d20" selected>D20 (Icosahedron)</option>
       </select>
     </div>
-    <h3 style="margin-top:12px">User Presets</h3>
-    <p style="font-size:11px;color:#f5e8c0aa;margin-bottom:8px">Save a name + die type combination (e.g. "Christian → D8").</p>
-    <div id="user-presets"></div>
-    <div class="s-row" style="margin-top:8px;gap:8px">
-      <input type="text" id="preset-name-input" placeholder="Name (e.g. Christian)">
-      <button id="preset-save-btn">Save</button>
-    </div>
   </div>
 
   <div class="s-section">
@@ -161,85 +154,14 @@
     </div>
   </div>
 
-  <div class="s-section">
-    <h3>Export</h3>
-    <p style="font-size:11px;color:#f5e8c0aa;line-height:1.6;margin-bottom:14px">Saves selected rolls as H.264 MP4 (DaVinci Resolve / Premiere / FCP compatible). H.264 has no alpha channel — pick a solid background below and chroma-key it in your editor.</p>
-    <div class="s-row">
-      <span class="s-label">Resolution</span>
-      <select id="exp-res">
-        <option value="1">1× screen</option>
-        <option value="2" selected>2× screen</option>
-      </select>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Background</span>
-      <select id="exp-bg">
-        <option value="chroma">🟩 Chroma green</option>
-        <option value="magenta">🟥 Magenta</option>
-        <option value="black">Black</option>
-        <option value="current">Current theme bg</option>
-      </select>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Bitrate</span>
-      <select id="exp-bitrate">
-        <option value="8000000">8 Mbps</option>
-        <option value="20000000">20 Mbps</option>
-        <option value="40000000" selected>40 Mbps</option>
-      </select>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Lead-in</span>
-      <input type="range" id="exp-leadin" min="0" max="2" step="0.1" value="0.5">
-      <span class="val" id="exp-leadin-val">0.5s</span>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Hold</span>
-      <input type="range" id="exp-hold" min="0.2" max="4" step="0.1" value="0.6">
-      <span class="val" id="exp-hold-val">0.6s</span>
-    </div>
-    <div style="font-size:11px;color:#f5e8c0aa;letter-spacing:1px;text-transform:uppercase;margin:14px 0 8px">Visible in export</div>
-    <div class="s-row">
-      <span class="s-label">Modifier animations</span>
-      <input type="checkbox" id="exp-show-modfx" checked style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
-    </div>
-    <div class="s-row">
-      <span class="s-label">Modifier cards</span>
-      <input type="checkbox" id="exp-show-cards" checked style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
-    </div>
-    <div class="s-row">
-      <span class="s-label">Result text</span>
-      <input type="checkbox" id="exp-show-result" style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
-    </div>
-    <div class="s-row" style="align-items:flex-start">
-      <span class="s-label">Numbers</span>
-      <div style="flex:1">
-        <div class="picker-acts">
-          <button class="picker-act" id="pickAll">All</button>
-          <button class="picker-act" id="pickNone">None</button>
-        </div>
-        <div id="facePicker"></div>
-      </div>
-    </div>
-    <button id="exportBtn" style="margin-top:10px">⬇ Export All 20 Videos</button>
-  </div>
-
   <button id="resetBtn">↺ Reset Defaults</button>
-</div>
-
-<div id="exportOverlay">
-  <div id="exportModal">
-    <div id="exportTitle">Generating Videos</div>
-    <div id="exportProgress"></div>
-    <div id="exportBarTrack"><div id="exportBarFill"></div></div>
-    <button id="exportCancelBtn">Cancel</button>
-  </div>
 </div>
 
 <div id="ui">
   <input type="number" id="rollInput" min="1" max="20" value="20" />
   <button id="rollBtn">ROLL</button>
   <button id="randomBtn">RANDOM</button>
+  <a href="export.html" id="exportPageLink">Export →</a>
 </div>
 
 <div id="modifiers-ui">

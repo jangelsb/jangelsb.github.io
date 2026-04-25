@@ -3,12 +3,22 @@ import { Output, Mp4OutputFormat, BufferTarget, CanvasSource } from 'mediabunny'
 import { CONFIG } from './config.js';
 import { renderer, camera } from './scene.js';
 import { roll, rollState } from './animation.js';
-import { modifierAnim, getOverlayCanvas, drawCardsToCanvas } from './modifiers.js';
+import { modifierAnim, getOverlayCanvas, drawCardsToCanvas, setModifiers } from './modifiers.js';
+import { buildDie, rebuildTextures } from './geometry.js';
+import { applyTheme, BUILT_IN_THEMES, loadUserThemes } from './themes.js';
 
 export const exportNumbers = new Set(Array.from({ length: 20 }, (_, i) => i + 1));
 
 let exportCancelled = false;
 let exportDirHandle = null;
+
+// Resolves a theme key (built-in key or 'user:Name') to a theme object.
+function getThemeByKey(key) {
+  if (!key) return null;
+  if (BUILT_IN_THEMES[key]) return BUILT_IN_THEMES[key];
+  const name = key.startsWith('user:') ? key.slice(5) : key;
+  return loadUserThemes().find(t => t.name === name) || null;
+}
 
 // Draws the #result text onto the composite canvas, mirroring its CSS style.
 function drawResultToCanvas(ctx, canvasW, canvasH) {
@@ -72,7 +82,7 @@ function getExportVisibility() {
   };
 }
 
-async function recordSingleRoll(n, settings) {
+async function recordSingleRoll(n, settings, filename) {
   const { resMul, bgColor, bitrate, leadInMs, holdMs } = settings;
   const vis = getExportVisibility();
 
@@ -167,7 +177,7 @@ async function recordSingleRoll(n, settings) {
   if (!exportCancelled) {
     await output.finalize();
     const blob = new Blob([target.buffer], { type: 'video/mp4' });
-    await saveBlob(blob, `d20_roll_${String(n).padStart(2, '0')}.mp4`);
+    await saveBlob(blob, filename || `d20_roll_${String(n).padStart(2, '0')}.mp4`);
   } else {
     await output.cancel();
   }
@@ -229,4 +239,72 @@ export function initExportCancelBtn() {
     exportCancelled = true;
     document.getElementById('exportCancelBtn').textContent = 'Cancelling\u2026';
   });
+}
+
+// ── Timeline export ───────────────────────────────────────────────────────────
+// Records each timeline item as a separate MP4 video.
+// items: TimelineItem[] — each has { label, dieType, themeName, modifiers, number }
+export async function exportTimelineItems(items, settings) {
+  exportCancelled = false;
+  exportDirHandle = null;
+
+  if (window.showDirectoryPicker) {
+    try {
+      exportDirHandle = await window.showDirectoryPicker({ id: 'd20-export', mode: 'readwrite', startIn: 'downloads' });
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      exportDirHandle = null;
+    }
+  }
+
+  const overlay    = document.getElementById('exportOverlay');
+  const progressEl = document.getElementById('exportProgress');
+  const barFill    = document.getElementById('exportBarFill');
+  const cancelBtn  = document.getElementById('exportCancelBtn');
+
+  barFill.style.width   = '0%';
+  cancelBtn.disabled    = false;
+  cancelBtn.textContent = 'Cancel';
+  overlay.classList.add('show');
+
+  const total = items.length;
+
+  for (let i = 0; i < total; i++) {
+    if (exportCancelled) break;
+    const item = items[i];
+    progressEl.textContent = `Recording item ${i + 1} / ${total}: \u201c${item.label || item.dieType}\u201d\u2026`;
+    barFill.style.width = `${(i / total) * 100}%`;
+
+    // Apply theme
+    const theme = getThemeByKey(item.themeName);
+    if (theme) {
+      applyTheme(theme);
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    // Apply die type
+    CONFIG.dieType = item.dieType;
+    buildDie(item.dieType);
+    rebuildTextures();
+    await new Promise(r => setTimeout(r, 250));
+
+    // Apply modifiers (without persisting to localStorage)
+    setModifiers(item.modifiers || []);
+
+    const safeName = (item.label || item.dieType)
+      .replace(/[^a-zA-Z0-9\s\-_]/g, '').trim().replace(/\s+/g, '_') || item.dieType;
+    const filename = `${String(i + 1).padStart(2, '0')}_${safeName}_${item.dieType}_roll${String(item.number).padStart(2, '0')}.mp4`;
+
+    await recordSingleRoll(item.number, settings, filename);
+
+    if (!exportCancelled) await new Promise(r => setTimeout(r, 150));
+  }
+
+  barFill.style.width    = '100%';
+  progressEl.textContent = exportCancelled ? 'Cancelled.' : `Done! ${total} item${total !== 1 ? 's' : ''} exported.`;
+  cancelBtn.disabled     = true;
+
+  await new Promise(r => setTimeout(r, 2000));
+  overlay.classList.remove('show');
+  rollState.current = 'idle';
 }

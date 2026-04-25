@@ -1,9 +1,8 @@
-import { CONFIG, DEFAULTS, DIE_TYPES, loadUserPresets, saveUserPreset, deleteUserPreset } from './config.js';
+import { CONFIG, DEFAULTS, DIE_TYPES } from './config.js';
 import { renderer, camera } from './scene.js';
 import { dice, rebuildTextures, buildDie, activeDieState } from './geometry.js';
 import { roll, rollState } from './animation.js';
 import { BUILT_IN_THEMES, applyTheme, loadUserThemes, saveUserTheme, renderUserThemes } from './themes.js';
-import { generateAllWebMs, exportNumbers, initExportCancelBtn } from './export.js';
 import { addModifier, removeModifier, getModifiers } from './modifiers.js';
 
 // ── CSS custom-property helpers ───────────────────────────────────────────────
@@ -105,14 +104,6 @@ function bindVal(sliderId, valId, suffix = '') {
   });
 }
 
-function updateExportBtnLabel() {
-  const n = exportNumbers.size;
-  document.getElementById('exportBtn').textContent =
-    n === 0  ? '\u2b07 Export (select numbers)' :
-    n === 20 ? '\u2b07 Export All 20 Videos' :
-               `\u2b07 Export ${n} Video${n > 1 ? 's' : ''}`;
-}
-
 // ── Modifier card rendering ───────────────────────────────────────────────────
 export function renderModifierCards() {
   const container = document.getElementById('mod-cards');
@@ -164,44 +155,6 @@ export function updateRollInputMax() {
   if (input) { input.max = max; input.min = 1; }
 }
 
-export function renderUserPresets() {
-  const container = document.getElementById('user-presets');
-  if (!container) return;
-  container.innerHTML = '';
-  loadUserPresets().forEach(preset => {
-    const btn = document.createElement('button');
-    btn.className   = 'preset-btn';
-    btn.title       = `${preset.name}: ${(preset.dieType || 'd20').toUpperCase()}`;
-    btn.textContent = preset.name;
-    btn.addEventListener('click', () => {
-      const type = preset.dieType || 'd20';
-      CONFIG.dieType = type;
-      buildDie(type);
-      rebuildTextures();
-      updateRollInputMax();
-      rollState.current = 'idle';
-      const sel = document.getElementById('c-dieType');
-      if (sel) sel.value = type;
-    });
-
-    const del = document.createElement('button');
-    del.className   = 'preset-del';
-    del.textContent = '✕';
-    del.title       = 'Delete preset';
-    del.addEventListener('click', e => {
-      e.stopPropagation();
-      deleteUserPreset(preset.name);
-      renderUserPresets();
-    });
-
-    const wrap = document.createElement('div');
-    wrap.className = 'preset-item';
-    wrap.appendChild(btn);
-    wrap.appendChild(del);
-    container.appendChild(wrap);
-  });
-}
-
 // ── initUI — call once from main.js ───────────────────────────────────────────
 export function initUI() {
 
@@ -229,18 +182,6 @@ export function initUI() {
     updateRollInputMax();
     rollState.current = 'idle';
   });
-
-  // User presets
-  document.getElementById('preset-save-btn').addEventListener('click', () => {
-    const nameEl = document.getElementById('preset-name-input');
-    const name   = nameEl.value.trim();
-    if (!name) return;
-    saveUserPreset(name, CONFIG.dieType || 'd20');
-    nameEl.value = '';
-    renderUserPresets();
-  });
-
-  renderUserPresets();
 
   // Settings panel toggle
   const toggle = document.getElementById('settingsToggle');
@@ -355,42 +296,6 @@ export function initUI() {
 
   // Reset to defaults
   document.getElementById('resetBtn').addEventListener('click', () => applyTheme(DEFAULTS));
-
-  // Video export
-  document.getElementById('exportBtn').addEventListener('click', generateAllWebMs);
-  initExportCancelBtn();
-
-  // Face number picker (for export selection)
-  const pickerContainer = document.getElementById('facePicker');
-  for (let i = 1; i <= 20; i++) {
-    const btn = document.createElement('button');
-    btn.className   = 'face-btn selected';
-    btn.textContent = i;
-    btn.dataset.n   = i;
-    btn.addEventListener('click', () => {
-      if (exportNumbers.has(i)) { exportNumbers.delete(i); btn.classList.remove('selected'); }
-      else { exportNumbers.add(i); btn.classList.add('selected'); }
-      updateExportBtnLabel();
-    });
-    pickerContainer.appendChild(btn);
-  }
-  document.getElementById('pickAll').addEventListener('click', () => {
-    for (let i = 1; i <= 20; i++) exportNumbers.add(i);
-    document.querySelectorAll('.face-btn').forEach(b => b.classList.add('selected'));
-    updateExportBtnLabel();
-  });
-  document.getElementById('pickNone').addEventListener('click', () => {
-    exportNumbers.clear();
-    document.querySelectorAll('.face-btn').forEach(b => b.classList.remove('selected'));
-    updateExportBtnLabel();
-  });
-
-  // Lead-in / hold slider labels
-  ['leadin', 'hold'].forEach(id => {
-    const slider = document.getElementById(`exp-${id}`);
-    const label  = document.getElementById(`exp-${id}-val`);
-    slider.addEventListener('input', () => { label.textContent = parseFloat(slider.value).toFixed(1) + 's'; });
-  });
 
   // Resize handler
   window.addEventListener('resize', () => {

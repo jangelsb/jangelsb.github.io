@@ -63,6 +63,12 @@ export function removeModifier(id) {
 
 export function clearModifiers() { modifiers = []; saveToStorage(); }
 
+// Temporarily override modifiers without persisting to localStorage (used by timeline export).
+export function setModifiers(mods) {
+  modifiers = mods.map((m, i) => ({ label: m.label, value: m.value, id: i + 1 }));
+  nextId = modifiers.length + 1;
+}
+
 // ── Canvas card renderer (used by export composite) ───────────────────────────
 // Draws modifier cards directly onto a 2D canvas context so they appear in
 // the exported video even though the DOM elements can't be captured by captureStream().
