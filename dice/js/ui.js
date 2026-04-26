@@ -253,6 +253,7 @@ export function initUI() {
   // Reset to BG3 baseline and re-run the normal die-type update flow.
   document.getElementById('resetBtn').addEventListener('click', () => {
     applyTheme(BUILT_IN_THEMES.bg3);
+    document.dispatchEvent(new CustomEvent('studioReset', { detail: { themeKey: 'bg3' } }));
     const dieTypeEl = document.getElementById('c-dieType');
     if (dieTypeEl) {
       dieTypeEl.value = 'd20';

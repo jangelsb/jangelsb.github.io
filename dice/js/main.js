@@ -721,6 +721,10 @@ document.addEventListener('themeapplied', () => {
   applyModCardStyles();
   studioThemeDirty = false;
 });
+document.addEventListener('studioReset', e => {
+  currentStudioThemeKey = e.detail?.themeKey || 'bg3';
+  studioThemeDirty = false;
+});
 document.addEventListener('modifierschanged', renderStudioMods);
 
 // Dirty-track theme customizations made via Studio inputs
