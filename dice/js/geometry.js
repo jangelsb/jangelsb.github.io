@@ -287,8 +287,8 @@ function buildD10Geo() {
   const vertices = [];
   const indices  = [];
 
-  const upperR = 1.6, upperY = 0.5;
-  const lowerR = 1.6, lowerY = -0.5;
+  const upperR = 1.78, upperY = 0.22;
+  const lowerR = 1.78, lowerY = -0.22;
 
   const upper = [], lower = [];
   for (let i = 0; i < 5; i++) {
@@ -298,7 +298,7 @@ function buildD10Geo() {
     lower.push([lowerR * Math.cos(aL), lowerY, lowerR * Math.sin(aL)]);
   }
 
-  const allVerts = [[0, 2.0, 0], ...upper, ...lower, [0, -2.0, 0]];
+  const allVerts = [[0, 1.82, 0], ...upper, ...lower, [0, -1.82, 0]];
   allVerts.forEach(v => vertices.push(...v));
 
   for (let i = 0; i < 5; i++) {

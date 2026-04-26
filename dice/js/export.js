@@ -282,6 +282,13 @@ export async function exportTimelineItems(items, settings) {
       await new Promise(r => setTimeout(r, 100));
     }
 
+    // Apply per-item card size and distance
+    CONFIG.modCardScale   = item.cardScale  ?? 1.0;
+    CONFIG.modCardsBottom = item.cardsBottom ?? 108;
+    const r = document.documentElement.style;
+    r.setProperty('--cards-bottom', CONFIG.modCardsBottom + 'px');
+    r.setProperty('--card-scale',   CONFIG.modCardScale);
+
     // Apply die type
     CONFIG.dieType = item.dieType;
     buildDie(item.dieType);

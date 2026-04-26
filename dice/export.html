@@ -16,7 +16,7 @@
 <div id="result"></div>
 
 <!-- Hidden modifier cards container (used by export compositing) -->
-<div id="modifiers-ui" style="visibility:hidden;pointer-events:none">
+<div id="modifiers-ui" style="pointer-events:none">
   <div id="mod-cards"></div>
 </div>
 
@@ -29,194 +29,178 @@
 <div id="settingsPanel">
   <a href="index.html" class="panel-nav-link">&#8592; Back to Studio</a>
 
-  <!-- ── Current Setup ──────────────────────────────── -->
-  <div class="s-section">
-    <h3>Current Setup</h3>
-    <div class="s-row">
-      <span class="s-label">Die Type</span>
-      <select id="ep-dieType">
-        <option value="d4">D4</option>
-        <option value="d6">D6</option>
-        <option value="d8">D8</option>
-        <option value="d10">D10</option>
-        <option value="d12">D12</option>
-        <option value="d20" selected>D20</option>
-      </select>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Theme</span>
-      <select id="ep-theme"></select>
-    </div>
-    <div class="s-divider">Modifiers</div>
-    <div id="cs-mods"></div>
-    <div class="s-row" style="gap:6px;margin-top:6px">
-      <input type="text"   class="s-text-input" id="cs-mod-label" placeholder="Label (e.g. STR)" maxlength="20" style="flex:2">
-      <input type="number" id="cs-mod-value" placeholder="+3" style="width:58px;font-size:13px;padding:5px;text-align:center">
-      <button class="s-btn" id="cs-mod-add" style="padding:5px 10px;font-size:13px">+</button>
-    </div>
-    <div class="s-divider">Cards</div>
-    <div class="s-row">
-      <span class="s-label">Card size</span>
-      <input type="range" id="cs-cardScale" min="0.5" max="2.0" step="0.05" value="1.0">
-      <span class="val" id="v-cs-cardScale">1.00</span>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Cards distance</span>
-      <input type="range" id="cs-cardsBottom" min="80" max="400" step="4" value="108">
-      <span class="val" id="v-cs-cardsBottom">108px</span>
-    </div>
-    <div style="border-top:1px solid #c8a84a22;margin:14px 0 12px"></div>
-    <div class="s-row" style="gap:6px">
-      <input type="text"   class="s-text-input" id="cs-entry-label" placeholder="Entry label…" maxlength="40" style="flex:2">
-      <input type="number" id="cs-entry-number" min="1" max="20" value="1" style="width:54px;font-size:13px;padding:5px;text-align:center">
-      <button class="s-btn" id="cs-add-to-tl" style="white-space:nowrap;padding:5px 10px;font-size:11px">+ Add</button>
-    </div>
-  </div>
-
-  <!-- ── Export Settings (shared) ──────────────────── -->
-  <div class="s-section">
-    <h3>Export Settings</h3>
-    <p style="font-size:11px;color:#f5e8c0aa;line-height:1.6;margin-bottom:14px">H.264 MP4 — no alpha channel. Pick a background and chroma-key in your editor.</p>
-    <div class="s-row">
-      <span class="s-label">Resolution</span>
-      <select id="exp-res">
-        <option value="1">1&times; screen</option>
-        <option value="2" selected>2&times; screen</option>
-      </select>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Background</span>
-      <select id="exp-bg">
-        <option value="chroma">&#129001; Chroma green</option>
-        <option value="magenta">&#128997; Magenta</option>
-        <option value="black">Black</option>
-        <option value="current">Current theme bg</option>
-      </select>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Bitrate</span>
-      <select id="exp-bitrate">
-        <option value="8000000">8 Mbps</option>
-        <option value="20000000">20 Mbps</option>
-        <option value="40000000" selected>40 Mbps</option>
-      </select>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Lead-in</span>
-      <input type="range" id="exp-leadin" min="0" max="2" step="0.1" value="0.5">
-      <span class="val" id="exp-leadin-val">0.5s</span>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Hold</span>
-      <input type="range" id="exp-hold" min="0.2" max="4" step="0.1" value="0.6">
-      <span class="val" id="exp-hold-val">0.6s</span>
-    </div>
-    <div class="s-divider">Visible in export</div>
-    <div class="s-row">
-      <span class="s-label">Modifier animations</span>
-      <input type="checkbox" id="exp-show-modfx" checked style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
-    </div>
-    <div class="s-row">
-      <span class="s-label">Modifier cards</span>
-      <input type="checkbox" id="exp-show-cards" style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
-    </div>
-    <div class="s-row">
-      <span class="s-label">Result text</span>
-      <input type="checkbox" id="exp-show-result" style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
-    </div>
-  </div>
-
   <!-- ── Mode selector ──────────────────────────────── -->
   <div id="exp-mode-tabs">
     <button class="mode-tab active" data-mode="timeline">Timeline</button>
     <button class="mode-tab" data-mode="quick">Quick Export</button>
   </div>
 
+
+  <!-- ── Export Settings (shared) ──────────────────── -->
+  <details id="exp-settings-details">
+    <summary class="exp-settings-summary">Export Settings</summary>
+    <div class="s-section" style="margin-top:12px">
+      <p style="font-size:11px;color:#f5e8c0aa;line-height:1.6;margin-bottom:14px">H.264 MP4 — no alpha channel. Pick a background and chroma-key in your editor.</p>
+      <div class="s-row">
+        <span class="s-label">Resolution</span>
+        <select id="exp-res">
+          <option value="1">1&times; screen</option>
+          <option value="2" selected>2&times; screen</option>
+        </select>
+      </div>
+      <div class="s-row">
+        <span class="s-label">Background</span>
+        <select id="exp-bg">
+          <option value="chroma">&#129001; Chroma green</option>
+          <option value="magenta">&#128997; Magenta</option>
+          <option value="black">Black</option>
+          <option value="current">Current theme bg</option>
+        </select>
+      </div>
+      <div class="s-row">
+        <span class="s-label">Bitrate</span>
+        <select id="exp-bitrate">
+          <option value="8000000">8 Mbps</option>
+          <option value="20000000">20 Mbps</option>
+          <option value="40000000" selected>40 Mbps</option>
+        </select>
+      </div>
+      <div class="s-row">
+        <span class="s-label">Lead-in</span>
+        <input type="range" id="exp-leadin" min="0" max="2" step="0.1" value="0.5">
+        <span class="val" id="exp-leadin-val">0.5s</span>
+      </div>
+      <div class="s-row">
+        <span class="s-label">Hold</span>
+        <input type="range" id="exp-hold" min="0.2" max="4" step="0.1" value="0.6">
+        <span class="val" id="exp-hold-val">0.6s</span>
+      </div>
+      <div class="s-divider">Visible in export</div>
+      <div class="s-row">
+        <span class="s-label">Modifier animations</span>
+        <input type="checkbox" id="exp-show-modfx" checked style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
+      </div>
+      <div class="s-row">
+        <span class="s-label">Modifier cards</span>
+        <input type="checkbox" id="exp-show-cards" checked style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
+      </div>
+      <div class="s-row">
+        <span class="s-label">Result text</span>
+        <input type="checkbox" id="exp-show-result" style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
+      </div>
+    </div>
+  </details>
+
   <!-- ── Timeline panel ────────────────────────────── -->
   <div id="exp-panel-timeline">
 
-    <div class="s-section">
-      <h3>Timeline</h3>
-      <div id="tl-items"></div>
+    <details id="tl-entries-details" open>
+      <summary class="exp-settings-summary">Timeline Entries</summary>
+      <div class="s-section" style="margin-top:12px">
+        <div id="tl-items"></div>
+        <!-- Inline edit/add form -->
+        <div id="tl-item-form" style="display:none;padding-top:12px;border-top:1px solid #c8a84a22;margin-top:10px">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#c8a84a;margin-bottom:10px" id="tl-form-title">Edit Entry</div>
+          <div class="s-row">
+            <span class="s-label">Entry name</span>
+            <input type="text" class="s-text-input" id="tl-form-label" placeholder="e.g. Attack Roll" maxlength="40">
+          </div>
+          <div class="s-row">
+            <span class="s-label">Die Type</span>
+            <select id="tl-form-die">
+              <option value="d4">D4</option>
+              <option value="d6">D6</option>
+              <option value="d8">D8</option>
+              <option value="d10">D10</option>
+              <option value="d12">D12</option>
+              <option value="d20" selected>D20</option>
+            </select>
+          </div>
+          <div class="s-row">
+            <span class="s-label">Theme</span>
+            <select id="tl-form-theme"></select>
+          </div>
+          <div class="s-divider" style="margin-top:8px">Roll Number</div>
+          <div id="tl-form-face-picker" style="margin-bottom:8px"></div>
+          <div class="s-divider">Modifiers</div>
+          <div id="tl-form-mods-list"></div>
+          <div class="s-row" style="gap:6px;margin-top:4px">
+            <input type="text" class="s-text-input" id="tl-form-mod-label" placeholder="Name (e.g. Dexterity)" maxlength="20" style="flex:2">
+            <input type="number" id="tl-form-mod-value" placeholder="+3" style="width:58px;font-size:13px;padding:5px;text-align:center">
+            <button class="s-btn" id="tl-form-mod-add" style="padding:5px 10px;font-size:13px">+</button>
+          </div>
+          <div class="s-divider">Cards</div>
+          <div class="s-row">
+            <span class="s-label">Card size</span>
+            <input type="range" id="tl-form-cardScale" min="0.5" max="2.0" step="0.05" value="1.0">
+            <span class="val" id="v-tl-form-cardScale">1.00</span>
+          </div>
+          <div class="s-row">
+            <span class="s-label">Card distance</span>
+            <input type="range" id="tl-form-cardsBottom" min="80" max="400" step="4" value="108">
+            <span class="val" id="v-tl-form-cardsBottom">108px</span>
+          </div>
+          <div class="s-row" style="gap:8px;margin-top:12px">
+            <button class="s-btn s-btn-cancel" id="tl-form-cancel">Cancel</button>
+            <button class="s-btn" id="tl-form-save" style="flex:1">Save Entry</button>
+          </div>
+        </div>
+        <button class="s-btn s-btn-add-entry" id="tl-add-entry-btn" style="width:100%;margin-top:8px">+ Add Entry</button>
+      </div>
+    </details>
 
-      <!-- Inline edit form -->
-      <div id="tl-item-form" style="display:none;padding-top:12px;border-top:1px solid #c8a84a22;margin-top:10px">
-        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#c8a84a;margin-bottom:10px" id="tl-form-title">Edit Item</div>
-        <div class="s-row">
-          <span class="s-label">Label</span>
-          <input type="text" class="s-text-input" id="tl-form-label" placeholder="e.g. Attack Roll" maxlength="40">
+    <details id="tl-saved-details" open>
+      <summary class="exp-settings-summary">Saved Timelines</summary>
+      <div class="s-section" style="margin-top:12px">
+        <div id="tl-saved-list" style="margin-bottom:8px"></div>
+        <div class="s-row" style="gap:8px">
+          <input type="text" class="s-text-input" id="tl-save-name" placeholder="Timeline name…">
+          <button class="s-btn" id="tl-save-btn" style="white-space:nowrap">Save</button>
         </div>
-        <div class="s-row">
-          <span class="s-label">Die Type</span>
-          <select id="tl-form-die">
-            <option value="d4">D4</option>
-            <option value="d6">D6</option>
-            <option value="d8">D8</option>
-            <option value="d10">D10</option>
-            <option value="d12">D12</option>
-            <option value="d20" selected>D20</option>
-          </select>
+        <div id="theme-io" style="margin-top:6px">
+          <button class="io-btn" id="tl-export-json">&#11015; Export JSON</button>
+          <button class="io-btn" id="tl-import-json-btn">&#11014; Import JSON</button>
         </div>
-        <div class="s-row">
-          <span class="s-label">Theme</span>
-          <select id="tl-form-theme"></select>
-        </div>
-        <div class="s-row">
-          <span class="s-label">Roll Number</span>
-          <input type="number" id="tl-form-number" min="1" max="20" value="1" style="width:70px;font-size:14px;padding:6px;text-align:center">
-        </div>
-        <div class="s-row">
-          <span class="s-label">Card size</span>
-          <input type="range" id="tl-form-cardScale" min="0.5" max="2.0" step="0.05" value="1.0">
-          <span class="val" id="v-tl-cardScale">1.00</span>
-        </div>
-        <div class="s-row">
-          <span class="s-label">Cards distance</span>
-          <input type="range" id="tl-form-cardsBottom" min="80" max="400" step="4" value="108">
-          <span class="val" id="v-tl-cardsBottom">108px</span>
-        </div>
-        <div class="s-divider">Modifiers</div>
-        <div id="tl-form-mods-list"></div>
-        <div class="s-row" style="gap:6px;margin-top:4px">
-          <input type="text" class="s-text-input" id="tl-form-mod-label" placeholder="Label" maxlength="20" style="flex:2">
-          <input type="number" id="tl-form-mod-value" placeholder="+3" style="width:58px;font-size:13px;padding:5px;text-align:center">
-          <button class="s-btn" id="tl-form-mod-add" style="padding:5px 10px;font-size:13px">+</button>
-        </div>
-        <div class="s-row" style="gap:8px;margin-top:12px">
-          <button class="s-btn s-btn-cancel" id="tl-form-cancel">Cancel</button>
-          <button class="s-btn" id="tl-form-save">Save Item</button>
-        </div>
+        <input type="file" id="tl-import-file" accept=".json,application/json" style="display:none">
       </div>
-    </div>
-
-    <div class="s-section">
-      <h3>Saved Timelines</h3>
-      <div id="tl-saved-list" style="margin-bottom:8px"></div>
-      <div class="s-row" style="gap:8px">
-        <input type="text" class="s-text-input" id="tl-save-name" placeholder="Timeline name…">
-        <button class="s-btn" id="tl-save-btn" style="white-space:nowrap">Save</button>
-      </div>
-      <div id="theme-io" style="margin-top:6px">
-        <button class="io-btn" id="tl-export-json">&#11015; Export JSON</button>
-        <button class="io-btn" id="tl-import-json-btn">&#11014; Import JSON</button>
-      </div>
-      <input type="file" id="tl-import-file" accept=".json,application/json" style="display:none">
-    </div>
+    </details>
 
     <div class="s-section">
       <div class="s-row" style="gap:8px">
         <button class="s-btn tl-action" id="tl-preview-btn">&#9654; Preview</button>
         <button class="s-btn tl-action" id="tl-export-btn">&#11015; Export Timeline</button>
       </div>
+      <button class="s-btn s-btn-cancel" id="tl-clear-btn" style="width:100%;margin-top:8px;text-align:center">Clear Timeline</button>
     </div>
 
   </div><!-- /exp-panel-timeline -->
 
-  <!-- ── Quick Export panel ────────────────────────── -->
+  <!-- Quick Export panel -->
   <div id="exp-panel-quick" style="display:none">
     <div class="s-section">
-      <h3>Quick Export</h3>
-      <p style="font-size:11px;color:#f5e8c0aa;margin-bottom:10px">Exports the Current Setup for specific roll numbers — one video per number.</p>
+      <div class="s-row">
+        <span class="s-label">Die Type</span>
+        <select id="ep-dieType">
+          <option value="d4">D4</option>
+          <option value="d6">D6</option>
+          <option value="d8">D8</option>
+          <option value="d10">D10</option>
+          <option value="d12">D12</option>
+          <option value="d20" selected>D20</option>
+        </select>
+      </div>
+      <div class="s-row">
+        <span class="s-label">Theme</span>
+        <select id="ep-theme"></select>
+      </div>
+      <div class="s-divider">Modifiers</div>
+      <div id="cs-mods"></div>
+      <div class="s-row" style="gap:6px;margin-top:6px">
+        <input type="text"   class="s-text-input" id="cs-mod-label" placeholder="Name (e.g. Dexterity)" maxlength="20" style="flex:2">
+        <input type="number" id="cs-mod-value" placeholder="+3" style="width:58px;font-size:13px;padding:5px;text-align:center">
+        <button class="s-btn" id="cs-mod-add" style="padding:5px 10px;font-size:13px">+</button>
+      </div>
+      <div class="s-divider">Numbers</div>
       <div class="s-row" style="align-items:flex-start">
         <span class="s-label">Numbers</span>
         <div style="flex:1">

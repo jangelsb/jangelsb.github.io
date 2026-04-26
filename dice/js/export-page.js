@@ -5,7 +5,8 @@ import { roll, rollState } from './animation.js';
 import { applyTheme, BUILT_IN_THEMES, loadUserThemes } from './themes.js';
 import { CONFIG, DIE_TYPES } from './config.js';
 import { buildDie, rebuildTextures, activeDieState } from './geometry.js';
-import { setModifiers } from './modifiers.js';
+import { setModifiers, modifierAnim } from './modifiers.js';
+import { renderModifierCards } from './ui.js';
 import { loadTimelines, saveTimeline, deleteTimeline } from './timeline.js';
 import {
   exportTimelineItems,
@@ -92,12 +93,12 @@ function applyModCardStyles() {
 }
 
 // ── Current Setup state ───────────────────────────────────────────────────────
-let currentMods = [];
+let qeMods = [];
 
-function renderCurrentMods() {
+function renderQeMods() {
   const container = document.getElementById('cs-mods');
   container.innerHTML = '';
-  if (!currentMods.length) {
+  if (!qeMods.length) {
     const empty = document.createElement('p');
     empty.className   = 'tl-empty';
     empty.textContent = 'No modifiers';
@@ -105,7 +106,7 @@ function renderCurrentMods() {
     container.appendChild(empty);
     return;
   }
-  currentMods.forEach((mod, idx) => {
+  qeMods.forEach((mod, idx) => {
     const row = document.createElement('div');
     row.className = 'tl-form-mod-row';
     const valStr     = (mod.value >= 0 ? '+' : '') + mod.value;
@@ -116,45 +117,125 @@ function renderCurrentMods() {
       <button class="tl-form-mod-del" title="Remove">&#10005;</button>
     `;
     row.querySelector('.tl-form-mod-del').addEventListener('click', () => {
-      currentMods.splice(idx, 1);
-      setModifiers(currentMods);
-      renderCurrentMods();
+      qeMods.splice(idx, 1);
+      setModifiers(qeMods);
+      renderModifierCards();
+      renderQeMods();
     });
     container.appendChild(row);
   });
 }
 
-function syncCsCardSliders() {
-  const se = document.getElementById('cs-cardScale');
-  const be = document.getElementById('cs-cardsBottom');
-  const sv = document.getElementById('v-cs-cardScale');
-  const bv = document.getElementById('v-cs-cardsBottom');
-  if (se) se.value = CONFIG.modCardScale  ?? 1.0;
-  if (be) be.value = CONFIG.modCardsBottom ?? 108;
-  if (sv) sv.textContent = (CONFIG.modCardScale  ?? 1.0).toFixed(2);
-  if (bv) bv.textContent = (CONFIG.modCardsBottom ?? 108) + 'px';
+function syncFormCardSliders(cardScale, cardsBottom) {
+  const se = document.getElementById('tl-form-cardScale');
+  const be = document.getElementById('tl-form-cardsBottom');
+  const sv = document.getElementById('v-tl-form-cardScale');
+  const bv = document.getElementById('v-tl-form-cardsBottom');
+  const scale  = cardScale  ?? CONFIG.modCardScale  ?? 1.0;
+  const bottom = cardsBottom ?? CONFIG.modCardsBottom ?? 108;
+  if (se) se.value = scale;
+  if (be) be.value = bottom;
+  if (sv) sv.textContent = parseFloat(scale).toFixed(2);
+  if (bv) bv.textContent = bottom + 'px';
+  CONFIG.modCardScale  = parseFloat(scale);
+  CONFIG.modCardsBottom = parseInt(bottom, 10);
 }
 
-function addCurrentSetupToTimeline() {
-  const label  = document.getElementById('cs-entry-label').value.trim();
-  const number = parseInt(document.getElementById('cs-entry-number').value, 10);
-  if (isNaN(number) || number < 1) { alert('Enter a valid roll number.'); return; }
-  const dieType   = document.getElementById('ep-dieType').value;
-  const themeName = document.getElementById('ep-theme').value;
-  timelineItems.push({
-    id:             nextItemId++,
-    label:          label || `${dieType.toUpperCase()} Roll`,
-    dieType,
-    themeName,
-    modifiers:      currentMods.map(m => ({ ...m })),
-    number,
-    modCardScale:   CONFIG.modCardScale   ?? 1.0,
-    modCardsBottom: CONFIG.modCardsBottom ?? 108,
+// ── Face number pickers (single-select) ────────────────────────────────────────────
+let tlFormSelectedNumber = 1;
+
+function buildTlFormFacePicker(dieType, selected) {
+  const picker = document.getElementById('tl-form-face-picker');
+  if (!picker) return;
+  picker.innerHTML = '';
+  const maxN = dieType === 'd10' ? 10 : (DIE_TYPES[dieType]?.faces || 20);
+  tlFormSelectedNumber = Math.min(Math.max(selected || 1, 1), maxN);
+  const cols = Math.ceil(maxN / 2);
+  picker.style.display = 'grid';
+  picker.style.gap = '4px';
+  picker.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  picker.style.marginBottom = '8px';
+  for (let i = 1; i <= maxN; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'face-btn' + (i === tlFormSelectedNumber ? ' selected' : '');
+    btn.textContent = i;
+    btn.addEventListener('click', () => {
+      tlFormSelectedNumber = i;
+      picker.querySelectorAll('.face-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+    picker.appendChild(btn);
+  }
+}
+
+// ── Timeline entry actions ────────────────────────────────────────────
+
+function qeApplyToCanvas() {
+  const type     = document.getElementById('ep-dieType').value;
+  const themeKey = document.getElementById('ep-theme').value;
+  CONFIG.dieType = type;
+  buildDie(type);
+  rebuildTextures();
+  const theme = getThemeByKey(themeKey);
+  if (theme) applyTheme(theme);
+  applyModCardStyles();
+  setModifiers(qeMods);
+  renderModifierCards();
+  rollState.current = 'idle';
+  buildFacePicker();
+}
+
+function selectTimelineItem(id) {
+  selectedItemId = id;
+  document.querySelectorAll('.tl-item-row').forEach(r => {
+    r.classList.toggle('tl-selected', r.dataset.id === String(id));
   });
-  document.getElementById('cs-entry-label').value  = '';
-  document.getElementById('cs-entry-number').value = '1';
-  renderTimeline();
-  if (document.getElementById('exp-panel-timeline').style.display === 'none') switchMode('timeline');
+  const item = timelineItems.find(i => i.id === id);
+  if (!item) return;
+  const theme = getThemeByKey(item.themeName);
+  if (theme) applyTheme(theme);
+  CONFIG.modCardScale   = item.cardScale  ?? 1.0;
+  CONFIG.modCardsBottom = item.cardsBottom ?? 108;
+  applyModCardStyles();
+  CONFIG.dieType = item.dieType;
+  buildDie(item.dieType);
+  rebuildTextures();
+  setModifiers(item.modifiers || []);
+  renderModifierCards();
+  rollState.current = 'idle';
+}
+
+async function rollSingleItem(id) {
+  selectTimelineItem(id);
+  await new Promise(r => setTimeout(r, 350));
+  const item = timelineItems.find(i => i.id === id);
+  if (item) roll(item.number);
+}
+
+function openNewEntryForm() {
+  editingItemId = null;
+  formMods      = [];
+  document.getElementById('tl-form-title').textContent = 'New Entry';
+  document.getElementById('tl-form-label').value       = '';
+  document.getElementById('tl-form-die').value         = 'd20';
+  buildTlFormFacePicker('d20', 1);
+  populateThemeSelect(document.getElementById('tl-form-theme'), 'bg3');
+  renderFormMods();
+  syncFormCardSliders(1.0, 108);
+  // Apply defaults to canvas
+  CONFIG.dieType = 'd20';
+  buildDie('d20');
+  rebuildTextures();
+  const theme = getThemeByKey('bg3');
+  if (theme) applyTheme(theme);
+  applyModCardStyles();
+  setModifiers([]);
+  renderModifierCards();
+  rollState.current = 'idle';
+  const form = document.getElementById('tl-item-form');
+  form.style.display = '';
+  document.getElementById('tl-add-entry-btn').style.display = 'none';
+  form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ── Mode tabs ─────────────────────────────────────────────────────────────────
@@ -164,32 +245,48 @@ function switchMode(mode) {
   });
   document.getElementById('exp-panel-timeline').style.display = mode === 'timeline' ? '' : 'none';
   document.getElementById('exp-panel-quick').style.display    = mode === 'quick'    ? '' : 'none';
+  if (mode === 'quick') {
+    qeApplyToCanvas();
+  } else if (selectedItemId !== null) {
+    selectTimelineItem(selectedItemId);
+  }
 }
 
-// ── Timeline state (in-memory) ────────────────────────────────────────────────
-let timelineItems = [];
-let nextItemId    = 1;
-let editingItemId = null;
-let formMods      = [];
+// ── Timeline state (in-memory + auto-saved) ──────────────────────────────────
+const WORKING_TL_KEY = 'd20-timeline-working';
+
+function persistWorkingTimeline() {
+  try { localStorage.setItem(WORKING_TL_KEY, JSON.stringify(timelineItems)); } catch {}
+}
+
+function loadWorkingTimeline() {
+  try { return JSON.parse(localStorage.getItem(WORKING_TL_KEY) || '[]'); } catch { return []; }
+}
+
+let timelineItems = loadWorkingTimeline();
+let nextItemId    = timelineItems.length
+  ? Math.max(...timelineItems.map(i => i.id || 0)) + 1
+  : 1;
+let editingItemId  = null;
+let selectedItemId = null;
+let formMods       = [];
 
 // ── Timeline rendering ────────────────────────────────────────────────────────
 function renderTimeline() {
   const container = document.getElementById('tl-items');
-  const form      = document.getElementById('tl-item-form');
   container.innerHTML = '';
 
   if (timelineItems.length === 0) {
     const empty = document.createElement('p');
     empty.className   = 'tl-empty';
-    empty.textContent = 'No items yet — configure Current Setup and click "+ Add".';
+    empty.textContent = 'No entries yet — click "+ Add Entry" to start.';
     container.appendChild(empty);
-    container.appendChild(form);
     return;
   }
 
   timelineItems.forEach((item, idx) => {
     const row = document.createElement('div');
-    row.className  = 'tl-item-row';
+    row.className  = 'tl-item-row' + (item.id === selectedItemId ? ' tl-selected' : '');
     row.dataset.id = item.id;
 
     const modsSummary = item.modifiers.length > 0
@@ -210,6 +307,7 @@ function renderTimeline() {
         <span class="tl-item-meta">${escapeHtml(modsSummary)}</span>
       </div>
       <div class="tl-item-btns">
+        <button class="tl-btn tl-btn-play" title="Roll">&#9654;</button>
         <button class="tl-btn tl-btn-up"   title="Move up"   ${idx === 0 ? 'disabled' : ''}>&#9650;</button>
         <button class="tl-btn tl-btn-down" title="Move down" ${idx === timelineItems.length - 1 ? 'disabled' : ''}>&#9660;</button>
         <button class="tl-btn tl-btn-edit" title="Edit">&#9998;</button>
@@ -217,15 +315,16 @@ function renderTimeline() {
       </div>
     `;
 
-    row.querySelector('.tl-btn-up').addEventListener('click',   () => moveItem(item.id, -1));
-    row.querySelector('.tl-btn-down').addEventListener('click', () => moveItem(item.id,  1));
-    row.querySelector('.tl-btn-edit').addEventListener('click', () => openEditForm(item.id));
-    row.querySelector('.tl-btn-del').addEventListener('click',  () => deleteItem(item.id));
+    row.querySelector('.tl-item-num').addEventListener('click',  () => selectTimelineItem(item.id));
+    row.querySelector('.tl-item-info').addEventListener('click', () => selectTimelineItem(item.id));
+    row.querySelector('.tl-btn-play').addEventListener('click',  () => rollSingleItem(item.id));
+    row.querySelector('.tl-btn-up').addEventListener('click',    () => moveItem(item.id, -1));
+    row.querySelector('.tl-btn-down').addEventListener('click',  () => moveItem(item.id,  1));
+    row.querySelector('.tl-btn-edit').addEventListener('click',  () => openEditForm(item.id));
+    row.querySelector('.tl-btn-del').addEventListener('click',   () => deleteItem(item.id));
 
     container.appendChild(row);
   });
-
-  container.appendChild(form);
 }
 
 function moveItem(id, dir) {
@@ -234,12 +333,14 @@ function moveItem(id, dir) {
   const newIdx = idx + dir;
   if (newIdx < 0 || newIdx >= timelineItems.length) return;
   [timelineItems[idx], timelineItems[newIdx]] = [timelineItems[newIdx], timelineItems[idx]];
+  persistWorkingTimeline();
   renderTimeline();
 }
 
 function deleteItem(id) {
   timelineItems = timelineItems.filter(i => i.id !== id);
   if (editingItemId === id) closeEditForm();
+  persistWorkingTimeline();
   renderTimeline();
 }
 
@@ -251,34 +352,36 @@ function openEditForm(id) {
   editingItemId = id;
   formMods      = item.modifiers.map(m => ({ ...m }));
 
-  document.getElementById('tl-form-title').textContent = 'Edit Item';
+  document.getElementById('tl-form-title').textContent = 'Edit Entry';
   document.getElementById('tl-form-label').value       = item.label || '';
   document.getElementById('tl-form-die').value         = item.dieType;
 
-  const maxN  = item.dieType === 'd10' ? 10 : (DIE_TYPES[item.dieType]?.faces || 20);
-  const numEl = document.getElementById('tl-form-number');
-  numEl.max   = String(maxN);
-  numEl.value = String(item.number);
-
-  const cardScale   = item.modCardScale   ?? (CONFIG.modCardScale   ?? 1.0);
-  const cardsBottom = item.modCardsBottom ?? (CONFIG.modCardsBottom ?? 108);
-  const scaleEl  = document.getElementById('tl-form-cardScale');
-  const bottomEl = document.getElementById('tl-form-cardsBottom');
-  scaleEl.value  = cardScale;
-  bottomEl.value = cardsBottom;
-  document.getElementById('v-tl-cardScale').textContent   = cardScale.toFixed(2);
-  document.getElementById('v-tl-cardsBottom').textContent = cardsBottom + 'px';
+  buildTlFormFacePicker(item.dieType, item.number);
 
   populateThemeSelect(document.getElementById('tl-form-theme'), item.themeName);
   renderFormMods();
+  syncFormCardSliders(item.cardScale ?? 1.0, item.cardsBottom ?? 108);
+
+  // Apply item to canvas live
+  const theme = getThemeByKey(item.themeName);
+  if (theme) applyTheme(theme);
+  applyModCardStyles();
+  CONFIG.dieType = item.dieType;
+  buildDie(item.dieType);
+  rebuildTextures();
+  setModifiers(formMods);
+  renderModifierCards();
+  rollState.current = 'idle';
 
   const form = document.getElementById('tl-item-form');
   form.style.display = '';
+  document.getElementById('tl-add-entry-btn').style.display = 'none';
   form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function closeEditForm() {
   document.getElementById('tl-item-form').style.display = 'none';
+  document.getElementById('tl-add-entry-btn').style.display = '';
   editingItemId = null;
   formMods      = [];
 }
@@ -306,6 +409,8 @@ function renderFormMods() {
     `;
     row.querySelector('.tl-form-mod-del').addEventListener('click', () => {
       formMods.splice(idx, 1);
+      setModifiers(formMods);
+      renderModifierCards();
       renderFormMods();
     });
     list.appendChild(row);
@@ -313,40 +418,58 @@ function renderFormMods() {
 }
 
 function submitItemForm() {
-  const label          = document.getElementById('tl-form-label').value.trim();
-  const dieType        = document.getElementById('tl-form-die').value;
-  const themeName      = document.getElementById('tl-form-theme').value;
-  const number         = parseInt(document.getElementById('tl-form-number').value, 10);
-  const modCardScale   = parseFloat(document.getElementById('tl-form-cardScale').value);
-  const modCardsBottom = parseInt(document.getElementById('tl-form-cardsBottom').value, 10);
+  const label      = document.getElementById('tl-form-label').value.trim();
+  const dieType    = document.getElementById('tl-form-die').value;
+  const themeName  = document.getElementById('tl-form-theme').value;
+  const number     = tlFormSelectedNumber;
+  const cardScale  = parseFloat(document.getElementById('tl-form-cardScale').value);
+  const cardsBottom = parseInt(document.getElementById('tl-form-cardsBottom').value, 10);
 
-  if (isNaN(number) || number < 1) { alert('Enter a valid roll number.'); return; }
+  if (number < 1) return;
 
-  const item = timelineItems.find(i => i.id === editingItemId);
-  if (item) {
-    item.label          = label;
-    item.dieType        = dieType;
-    item.themeName      = themeName;
-    item.number         = number;
-    item.modifiers      = formMods.map(m => ({ ...m }));
-    item.modCardScale   = modCardScale;
-    item.modCardsBottom = modCardsBottom;
+  if (editingItemId === null) {
+    const newItem = {
+      id:        nextItemId++,
+      label:     label || `${dieType.toUpperCase()} Roll`,
+      dieType,
+      themeName,
+      number,
+      modifiers: formMods.map(m => ({ ...m })),
+      cardScale,
+      cardsBottom,
+    };
+    timelineItems.push(newItem);
+    selectedItemId = newItem.id;
+  } else {
+    const item = timelineItems.find(i => i.id === editingItemId);
+    if (item) {
+      item.label       = label;
+      item.dieType     = dieType;
+      item.themeName   = themeName;
+      item.number      = number;
+      item.modifiers   = formMods.map(m => ({ ...m }));
+      item.cardScale   = cardScale;
+      item.cardsBottom = cardsBottom;
+    }
   }
 
   closeEditForm();
+  persistWorkingTimeline();
   renderTimeline();
 }
 
 // ── Preview playback ──────────────────────────────────────────────────────────
 let previewCancelled = false;
+let previewRunning   = false;
 
 async function previewTimeline() {
+  if (previewRunning) { stopPreview(); return; }
   if (timelineItems.length === 0) { alert('Add at least one item to preview.'); return; }
 
   previewCancelled = false;
+  previewRunning   = true;
   const btn = document.getElementById('tl-preview-btn');
   btn.textContent = '⏹ Stop';
-  btn.onclick     = stopPreview;
 
   for (let i = 0; i < timelineItems.length; i++) {
     if (previewCancelled) break;
@@ -364,9 +487,8 @@ async function previewTimeline() {
     const theme = getThemeByKey(item.themeName);
     if (theme) applyTheme(theme);
 
-    // Apply card overrides (after theme sets defaults)
-    if (item.modCardScale   !== undefined) CONFIG.modCardScale   = item.modCardScale;
-    if (item.modCardsBottom !== undefined) CONFIG.modCardsBottom = item.modCardsBottom;
+    CONFIG.modCardScale   = item.cardScale  ?? 1.0;
+    CONFIG.modCardsBottom = item.cardsBottom ?? 108;
     applyModCardStyles();
 
     // Apply die type
@@ -376,6 +498,7 @@ async function previewTimeline() {
 
     // Apply modifiers
     setModifiers(item.modifiers || []);
+    renderModifierCards();
 
     // Allow die to settle before rolling
     rollState.current = 'idle';
@@ -395,15 +518,13 @@ async function previewTimeline() {
   }
 
   document.querySelectorAll('.tl-item-row').forEach(r => r.classList.remove('tl-active'));
+  previewRunning   = false;
   btn.textContent = '▶ Preview';
-  btn.onclick     = previewTimeline;
 }
 
 function stopPreview() {
   previewCancelled = true;
-  const btn = document.getElementById('tl-preview-btn');
-  btn.textContent = '▶ Preview';
-  btn.onclick     = previewTimeline;
+  document.getElementById('tl-preview-btn').textContent = 'Stopping\u2026';
 }
 
 async function waitForRollDone(timeoutMs = 25000) {
@@ -432,14 +553,19 @@ function renderSavedTimelines() {
   loadTimelines().forEach(t => {
     const pill  = document.createElement('div');
     pill.className = 'theme-pill';
+    pill.style.cursor = 'pointer';
 
     const label = document.createElement('span');
     label.className   = 'pill-label';
     label.textContent = t.name;
-    label.addEventListener('click', () => {
+    pill.addEventListener('click', e => {
+      if (e.target.closest('.pill-del')) return;
       timelineItems = t.items.map(item => ({ ...item }));
-      nextItemId    = Math.max(0, ...timelineItems.map(i => i.id)) + 1;
+      nextItemId    = Math.max(0, ...timelineItems.map(i => i.id || 0)) + 1;
+      persistWorkingTimeline();
+      closeEditForm();
       renderTimeline();
+      switchMode('timeline');
     });
 
     const del = document.createElement('span');
@@ -462,6 +588,8 @@ function buildFacePicker() {
   picker.innerHTML = '';
   const labels = activeDieState.labels;
   const max    = labels.includes(0) ? 10 : labels.length;
+  const cols   = Math.ceil(max / 2);
+  picker.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
   // Reset exportNumbers to match current die
   exportNumbers.clear();
@@ -513,7 +641,6 @@ populateThemeSelect(document.getElementById('tl-form-theme'), 'bg3');
 // Re-apply card styles when a theme is applied
 document.addEventListener('themeapplied', () => {
   applyModCardStyles();
-  syncCsCardSliders();
 });
 
 // Panel toggle
@@ -529,7 +656,7 @@ document.querySelectorAll('.mode-tab').forEach(btn => {
   btn.addEventListener('click', () => switchMode(btn.dataset.mode));
 });
 
-// Current Setup: die type
+// Quick Export: die type
 document.getElementById('ep-dieType').addEventListener('change', e => {
   const type = e.target.value;
   CONFIG.dieType = type;
@@ -537,28 +664,25 @@ document.getElementById('ep-dieType').addEventListener('change', e => {
   rebuildTextures();
   rollState.current = 'idle';
   buildFacePicker();
-  const maxN  = type === 'd10' ? 10 : (DIE_TYPES[type]?.faces || 20);
-  const numEl = document.getElementById('cs-entry-number');
-  numEl.max   = String(maxN);
-  if (parseInt(numEl.value, 10) > maxN) numEl.value = '1';
 });
 
-// Current Setup: theme
+// Quick Export: theme
 document.getElementById('ep-theme').addEventListener('change', e => {
   const theme = getThemeByKey(e.target.value);
   if (theme) applyTheme(theme);
 });
 
-// Current Setup: add modifier
+// Quick Export: add modifier
 document.getElementById('cs-mod-add').addEventListener('click', () => {
   const labelEl = document.getElementById('cs-mod-label');
   const valueEl = document.getElementById('cs-mod-value');
-  const label   = labelEl.value.trim() || 'Modifier';
+  const label   = labelEl.value.trim() || 'MOD';
   const value   = parseInt(valueEl.value, 10);
   if (isNaN(value)) return;
-  currentMods.push({ label, value });
-  setModifiers(currentMods);
-  renderCurrentMods();
+  qeMods.push({ label, value });
+  setModifiers(qeMods);
+  renderModifierCards();
+  renderQeMods();
   labelEl.value = '';
   valueEl.value = '';
   labelEl.focus();
@@ -567,49 +691,44 @@ document.getElementById('cs-mod-value').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('cs-mod-add').click();
 });
 
-// Current Setup: card sliders
-document.getElementById('cs-cardScale').addEventListener('input', e => {
-  CONFIG.modCardScale = parseFloat(e.target.value);
-  document.getElementById('v-cs-cardScale').textContent = parseFloat(e.target.value).toFixed(2);
-  applyModCardStyles();
-});
-document.getElementById('cs-cardsBottom').addEventListener('input', e => {
-  CONFIG.modCardsBottom = parseInt(e.target.value, 10);
-  document.getElementById('v-cs-cardsBottom').textContent = e.target.value + 'px';
-  applyModCardStyles();
-});
-
-// Current Setup: add to timeline
-document.getElementById('cs-add-to-tl').addEventListener('click', addCurrentSetupToTimeline);
-document.getElementById('cs-entry-number').addEventListener('keydown', e => {
-  if (e.key === 'Enter') addCurrentSetupToTimeline();
-});
-
-// Edit form: die type change → update number max
-document.getElementById('tl-form-die').addEventListener('change', e => {
-  const dt    = e.target.value;
-  const maxN  = dt === 'd10' ? 10 : (DIE_TYPES[dt]?.faces || 20);
-  const numEl = document.getElementById('tl-form-number');
-  numEl.max   = String(maxN);
-  if (parseInt(numEl.value, 10) > maxN) numEl.value = '1';
-});
-
-// Edit form: card sliders
+// Entry form: card sliders → live preview
 document.getElementById('tl-form-cardScale').addEventListener('input', e => {
-  document.getElementById('v-tl-cardScale').textContent = parseFloat(e.target.value).toFixed(2);
+  CONFIG.modCardScale = parseFloat(e.target.value);
+  document.getElementById('v-tl-form-cardScale').textContent = parseFloat(e.target.value).toFixed(2);
+  applyModCardStyles();
 });
 document.getElementById('tl-form-cardsBottom').addEventListener('input', e => {
-  document.getElementById('v-tl-cardsBottom').textContent = e.target.value + 'px';
+  CONFIG.modCardsBottom = parseInt(e.target.value, 10);
+  document.getElementById('v-tl-form-cardsBottom').textContent = e.target.value + 'px';
+  applyModCardStyles();
+});
+
+// Edit/Add form: die type change → rebuild face picker + live canvas
+document.getElementById('tl-form-die').addEventListener('change', e => {
+  const type = e.target.value;
+  buildTlFormFacePicker(type, tlFormSelectedNumber);
+  CONFIG.dieType = type;
+  buildDie(type);
+  rebuildTextures();
+  rollState.current = 'idle';
+});
+
+// Edit/Add form: theme change → live canvas
+document.getElementById('tl-form-theme').addEventListener('change', e => {
+  const theme = getThemeByKey(e.target.value);
+  if (theme) applyTheme(theme);
 });
 
 // Edit form: add modifier
 document.getElementById('tl-form-mod-add').addEventListener('click', () => {
   const labelEl = document.getElementById('tl-form-mod-label');
   const valueEl = document.getElementById('tl-form-mod-value');
-  const label   = labelEl.value.trim() || 'Modifier';
+  const label   = labelEl.value.trim() || 'MOD';
   const value   = parseInt(valueEl.value, 10);
   if (isNaN(value)) return;
   formMods.push({ label, value });
+  setModifiers(formMods);
+  renderModifierCards();
   renderFormMods();
   labelEl.value = '';
   valueEl.value = '';
@@ -626,8 +745,11 @@ document.getElementById('tl-form-cancel').addEventListener('click', () => {
   renderTimeline();
 });
 
+// Timeline: add new entry
+document.getElementById('tl-add-entry-btn').addEventListener('click', openNewEntryForm);
+
 // Timeline: preview & export
-document.getElementById('tl-preview-btn').addEventListener('click', previewTimeline);
+document.getElementById('tl-preview-btn').onclick = previewTimeline;
 document.getElementById('tl-export-btn').addEventListener('click', async () => {
   if (timelineItems.length === 0) { alert('Add at least one item to export.'); return; }
   await exportTimelineItems(timelineItems, getExportSettings());
@@ -643,6 +765,17 @@ document.getElementById('tl-save-btn').addEventListener('click', () => {
   saveTimeline(name, timelineItems);
   nameEl.value = '';
   renderSavedTimelines();
+});
+
+// Clear timeline
+document.getElementById('tl-clear-btn').addEventListener('click', () => {
+  if (timelineItems.length === 0) return;
+  if (!confirm('Clear all timeline items?')) return;
+  timelineItems = [];
+  nextItemId = 1;
+  closeEditForm();
+  persistWorkingTimeline();
+  renderTimeline();
 });
 
 document.getElementById('tl-export-json').addEventListener('click', () => {
@@ -669,7 +802,10 @@ document.getElementById('tl-import-file').addEventListener('change', e => {
     const items = Array.isArray(data) ? data : (data.items || []);
     if (!items.length) { alert('No items found in file.'); return; }
     timelineItems = items.map(item => ({ ...item, id: nextItemId++ }));
+    persistWorkingTimeline();
+    closeEditForm();
     renderTimeline();
+    switchMode('timeline');
     e.target.value = '';
   };
   reader.readAsText(file);
@@ -680,12 +816,12 @@ document.getElementById('pickAll').addEventListener('click', () => {
   const labels = activeDieState.labels;
   const max    = labels.includes(0) ? 10 : labels.length;
   for (let i = 1; i <= max; i++) exportNumbers.add(i);
-  document.querySelectorAll('.face-btn').forEach(b => b.classList.add('selected'));
+  document.getElementById('facePicker').querySelectorAll('.face-btn').forEach(b => b.classList.add('selected'));
   updateExportBtnLabel();
 });
 document.getElementById('pickNone').addEventListener('click', () => {
   exportNumbers.clear();
-  document.querySelectorAll('.face-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('facePicker').querySelectorAll('.face-btn').forEach(b => b.classList.remove('selected'));
   updateExportBtnLabel();
 });
 document.getElementById('exportBtn').addEventListener('click', generateAllWebMs);
@@ -711,7 +847,22 @@ window.addEventListener('resize', () => {
   if (ov) { ov.width = window.innerWidth; ov.height = window.innerHeight; }
 });
 
+// Wire "Visible in export" checkboxes as live preview controls
+function syncPreviewVisibility() {
+  const showCards  = document.getElementById('exp-show-cards').checked;
+  const showResult = document.getElementById('exp-show-result').checked;
+  const showModFx  = document.getElementById('exp-show-modfx').checked;
+  document.body.classList.toggle('export-no-cards',  !showCards);
+  document.body.classList.toggle('export-no-result', !showResult);
+  modifierAnim.skip = !showModFx;
+}
+document.getElementById('exp-show-cards').addEventListener('change',  syncPreviewVisibility);
+document.getElementById('exp-show-modfx').addEventListener('change',  syncPreviewVisibility);
+document.getElementById('exp-show-result').addEventListener('change', syncPreviewVisibility);
+syncPreviewVisibility();
+
 // Initial renders
 renderTimeline();
 renderSavedTimelines();
 buildFacePicker();
+renderQeMods();
