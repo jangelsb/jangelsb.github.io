@@ -33,7 +33,7 @@ export const BUILT_IN_THEMES = {
     modCardBorder:   '#9aabcc',
     modCardLabelColor: '#9aabcc',
     modCardScale:    1.0,
-    modCardsBottom:  108,
+    modCardsBottom:  132,
   },
   classic: { ...DEFAULTS },
   bloodmoon: {
@@ -61,7 +61,7 @@ export const BUILT_IN_THEMES = {
     modCardBorder:   '#cc2020',
     modCardLabelColor: '#ffd0d0',
     modCardScale:    1.0,
-    modCardsBottom:  108,
+    modCardsBottom:  132,
   },
   arcane: {
     faceColorTop:    '#2a1545',
@@ -88,7 +88,7 @@ export const BUILT_IN_THEMES = {
     modCardBorder:   '#a855f7',
     modCardLabelColor: '#d4a7ff',
     modCardScale:    1.0,
-    modCardsBottom:  108,
+    modCardsBottom:  132,
   },
   emerald: {
     faceColorTop:    '#0d2b1a',
@@ -115,7 +115,7 @@ export const BUILT_IN_THEMES = {
     modCardBorder:   '#4a9a6a',
     modCardLabelColor: '#c4f0c8',
     modCardScale:    1.0,
-    modCardsBottom:  108,
+    modCardsBottom:  132,
   },
   undead: {
     faceColorTop:    '#1a1a1a',
@@ -142,7 +142,7 @@ export const BUILT_IN_THEMES = {
     modCardBorder:   '#44bb66',
     modCardLabelColor: '#aaffbb',
     modCardScale:    1.0,
-    modCardsBottom:  108,
+    modCardsBottom:  132,
   },
   forge: {
     faceColorTop:    '#2a1a08',
@@ -169,7 +169,7 @@ export const BUILT_IN_THEMES = {
     modCardBorder:   '#e07820',
     modCardLabelColor: '#ffe0a0',
     modCardScale:    1.0,
-    modCardsBottom:  108,
+    modCardsBottom:  132,
   },
 };
 

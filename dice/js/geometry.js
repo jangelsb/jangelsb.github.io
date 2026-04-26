@@ -392,6 +392,27 @@ export function buildDie(dieType) {
     faceData = computeFaceDataMultiTri(geo, trisPerFace);
   }
   const { faceNormals: fN, faceUps: fU, faceHints: fH, inradius, edge } = faceData;
+
+  // D4: force all faces to appear apex-up (flat edge at bottom) regardless of
+  // which way the tetrahedron triangle physically points in world space.
+  // For faces detected as apex-down, negate faceUp (so the apex becomes the
+  // "up" direction when displayed) and rotate the UV 180° to compensate.
+  if (dieType === 'd4') {
+    const uvAttr = geo.attributes.uv;
+    fH.forEach((hint, f) => {
+      if (hint.apexDown) {
+        hint.apexDown = false;
+        fU[f].negate();
+        for (let v = 0; v < 3; v++) {
+          const vi = f * 3 + v;
+          uvAttr.setX(vi, 1 - uvAttr.getX(vi));
+          uvAttr.setY(vi, 1 - uvAttr.getY(vi));
+        }
+        uvAttr.needsUpdate = true;
+      }
+    });
+  }
+
   FACE_INRADIUS = inradius;
   FACE_EDGE     = edge;
 

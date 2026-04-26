@@ -132,6 +132,7 @@ renderer.setAnimationLoop(() => {
       if (mods.length === 0) {
         el.textContent = `Rolled: ${pendingResult}`;
         el.classList.add('show');
+        document.dispatchEvent(new CustomEvent('rollcomplete', { detail: { result: pendingResult } }));
       } else {
         rollState.current = 'modifiers';
 
@@ -143,6 +144,7 @@ renderer.setAnimationLoop(() => {
           el.textContent = `Rolled: ${finalTotal}`;
           el.classList.add('show');
           rollState.current = 'done';
+          document.dispatchEvent(new CustomEvent('rollcomplete', { detail: { result: pendingResult } }));
         });
       }
     }

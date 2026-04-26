@@ -67,7 +67,8 @@ function drawFlatFace(ctx, S, number) {
 }
 
 function drawNumber(ctx, number, cx, cy) {
-  const label = typeof number === 'string' ? number : String(number);
+  const displayNumber = (CONFIG.dieType === 'd10' && number === 0) ? 10 : number;
+  const label = typeof displayNumber === 'string' ? displayNumber : String(displayNumber);
   ctx.shadowColor = CONFIG.glowColor + '99';
   ctx.shadowBlur  = 14;
   ctx.fillStyle   = CONFIG.numberColor;

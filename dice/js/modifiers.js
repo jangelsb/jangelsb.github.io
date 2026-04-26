@@ -91,7 +91,7 @@ export function drawCardsToCanvas(ctx, canvasW, canvasH) {
 
   const pixelScale  = canvasW / window.innerWidth;
   const cardScale   = CONFIG.modCardScale  ?? 1.0;
-  const bottomPx    = (CONFIG.modCardsBottom ?? 108) * pixelScale;
+  const bottomPx    = (CONFIG.modCardsBottom ?? 132) * pixelScale;
 
   const cardW  = 90  * cardScale * pixelScale;
   const cardH  = 62  * cardScale * pixelScale;

@@ -1,7 +1,5 @@
-import { CONFIG, DEFAULTS, DIE_TYPES } from './config.js';
-import { renderer, camera } from './scene.js';
+import { CONFIG } from './config.js';
 import { dice, rebuildTextures, buildDie, activeDieState } from './geometry.js';
-import { roll, rollState } from './animation.js';
 import { BUILT_IN_THEMES, applyTheme, loadUserThemes, saveUserTheme, renderUserThemes } from './themes.js';
 import { addModifier, removeModifier, getModifiers } from './modifiers.js';
 
@@ -10,7 +8,7 @@ function hexWithAlpha(hex, alpha) {
   return hex + Math.round(alpha * 255).toString(16).padStart(2, '0');
 }
 
-function applyModCardStyles() {
+export function applyModCardStyles() {
   const r   = document.documentElement.style;
   const bd  = CONFIG.modCardBorder;
   const lb  = CONFIG.modCardLabelColor;
@@ -32,7 +30,7 @@ function applyModCardStyles() {
   r.setProperty('--mod-negative',   neg);
   r.setProperty('--mod-neg-g1',     hexWithAlpha(neg, 0.533));
   r.setProperty('--mod-neg-g2',     hexWithAlpha(neg, 0.267));
-  r.setProperty('--cards-bottom',   (CONFIG.modCardsBottom ?? 108) + 'px');
+  r.setProperty('--cards-bottom',   (CONFIG.modCardsBottom ?? 132) + 'px');
   r.setProperty('--card-scale',      (CONFIG.modCardScale  ?? 1.0));
 }
 
@@ -72,15 +70,12 @@ function syncInputsFromConfig() {
   document.getElementById('c-modCardLabel').value  = CONFIG.modCardLabelColor;
   document.getElementById('c-modCardScale').value  = CONFIG.modCardScale  ?? 1.0;
   document.getElementById('v-modCardScale').textContent = (CONFIG.modCardScale ?? 1.0).toFixed(2);
-  document.getElementById('c-modCardsBottom').value = CONFIG.modCardsBottom ?? 108;
-  document.getElementById('v-modCardsBottom').textContent = (CONFIG.modCardsBottom ?? 108) + 'px';
+  document.getElementById('c-modCardsBottom').value = CONFIG.modCardsBottom ?? 132;
+  document.getElementById('v-modCardsBottom').textContent = (CONFIG.modCardsBottom ?? 132) + 'px';
 
   // Die type selector
   const dieTypeEl = document.getElementById('c-dieType');
   if (dieTypeEl) dieTypeEl.value = CONFIG.dieType || 'd20';
-
-  // Update roll input max
-  updateRollInputMax();
 
   applyModCardStyles();
 }
@@ -126,6 +121,7 @@ export function renderModifierCards() {
     card.querySelector('.mod-remove').addEventListener('click', () => {
       removeModifier(mod.id);
       renderModifierCards();
+      document.dispatchEvent(new CustomEvent('modifierschanged'));
     });
     container.appendChild(card);
   });
@@ -143,53 +139,13 @@ function addModifierFromInputs() {
   if (isNaN(value)) return;
   addModifier(label, value);
   renderModifierCards();
+  document.dispatchEvent(new CustomEvent('modifierschanged'));
   labelEl.value = '';
   valueEl.value = '';
 }
 
-// ── Die type helpers ──────────────────────────────────────────────────────────
-export function updateRollInputMax() {
-  const labels = activeDieState.labels;
-  const max = labels.includes(0) ? 10 : labels.length;
-  const input = document.getElementById('rollInput');
-  if (input) { input.max = max; input.min = 1; }
-}
-
 // ── initUI — call once from main.js ───────────────────────────────────────────
 export function initUI() {
-
-  // Roll buttons
-  document.getElementById('rollBtn').addEventListener('click', () => {
-    roll(parseInt(document.getElementById('rollInput').value, 10));
-  });
-  document.getElementById('randomBtn').addEventListener('click', () => {
-    const labels = activeDieState.labels;
-    const max = labels.includes(0) ? 10 : labels.length;
-    const n = Math.ceil(Math.random() * max);
-    document.getElementById('rollInput').value = n;
-    roll(n);
-  });
-  document.getElementById('rollInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') roll(parseInt(e.target.value, 10));
-  });
-
-  // Die type selector
-  document.getElementById('c-dieType').addEventListener('change', e => {
-    const type = e.target.value;
-    CONFIG.dieType = type;
-    buildDie(type);
-    rebuildTextures();
-    updateRollInputMax();
-    rollState.current = 'idle';
-  });
-
-  // Settings panel toggle
-  const toggle = document.getElementById('settingsToggle');
-  const panel  = document.getElementById('settingsPanel');
-  toggle.addEventListener('click', () => {
-    toggle.classList.toggle('open');
-    panel.classList.toggle('open');
-  });
 
   // Color pickers
   bind('c-faceTop',  'faceColorTop');
@@ -294,16 +250,14 @@ export function initUI() {
     reader.readAsText(file);
   });
 
-  // Reset to defaults
-  document.getElementById('resetBtn').addEventListener('click', () => applyTheme(DEFAULTS));
-
-  // Resize handler
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    const ov = document.getElementById('mod-overlay-canvas');
-    if (ov) { ov.width = window.innerWidth; ov.height = window.innerHeight; }
+  // Reset to BG3 baseline and re-run the normal die-type update flow.
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    applyTheme(BUILT_IN_THEMES.bg3);
+    const dieTypeEl = document.getElementById('c-dieType');
+    if (dieTypeEl) {
+      dieTypeEl.value = 'd20';
+      dieTypeEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   });
 
   // ── Modifier color pickers ─────────────────────────────────────────────────

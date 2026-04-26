@@ -4,6 +4,7 @@ import { CONFIG } from './config.js';
 import { renderer, camera } from './scene.js';
 import { roll, rollState } from './animation.js';
 import { modifierAnim, getOverlayCanvas, drawCardsToCanvas, setModifiers } from './modifiers.js';
+import { renderModifierCards } from './ui.js';
 import { buildDie, rebuildTextures } from './geometry.js';
 import { applyTheme, BUILT_IN_THEMES, loadUserThemes } from './themes.js';
 
@@ -221,7 +222,7 @@ export async function generateAllWebMs() {
     const n = numbersToExport[i];
     progressEl.textContent = `Recording roll ${n}  (${i + 1} / ${total})\u2026`;
     barFill.style.width    = `${(i / total) * 100}%`;
-    await recordSingleRoll(n, settings);
+    await recordSingleRoll(n, settings, `${CONFIG.dieType}_roll_${String(n).padStart(2, '0')}.mp4`);
     if (!exportCancelled) await new Promise(r => setTimeout(r, 150));
   }
 
@@ -284,7 +285,7 @@ export async function exportTimelineItems(items, settings) {
 
     // Apply per-item card size and distance
     CONFIG.modCardScale   = item.cardScale  ?? 1.0;
-    CONFIG.modCardsBottom = item.cardsBottom ?? 108;
+    CONFIG.modCardsBottom = item.cardsBottom ?? 132;
     const r = document.documentElement.style;
     r.setProperty('--cards-bottom', CONFIG.modCardsBottom + 'px');
     r.setProperty('--card-scale',   CONFIG.modCardScale);
@@ -297,6 +298,7 @@ export async function exportTimelineItems(items, settings) {
 
     // Apply modifiers (without persisting to localStorage)
     setModifiers(item.modifiers || []);
+    renderModifierCards();
 
     const safeName = (item.label || item.dieType)
       .replace(/[^a-zA-Z0-9\s\-_]/g, '').trim().replace(/\s+/g, '_') || item.dieType;

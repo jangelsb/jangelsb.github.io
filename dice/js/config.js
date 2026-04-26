@@ -32,7 +32,7 @@ export const DEFAULTS = {
   modCardBorder:      '#c8a84a',
   modCardLabelColor:  '#c8a84a',
   modCardScale:       1.0,   // card size multiplier
-  modCardsBottom:     108,   // distance from bottom of viewport (px)
+  modCardsBottom:     132,   // distance from bottom of viewport (px)
 };
 
 export const CONFIG = { ...DEFAULTS };

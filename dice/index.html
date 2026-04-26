@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>D20 Roll</title>
+  <title>Dice Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Uncial+Antiqua&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
@@ -14,162 +14,395 @@
 
 <div id="result"></div>
 
-<button id="settingsToggle" title="Customize">⚙</button>
+<!-- Modifier cards (visual output on canvas — no add-row here anymore) -->
+<div id="modifiers-ui">
+  <div id="mod-cards"></div>
+</div>
+
+<!-- Roll UI: 2-row number grid + Random button -->
+<div id="roll-ui">
+  <div id="number-grid"></div>
+  <button id="randomBtn">Random</button>
+</div>
+
+<button id="settingsToggle" title="Settings">⚙</button>
 
 <div id="settingsPanel">
 
-  <div class="s-section">
-    <h3>Die Type</h3>
-    <div class="s-row">
-      <span class="s-label">Shape</span>
-      <select id="c-dieType">
-        <option value="d4">D4  (Tetrahedron)</option>
-        <option value="d6">D6  (Cube)</option>
-        <option value="d8">D8  (Octahedron)</option>
-        <option value="d10">D10 (Trapezohedron)</option>
-        <option value="d12">D12 (Dodecahedron)</option>
-        <option value="d20" selected>D20 (Icosahedron)</option>
-      </select>
+  <!-- ── Export Settings (shared collapsible, above all tabs) ────────────── -->
+  <details id="exp-settings-details">
+    <summary class="exp-settings-summary">Export Settings</summary>
+    <div class="s-section" style="margin-top:12px">
+      <p style="font-size:11px;color:#f5e8c0aa;line-height:1.6;margin-bottom:14px">H.264 MP4 — no alpha channel. Pick a background and chroma-key in your editor.</p>
+      <div class="s-row">
+        <span class="s-label">Resolution</span>
+        <select id="exp-res">
+          <option value="1">1&times; screen</option>
+          <option value="2" selected>2&times; screen</option>
+        </select>
+      </div>
+      <div class="s-row">
+        <span class="s-label">Background</span>
+        <select id="exp-bg">
+          <option value="chroma">&#129001; Chroma green</option>
+          <option value="magenta">&#128997; Magenta</option>
+          <option value="black">Black</option>
+          <option value="current">Current theme bg</option>
+        </select>
+      </div>
+      <div class="s-row">
+        <span class="s-label">Bitrate</span>
+        <select id="exp-bitrate">
+          <option value="8000000">8 Mbps</option>
+          <option value="20000000">20 Mbps</option>
+          <option value="40000000" selected>40 Mbps</option>
+        </select>
+      </div>
+      <div class="s-row">
+        <span class="s-label">Lead-in</span>
+        <input type="range" id="exp-leadin" min="0" max="2" step="0.1" value="0.5">
+        <span class="val" id="exp-leadin-val">0.5s</span>
+      </div>
+      <div class="s-row">
+        <span class="s-label">Hold</span>
+        <input type="range" id="exp-hold" min="0.2" max="4" step="0.1" value="0.6">
+        <span class="val" id="exp-hold-val">0.6s</span>
+      </div>
+      <div class="s-divider">Visible in export</div>
+      <div class="s-row">
+        <span class="s-label">Modifier animations</span>
+        <input type="checkbox" id="exp-show-modfx" checked style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
+      </div>
+      <div class="s-row">
+        <span class="s-label">Modifier cards</span>
+        <input type="checkbox" id="exp-show-cards" checked style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
+      </div>
+      <div class="s-row">
+        <span class="s-label">Result text</span>
+        <input type="checkbox" id="exp-show-result" style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
+      </div>
     </div>
+  </details>
+
+  <!-- ── Panel tab switcher ──────────────────────────────────────────────── -->
+  <div id="panel-tabs">
+    <button class="panel-tab active" data-tab="studio">Studio</button>
+    <button class="panel-tab" data-tab="timeline">Timeline</button>
+    <button class="panel-tab" data-tab="quick">Quick Export</button>
   </div>
 
-  <div class="s-section">
-    <h3>Themes</h3>
-    <div id="theme-presets">
-      <button class="theme-btn" data-theme="bg3">⚔ BG3</button>
-      <button class="theme-btn" data-theme="classic">Classic</button>
-      <button class="theme-btn" data-theme="bloodmoon">🩸 Blood Moon</button>
-      <button class="theme-btn" data-theme="arcane">🔮 Arcane</button>
-      <button class="theme-btn" data-theme="emerald">🌿 Emerald</button>
-      <button class="theme-btn" data-theme="undead">💀 Undead</button>
-      <button class="theme-btn" data-theme="forge">⚒ Forge</button>
-    </div>
-    <div id="saved-themes"></div>
-    <div class="s-row" style="margin-top:8px;gap:8px">
-      <input type="text" id="theme-name-input" placeholder="Save current as…">
-      <button id="saveThemeBtn">Save</button>
-    </div>
-    <div id="theme-io">
-      <button class="io-btn" id="exportThemesBtn">⬇ Export JSON</button>
-      <button class="io-btn" id="importThemesBtn">⬆ Import JSON</button>
-    </div>
-    <input type="file" id="importThemesFile" accept=".json,application/json" style="display:none">
-  </div>
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- STUDIO TAB                                                           -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-studio">
 
-  <div class="s-section">
-    <h3>Face Colors</h3>
-    <div class="s-row"><span class="s-label">Top gradient</span>    <input type="color" id="c-faceTop"  value="#1e1e46"></div>
-    <div class="s-row"><span class="s-label">Bottom gradient</span> <input type="color" id="c-faceBot"  value="#0c0c24"></div>
-    <div class="s-row"><span class="s-label">Edge / border</span>   <input type="color" id="c-border"   value="#c8a84a"></div>
-    <div class="s-row"><span class="s-label">Background</span>      <input type="color" id="c-bg"       value="#0d0d1a"></div>
-  </div>
+    <!-- ── Action bar: always visible at top ─────────────────────────── -->
+    <div id="studio-context">
+      <input type="text" id="studio-entry-name" class="s-text-input" placeholder="Entry name (optional)" maxlength="40">
+      <div class="studio-ctx-btns">
+        <button class="s-btn s-btn-cancel" id="studio-ctx-cancel" style="display:none">Cancel</button>
+        <button id="studio-add-tl-btn">+ Add to Timeline</button>
+      </div>
+    </div>
 
-  <div class="s-section">
-    <h3>Numbers</h3>
-    <div class="s-row"><span class="s-label">Number color</span>    <input type="color" id="c-numColor" value="#f5e8c0"></div>
-    <div class="s-row"><span class="s-label">Glow color</span>      <input type="color" id="c-numGlow"  value="#c8a84a"></div>
-    <div class="s-row">
-      <span class="s-label">Font</span>
-      <select id="c-font">
-        <option value="Cinzel, Georgia, serif">Cinzel (Fantasy)</option>
-        <option value="Georgia, serif" selected>Georgia</option>
-        <option value="'Times New Roman', serif">Times New Roman</option>
-        <option value="Palatino, serif">Palatino</option>
-        <option value="Impact, sans-serif">Impact</option>
-        <option value="'Arial Black', sans-serif">Arial Black</option>
-      </select>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Bold</span>
-      <input type="checkbox" id="c-bold" checked style="width:20px;height:20px;accent-color:#c8a84a;cursor:pointer">
-    </div>
-  </div>
+    <!-- Die Type (open) -->
+    <details open>
+      <summary class="exp-settings-summary">Die Type</summary>
+      <div class="s-section">
+        <div class="s-row">
+          <span class="s-label">Shape</span>
+          <select id="c-dieType">
+            <option value="d4">D4  (Tetrahedron)</option>
+            <option value="d6">D6  (Cube)</option>
+            <option value="d8">D8  (Octahedron)</option>
+            <option value="d10">D10 (Trapezohedron)</option>
+            <option value="d12">D12 (Dodecahedron)</option>
+            <option value="d20" selected>D20 (Icosahedron)</option>
+          </select>
+        </div>
+      </div>
+    </details>
 
-  <div class="s-section">
-    <h3>Die</h3>
-    <div class="s-row">
-      <span class="s-label">Size</span>
-      <input type="range" id="c-size" min="0.1" max="2" step="0.05" value="0.45">
-      <span class="val" id="v-size">0.45</span>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Shininess</span>
-      <input type="range" id="c-shine" min="0" max="200" step="5" value="70">
-      <span class="val" id="v-shine">70</span>
-    </div>
-  </div>
+    <!-- Modifiers (open) -->
+    <details open>
+      <summary class="exp-settings-summary">Modifiers</summary>
+      <div class="s-section">
+        <div id="studio-mods-list"></div>
+        <div id="mod-add-row">
+          <input type="text"   id="mod-label-input" placeholder="Label (e.g. Dexterity)" maxlength="20">
+          <input type="number" id="mod-value-input" placeholder="+3" style="width:64px">
+          <button id="mod-add-btn">+ Add</button>
+        </div>
+      </div>
+    </details>
 
-  <div class="s-section">
-    <h3>Animation</h3>
-    <div class="s-row">
-      <span class="s-label">Roll speed</span>
-      <input type="range" id="c-tumble" min="0.6" max="3.5" step="0.1" value="1.9">
-      <span class="val" id="v-tumble">1.9s</span>
+    <!-- Card controls: always visible (not collapsible) -->
+    <div class="s-section">
+      <div class="s-row">
+        <span class="s-label">Card size</span>
+        <input type="range" id="c-modCardScale" min="0.5" max="2.0" step="0.05" value="1.0">
+        <span class="val" id="v-modCardScale">1.00</span>
+      </div>
+      <div class="s-row">
+        <span class="s-label">Cards distance</span>
+        <input type="range" id="c-modCardsBottom" min="80" max="400" step="4" value="132">
+        <span class="val" id="v-modCardsBottom">132px</span>
+      </div>
     </div>
-    <div class="s-row">
-      <span class="s-label">Settle speed</span>
-      <input type="range" id="c-settle" min="0.1" max="2.5" step="0.05" value="0.4">
-      <span class="val" id="v-settle">0.40s</span>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Spins</span>
-      <input type="range" id="c-spinMin" min="1" max="5" step="0.5" value="2">
-      <span class="val" id="v-spinMin">2.0</span>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Chaos</span>
-      <input type="range" id="c-chaos" min="0" max="0.15" step="0.005" value="0.04">
-      <span class="val" id="v-chaos">4%</span>
-    </div>
-    <div class="s-row">
-      <span class="s-label">Decay</span>
-      <input type="range" id="c-decay" min="1.5" max="6" step="0.1" value="3.8">
-      <span class="val" id="v-decay">3.8</span>
-    </div>
-  </div>
 
-  <div class="s-section">
-    <h3>Modifier Colors</h3>
-    <div class="s-row"><span class="s-label">Positive (+)</span>  <input type="color" id="c-modPos"      value="#f0c040"></div>
-    <div class="s-row"><span class="s-label">Negative (−)</span>  <input type="color" id="c-modNeg"      value="#e05050"></div>
-    <div class="s-row"><span class="s-label">Sparkles</span>     <input type="color" id="c-modParticle" value="#f0c040"></div>
-    <div class="s-row"><span class="s-label">Impact flash</span> <input type="color" id="c-modImpact"   value="#ffffff"></div>
-  </div>
+    <button id="resetBtn">Reset style</button>
 
-  <div class="s-section">
-    <h3>Modifier Cards</h3>
-    <div class="s-row"><span class="s-label">Background top</span>    <input type="color" id="c-modCardBg1"   value="#1a1830"></div>
-    <div class="s-row"><span class="s-label">Background bottom</span> <input type="color" id="c-modCardBg2"   value="#0c0c1e"></div>
-    <div class="s-row"><span class="s-label">Border / accent</span>   <input type="color" id="c-modCardBorder" value="#c8a84a"></div>
-    <div class="s-row"><span class="s-label">Label color</span>       <input type="color" id="c-modCardLabel"  value="#c8a84a"></div>
-    <div class="s-row">
-      <span class="s-label">Card size</span>
-      <input type="range" id="c-modCardScale" min="0.5" max="2.0" step="0.05" value="1.0">
-      <span class="val" id="v-modCardScale">1.00</span>
+    <!-- Themes (open) -->
+    <details open>
+      <summary class="exp-settings-summary">Themes</summary>
+      <div class="s-section">
+        <div id="theme-presets">
+          <button class="theme-btn" data-theme="bg3">⚔ BG3</button>
+          <button class="theme-btn" data-theme="classic">Classic</button>
+          <button class="theme-btn" data-theme="bloodmoon">🩸 Blood Moon</button>
+          <button class="theme-btn" data-theme="arcane">🔮 Arcane</button>
+          <button class="theme-btn" data-theme="emerald">🌿 Emerald</button>
+          <button class="theme-btn" data-theme="undead">💀 Undead</button>
+          <button class="theme-btn" data-theme="forge">⚒ Forge</button>
+        </div>
+        <div id="saved-themes"></div>
+        <div class="s-row" style="margin-top:8px;gap:8px">
+          <input type="text" id="theme-name-input" placeholder="Save current as…">
+          <button id="saveThemeBtn">Save</button>
+        </div>
+        <div class="theme-io">
+          <button class="io-btn" id="exportThemesBtn">⬇ Export JSON</button>
+          <button class="io-btn" id="importThemesBtn">⬆ Import JSON</button>
+        </div>
+        <input type="file" id="importThemesFile" accept=".json,application/json" style="display:none">
+      </div>
+    </details>
+
+    <!-- Face Colors (collapsed) -->
+    <details>
+      <summary class="exp-settings-summary">Face Colors</summary>
+      <div class="s-section">
+        <div class="s-row"><span class="s-label">Top gradient</span>    <input type="color" id="c-faceTop"  value="#1e1e46"></div>
+        <div class="s-row"><span class="s-label">Bottom gradient</span> <input type="color" id="c-faceBot"  value="#0c0c24"></div>
+        <div class="s-row"><span class="s-label">Edge / border</span>   <input type="color" id="c-border"   value="#c8a84a"></div>
+        <div class="s-row"><span class="s-label">Background</span>      <input type="color" id="c-bg"       value="#0d0d1a"></div>
+      </div>
+    </details>
+
+    <!-- Numbers (collapsed) -->
+    <details>
+      <summary class="exp-settings-summary">Numbers</summary>
+      <div class="s-section">
+        <div class="s-row"><span class="s-label">Number color</span> <input type="color" id="c-numColor" value="#f5e8c0"></div>
+        <div class="s-row"><span class="s-label">Glow color</span>   <input type="color" id="c-numGlow"  value="#c8a84a"></div>
+        <div class="s-row">
+          <span class="s-label">Font</span>
+          <select id="c-font">
+            <option value="Cinzel, Georgia, serif">Cinzel (Fantasy)</option>
+            <option value="Georgia, serif" selected>Georgia</option>
+            <option value="'Times New Roman', serif">Times New Roman</option>
+            <option value="Palatino, serif">Palatino</option>
+            <option value="Impact, sans-serif">Impact</option>
+            <option value="'Arial Black', sans-serif">Arial Black</option>
+          </select>
+        </div>
+        <div class="s-row">
+          <span class="s-label">Bold</span>
+          <input type="checkbox" id="c-bold" checked style="width:20px;height:20px;accent-color:#c8a84a;cursor:pointer">
+        </div>
+      </div>
+    </details>
+
+    <!-- Die (collapsed) -->
+    <details>
+      <summary class="exp-settings-summary">Die</summary>
+      <div class="s-section">
+        <div class="s-row">
+          <span class="s-label">Size</span>
+          <input type="range" id="c-size" min="0.1" max="2" step="0.05" value="0.45">
+          <span class="val" id="v-size">0.45</span>
+        </div>
+        <div class="s-row">
+          <span class="s-label">Shininess</span>
+          <input type="range" id="c-shine" min="0" max="200" step="5" value="70">
+          <span class="val" id="v-shine">70</span>
+        </div>
+      </div>
+    </details>
+
+    <!-- Animation (collapsed) -->
+    <details>
+      <summary class="exp-settings-summary">Animation</summary>
+      <div class="s-section">
+        <div class="s-row">
+          <span class="s-label">Roll speed</span>
+          <input type="range" id="c-tumble" min="0.6" max="3.5" step="0.1" value="1.9">
+          <span class="val" id="v-tumble">1.9s</span>
+        </div>
+        <div class="s-row">
+          <span class="s-label">Settle speed</span>
+          <input type="range" id="c-settle" min="0.1" max="2.5" step="0.05" value="0.4">
+          <span class="val" id="v-settle">0.40s</span>
+        </div>
+        <div class="s-row">
+          <span class="s-label">Spins</span>
+          <input type="range" id="c-spinMin" min="1" max="5" step="0.5" value="2">
+          <span class="val" id="v-spinMin">2.0</span>
+        </div>
+        <div class="s-row">
+          <span class="s-label">Chaos</span>
+          <input type="range" id="c-chaos" min="0" max="0.15" step="0.005" value="0.04">
+          <span class="val" id="v-chaos">4%</span>
+        </div>
+        <div class="s-row">
+          <span class="s-label">Decay</span>
+          <input type="range" id="c-decay" min="1.5" max="6" step="0.1" value="3.8">
+          <span class="val" id="v-decay">3.8</span>
+        </div>
+      </div>
+    </details>
+
+    <!-- Modifier Colors (collapsed) -->
+    <details>
+      <summary class="exp-settings-summary">Modifier Colors</summary>
+      <div class="s-section">
+        <div class="s-row"><span class="s-label">Positive (+)</span>  <input type="color" id="c-modPos"      value="#f0c040"></div>
+        <div class="s-row"><span class="s-label">Negative (−)</span>  <input type="color" id="c-modNeg"      value="#e05050"></div>
+        <div class="s-row"><span class="s-label">Sparkles</span>      <input type="color" id="c-modParticle" value="#f0c040"></div>
+        <div class="s-row"><span class="s-label">Impact flash</span>  <input type="color" id="c-modImpact"   value="#ffffff"></div>
+      </div>
+    </details>
+
+    <!-- Modifier Card Style (collapsed) -->
+    <details>
+      <summary class="exp-settings-summary">Modifier Card Style</summary>
+      <div class="s-section">
+        <div class="s-row"><span class="s-label">Background top</span>    <input type="color" id="c-modCardBg1"    value="#1a1830"></div>
+        <div class="s-row"><span class="s-label">Background bottom</span> <input type="color" id="c-modCardBg2"    value="#0c0c1e"></div>
+        <div class="s-row"><span class="s-label">Border / accent</span>   <input type="color" id="c-modCardBorder" value="#c8a84a"></div>
+        <div class="s-row"><span class="s-label">Label color</span>       <input type="color" id="c-modCardLabel"  value="#c8a84a"></div>
+      </div>
+    </details>
+  </div><!-- /tab-studio -->
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- TIMELINE TAB                                                         -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-timeline" style="display:none">
+
+    <!-- Saved Timelines (above entries) -->
+    <details id="tl-saved-details" open>
+      <summary class="exp-settings-summary">Saved Timelines</summary>
+      <div class="s-section" style="margin-top:12px">
+        <div id="tl-saved-list" style="margin-bottom:8px"></div>
+        <div class="s-row" style="gap:8px">
+          <input type="text" class="s-text-input" id="tl-save-name" placeholder="Timeline name…">
+          <button class="s-btn" id="tl-save-btn" style="white-space:nowrap">Save</button>
+        </div>
+        <div class="theme-io" style="margin-top:6px">
+          <button class="io-btn" id="tl-export-json">&#11015; Export JSON</button>
+          <button class="io-btn" id="tl-import-json-btn">&#11014; Import JSON</button>
+        </div>
+        <input type="file" id="tl-import-file" accept=".json,application/json" style="display:none">
+      </div>
+    </details>
+
+    <!-- Timeline Entries -->
+    <details id="tl-entries-details" open>
+      <summary class="exp-settings-summary">Timeline Entries</summary>
+      <div class="s-section" style="margin-top:12px">
+        <div id="tl-items"></div>
+        <!-- Hidden form: accessed via Studio edit flow only -->
+        <div id="tl-item-form" style="display:none;padding-top:12px;border-top:1px solid #c8a84a22;margin-top:10px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#c8a84a;flex:1" id="tl-form-title">Edit Entry</div>
+            <button class="s-btn s-btn-cancel" id="tl-form-cancel">Cancel</button>
+            <button class="s-btn" id="tl-form-save" style="flex:1">Save Entry</button>
+          </div>
+          <div class="s-row">
+            <span class="s-label">Entry name</span>
+            <input type="text" class="s-text-input" id="tl-form-label" placeholder="e.g. Attack Roll" maxlength="40">
+          </div>
+          <div class="s-row">
+            <span class="s-label">Die Type</span>
+            <select id="tl-form-die">
+              <option value="d4">D4</option>
+              <option value="d6">D6</option>
+              <option value="d8">D8</option>
+              <option value="d10">D10</option>
+              <option value="d12">D12</option>
+              <option value="d20" selected>D20</option>
+            </select>
+          </div>
+          <div class="s-row">
+            <span class="s-label">Theme</span>
+            <select id="tl-form-theme"></select>
+          </div>
+          <div class="s-divider" style="margin-top:8px">Roll Number</div>
+          <div id="tl-form-face-picker" style="margin-bottom:8px"></div>
+          <div class="s-divider">Modifiers</div>
+          <div id="tl-form-mods-list"></div>
+          <div class="s-row" style="gap:6px;margin-top:4px">
+            <input type="text" class="s-text-input" id="tl-form-mod-label" placeholder="Name (e.g. Dexterity)" maxlength="20" style="flex:2">
+            <input type="number" id="tl-form-mod-value" placeholder="+3" style="width:58px;font-size:13px;padding:5px;text-align:center">
+            <button class="s-btn" id="tl-form-mod-add" style="padding:5px 10px;font-size:13px">+</button>
+          </div>
+          <div class="s-divider">Cards</div>
+          <div class="s-row">
+            <span class="s-label">Card size</span>
+            <input type="range" id="tl-form-cardScale" min="0.5" max="2.0" step="0.05" value="1.0">
+            <span class="val" id="v-tl-form-cardScale">1.00</span>
+          </div>
+          <div class="s-row">
+            <span class="s-label">Card distance</span>
+            <input type="range" id="tl-form-cardsBottom" min="80" max="400" step="4" value="132">
+            <span class="val" id="v-tl-form-cardsBottom">132px</span>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div class="s-section">
+      <div class="s-row" style="gap:8px">
+        <button class="s-btn tl-action" id="tl-preview-btn">&#9654; Preview</button>
+        <button class="s-btn tl-action" id="tl-export-btn">&#11015; Export Timeline</button>
+      </div>
+      <button class="s-btn s-btn-cancel" id="tl-clear-btn" style="width:100%;margin-top:8px;text-align:center">Clear Timeline</button>
     </div>
-    <div class="s-row">
-      <span class="s-label">Cards distance</span>
-      <input type="range" id="c-modCardsBottom" min="80" max="400" step="4" value="108">
-      <span class="val" id="v-modCardsBottom">108px</span>
+
+  </div><!-- /tab-timeline -->
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- QUICK EXPORT TAB                                                     -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-quick" style="display:none">
+
+    <div class="s-section">
+      <div class="s-divider">Numbers to Export</div>
+      <div class="s-row" style="align-items:flex-start">
+        <span class="s-label">Numbers</span>
+        <div style="flex:1">
+          <div class="picker-acts">
+            <button class="picker-act" id="pickAll">All</button>
+            <button class="picker-act" id="pickNone">None</button>
+          </div>
+          <div id="facePicker"></div>
+        </div>
+      </div>
+      <button id="exportBtn" style="margin-top:10px">&#11015; Export All Videos</button>
     </div>
-  </div>
 
-  <button id="resetBtn">↺ Reset Defaults</button>
-</div>
+  </div><!-- /tab-quick -->
 
-<div id="ui">
-  <input type="number" id="rollInput" min="1" max="20" value="20" />
-  <button id="rollBtn">ROLL</button>
-  <button id="randomBtn">RANDOM</button>
-  <a href="export.html" id="exportPageLink">Export →</a>
-</div>
+</div><!-- /settingsPanel -->
 
-<div id="modifiers-ui">
-  <div id="mod-cards"></div>
-  <div id="mod-add-row">
-    <input type="text"   id="mod-label-input" placeholder="Label (e.g. Dexterity)" maxlength="20">
-    <input type="number" id="mod-value-input" placeholder="+3" style="width:64px">
-    <button id="mod-add-btn">+ Add</button>
+<!-- Export progress overlay -->
+<div id="exportOverlay">
+  <div id="exportModal">
+    <div id="exportTitle">Generating Videos</div>
+    <div id="exportProgress"></div>
+    <div id="exportBarTrack"><div id="exportBarFill"></div></div>
+    <button id="exportCancelBtn">Cancel</button>
   </div>
 </div>
 
