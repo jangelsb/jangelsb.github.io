@@ -292,7 +292,7 @@ function renderTimeline() {
   if (timelineItems.length === 0) {
     const empty = document.createElement('p');
     empty.className   = 'tl-empty';
-    empty.textContent = 'No entries yet \u2014 click \u201c+ Add Entry\u201d to start.';
+    empty.textContent = 'No entries yet \u2014 click \u201c+ Add to Timeline\u201d in the Studio tab to start.';
     container.appendChild(empty);
     return;
   }
