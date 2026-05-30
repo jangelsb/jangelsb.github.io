@@ -173,6 +173,58 @@ export const BUILT_IN_THEMES = {
   },
 };
 
+export const BUILT_IN_THEME_LABELS = {
+  bg3:       '⚔ BG3',
+  classic:   'Classic',
+  bloodmoon: '🩸 Blood Moon',
+  arcane:    '🔮 Arcane',
+  emerald:   '🌿 Emerald',
+  undead:    '💀 Undead',
+  forge:     '⚒ Forge',
+};
+
+function themeLookupKey(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Accepts built-in keys ("forge"), display labels ("Forge", "⚒ Forge"),
+// and user theme names. Unknown values are left as-is so Dice Studio can fall
+// back gracefully instead of destroying imported data.
+export function normalizeThemeName(name) {
+  if (!name) return name;
+  const raw = String(name).trim();
+  if (!raw || raw.startsWith('user:')) return raw;
+  if (BUILT_IN_THEMES[raw]) return raw;
+
+  const lookup = themeLookupKey(raw);
+  const builtInMatch = Object.keys(BUILT_IN_THEMES).find(key =>
+    themeLookupKey(key) === lookup ||
+    themeLookupKey(BUILT_IN_THEME_LABELS[key] || key) === lookup
+  );
+  return builtInMatch || raw;
+}
+
+export function getThemeByKey(key) {
+  if (!key) return null;
+  const normalized = normalizeThemeName(key);
+  if (BUILT_IN_THEMES[normalized]) return BUILT_IN_THEMES[normalized];
+
+  const name = String(normalized).startsWith('user:')
+    ? String(normalized).slice(5)
+    : String(normalized);
+  const userThemes = loadUserThemes();
+  return userThemes.find(t => t.name === name)
+      || userThemes.find(t => t.name.toLowerCase() === name.toLowerCase())
+      || null;
+}
+
+export function getThemeDisplayName(key) {
+  if (!key) return 'Default';
+  const normalized = normalizeThemeName(key);
+  if (String(normalized).startsWith('user:')) return String(normalized).slice(5);
+  return BUILT_IN_THEME_LABELS[normalized] || normalized;
+}
+
 // Applies a theme object to CONFIG, rebuilds visuals, and notifies ui.js via event.
 export function applyTheme(themeObj) {
   Object.assign(CONFIG, themeObj);

@@ -6,20 +6,12 @@ import { roll, rollState } from './animation.js';
 import { modifierAnim, getOverlayCanvas, drawCardsToCanvas, setModifiers } from './modifiers.js';
 import { renderModifierCards } from './ui.js';
 import { buildDie, rebuildTextures } from './geometry.js';
-import { applyTheme, BUILT_IN_THEMES, loadUserThemes } from './themes.js';
+import { applyTheme, getThemeByKey } from './themes.js';
 
 export const exportNumbers = new Set(Array.from({ length: 20 }, (_, i) => i + 1));
 
 let exportCancelled = false;
 let exportDirHandle = null;
-
-// Resolves a theme key (built-in key or 'user:Name') to a theme object.
-function getThemeByKey(key) {
-  if (!key) return null;
-  if (BUILT_IN_THEMES[key]) return BUILT_IN_THEMES[key];
-  const name = key.startsWith('user:') ? key.slice(5) : key;
-  return loadUserThemes().find(t => t.name === name) || null;
-}
 
 // Draws the #result text onto the composite canvas, mirroring its CSS style.
 function drawResultToCanvas(ctx, canvasW, canvasH) {

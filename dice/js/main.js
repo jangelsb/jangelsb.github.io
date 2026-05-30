@@ -1,6 +1,16 @@
 // main.js — Single-page entry point combining Studio, Timeline, and Quick Export.
 import { roll, rollState } from './animation.js';
-import { applyTheme, BUILT_IN_THEMES, loadUserThemes, renderUserThemes, saveUserTheme } from './themes.js';
+import {
+  applyTheme,
+  BUILT_IN_THEMES,
+  BUILT_IN_THEME_LABELS,
+  getThemeByKey,
+  getThemeDisplayName,
+  loadUserThemes,
+  normalizeThemeName,
+  renderUserThemes,
+  saveUserTheme,
+} from './themes.js';
 import { CONFIG, DIE_TYPES } from './config.js';
 import { buildDie, rebuildTextures, activeDieState } from './geometry.js';
 import { setModifiers, modifierAnim, getModifiers, removeModifier } from './modifiers.js';
@@ -14,29 +24,11 @@ import {
 } from './export.js';
 import { renderer, camera } from './scene.js';
 
-// ── Built-in theme display names ──────────────────────────────────────────────
-const BUILT_IN_THEME_LABELS = {
-  bg3:       '⚔ BG3',
-  classic:   'Classic',
-  bloodmoon: '🩸 Blood Moon',
-  arcane:    '🔮 Arcane',
-  emerald:   '🌿 Emerald',
-  undead:    '💀 Undead',
-  forge:     '⚒ Forge',
-};
-
 // ── Utilities ─────────────────────────────────────────────────────────────────
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function getThemeByKey(key) {
-  if (!key) return null;
-  if (BUILT_IN_THEMES[key]) return BUILT_IN_THEMES[key];
-  const name = key.startsWith('user:') ? key.slice(5) : key;
-  return loadUserThemes().find(t => t.name === name) || null;
 }
 
 function getThemeOptions() {
@@ -47,14 +39,22 @@ function getThemeOptions() {
   return [...builtIn, ...user];
 }
 
+function normalizeTimelineItem(item) {
+  return {
+    ...item,
+    themeName: normalizeThemeName(item.themeName) || 'bg3',
+  };
+}
+
 function populateThemeSelect(selectEl, selectedKey) {
   if (!selectEl) return;
+  const normalizedSelectedKey = normalizeThemeName(selectedKey);
   selectEl.innerHTML = '';
   getThemeOptions().forEach(({ value, label }) => {
     const opt = document.createElement('option');
     opt.value = value;
     opt.textContent = label;
-    if (value === selectedKey) opt.selected = true;
+    if (value === normalizedSelectedKey) opt.selected = true;
     selectEl.appendChild(opt);
   });
 }
@@ -308,11 +308,7 @@ function renderTimeline() {
       ? item.modifiers.map(m => `${m.label} ${m.value >= 0 ? '+' : ''}${m.value}`).join(', ')
       : '\u2014';
 
-    const themeDisplay = item.themeName
-      ? (item.themeName.startsWith('user:')
-          ? item.themeName.slice(5)
-          : (BUILT_IN_THEME_LABELS[item.themeName] || item.themeName))
-      : 'Default';
+    const themeDisplay = getThemeDisplayName(item.themeName);
 
     row.innerHTML = `
       <div class="tl-item-num">${idx + 1}</div>
@@ -633,7 +629,7 @@ function renderSavedTimelines() {
     label.textContent = t.name;
     pill.addEventListener('click', e => {
       if (e.target.closest('.pill-del')) return;
-      timelineItems = t.items.map(item => ({ ...item }));
+      timelineItems = t.items.map(normalizeTimelineItem);
       nextItemId    = Math.max(0, ...timelineItems.map(i => i.id || 0)) + 1;
       persistWorkingTimeline();
       closeEditForm();
@@ -854,7 +850,7 @@ document.getElementById('tl-import-file').addEventListener('change', e => {
     catch { alert('Invalid JSON file.'); return; }
     const items = Array.isArray(data) ? data : (data.items || []);
     if (!items.length) { alert('No items found in file.'); return; }
-    timelineItems = items.map(item => ({ ...item, id: nextItemId++ }));
+    timelineItems = items.map(item => ({ ...normalizeTimelineItem(item), id: nextItemId++ }));
     persistWorkingTimeline();
     closeEditForm();
     renderTimeline();
