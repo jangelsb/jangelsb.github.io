@@ -5,13 +5,17 @@ import { renderer, camera } from './scene.js';
 import { roll, rollState } from './animation.js';
 import { modifierAnim, getOverlayCanvas, drawCardsToCanvas, setModifiers } from './modifiers.js';
 import { renderModifierCards } from './ui.js';
-import { buildDie, rebuildTextures } from './geometry.js';
+import { activeDieState, buildDie, rebuildTextures } from './geometry.js';
 import { applyTheme, getThemeByKey } from './themes.js';
 
 export const exportNumbers = new Set(Array.from({ length: 20 }, (_, i) => i + 1));
 
 let exportCancelled = false;
 let exportDirHandle = null;
+const EXPORT_FRAME_RATE = 60;
+const EXPORT_FRAME_DURATION = 1 / EXPORT_FRAME_RATE;
+const MIN_FRAME_DURATION = 1 / 240;
+const MAX_QUEUED_EXPORT_FRAMES = EXPORT_FRAME_RATE * 20;
 
 // Draws the #result text onto the composite canvas, mirroring its CSS style.
 function drawResultToCanvas(ctx, canvasW, canvasH) {
@@ -75,7 +79,26 @@ function getExportVisibility() {
   };
 }
 
+function getErrorMessage(err) {
+  return err?.message ?? String(err);
+}
+
+function getActiveDieMaxRoll() {
+  const labels = activeDieState.labels || [];
+  return labels.includes(0) ? 10 : labels.length;
+}
+
+function normalizeRollNumber(n) {
+  const rollNumber = Math.round(Number(n));
+  const maxRoll = getActiveDieMaxRoll();
+  if (!Number.isFinite(rollNumber) || rollNumber < 1 || rollNumber > maxRoll) {
+    throw new Error(`Roll ${n} is invalid for ${CONFIG.dieType.toUpperCase()} (expected 1-${maxRoll}).`);
+  }
+  return rollNumber;
+}
+
 async function recordSingleRoll(n, settings, filename) {
+  const rollNumber = normalizeRollNumber(n);
   const { resMul, bgColor, bitrate, leadInMs, holdMs } = settings;
   const vis = getExportVisibility();
 
@@ -106,7 +129,7 @@ async function recordSingleRoll(n, settings, filename) {
     modifierAnim.skip = false;
   };
 
-  if (exportCancelled) { restore(); return; }
+  if (exportCancelled) { restore(); return false; }
 
   const compCanvas  = document.createElement('canvas');
   compCanvas.width  = origW * resMul;
@@ -122,26 +145,44 @@ async function recordSingleRoll(n, settings, filename) {
     format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
     target,
   });
-  const canvasSource = new CanvasSource(compCanvas, { codec: 'avc', bitrate });
-  output.addVideoTrack(canvasSource, { frameRate: 60 });
+  const canvasSource = new CanvasSource(compCanvas, {
+    codec: 'avc',
+    bitrate,
+    transform: { frameRate: EXPORT_FRAME_RATE },
+  });
+  output.addVideoTrack(canvasSource, { frameRate: EXPORT_FRAME_RATE });
+
+  let outputStarted = false;
+  let outputSettled = false;
+  let sourceClosed = false;
+  let captureActive = false;
+  let capturePromise = null;
+  let captureError = null;
+  const pendingFrameAdds = [];
+  let queuedFrameAdds = 0;
 
   try {
     await output.start();
+    outputStarted = true;
   } catch (err) {
+    try { canvasSource.close(); } catch {}
     restore();
-    alert(`H.264 encoding is not supported in this browser.\n${err.message ?? err}`);
-    return;
+    throw new Error(`H.264 encoding is not supported in this browser. ${getErrorMessage(err)}`);
   }
 
   // Capture loop: composite WebGL + overlay + UI onto compCanvas each rAF tick,
   // then hand the snapshot to Mediabunny. Three.js's animation loop is registered
   // first, so renderer.domElement always holds the freshest rendered frame.
-  let captureActive = true;
   let frameTimestamp = 0;
+  let lastCaptureTimeMs = null;
   const runCapture = async () => {
     while (captureActive && !exportCancelled) {
-      await new Promise(r => requestAnimationFrame(r));
+      const captureTimeMs = await new Promise(r => requestAnimationFrame(r));
       if (!captureActive || exportCancelled) break;
+      const frameDuration = lastCaptureTimeMs === null
+        ? EXPORT_FRAME_DURATION
+        : Math.max((captureTimeMs - lastCaptureTimeMs) / 1000, MIN_FRAME_DURATION);
+      lastCaptureTimeMs = captureTimeMs;
       compCtx.clearRect(0, 0, compCanvas.width, compCanvas.height);
       compCtx.drawImage(renderer.domElement, 0, 0);
       if (vis.showModifierAnim && overlay && overlay.width > 0) {
@@ -149,30 +190,77 @@ async function recordSingleRoll(n, settings, filename) {
       }
       if (vis.showCards)  drawCardsToCanvas(compCtx, compCanvas.width, compCanvas.height);
       if (vis.showResult) drawResultToCanvas(compCtx, compCanvas.width, compCanvas.height);
-      await canvasSource.add(frameTimestamp, 1 / 60);
-      frameTimestamp += 1 / 60;
+      try {
+        queuedFrameAdds++;
+        const addPromise = canvasSource.add(frameTimestamp, frameDuration)
+          .catch(err => {
+            captureError = captureError || err;
+            exportCancelled = true;
+          })
+          .finally(() => { queuedFrameAdds--; });
+        pendingFrameAdds.push(addPromise);
+        if (queuedFrameAdds > MAX_QUEUED_EXPORT_FRAMES) {
+          captureError = new Error('Video encoder fell too far behind while exporting. Try 1x resolution or a lower bitrate.');
+          exportCancelled = true;
+        }
+      } catch (err) {
+        queuedFrameAdds = Math.max(0, queuedFrameAdds - 1);
+        captureError = err;
+        exportCancelled = true;
+      }
+      frameTimestamp += frameDuration;
     }
   };
 
-  const capturePromise = runCapture();
+  const stopCapture = async () => {
+    captureActive = false;
+    if (capturePromise) await capturePromise;
+    await Promise.all(pendingFrameAdds);
+    if (!sourceClosed) {
+      canvasSource.close();
+      sourceClosed = true;
+    }
+    if (captureError) throw captureError;
+  };
 
-  await new Promise(r => setTimeout(r, leadInMs));
-  if (!exportCancelled) roll(n);
+  try {
+    captureActive = true;
+    capturePromise = runCapture().catch(err => {
+      captureError = err;
+      exportCancelled = true;
+    });
 
-  await waitForDoneState();
-  if (!exportCancelled) await new Promise(r => setTimeout(r, holdMs));
+    await new Promise(r => setTimeout(r, leadInMs));
+    if (!exportCancelled) roll(rollNumber);
 
-  captureActive = false;
-  await capturePromise;
-  canvasSource.close();
-  restore();
+    await waitForDoneState();
+    if (!exportCancelled) await new Promise(r => setTimeout(r, holdMs));
 
-  if (!exportCancelled) {
+    await stopCapture();
+
+    if (exportCancelled) {
+      await output.cancel();
+      outputSettled = true;
+      return false;
+    }
+
     await output.finalize();
+    outputSettled = true;
     const blob = new Blob([target.buffer], { type: 'video/mp4' });
-    await saveBlob(blob, filename || `d20_roll_${String(n).padStart(2, '0')}.mp4`);
-  } else {
-    await output.cancel();
+    await saveBlob(blob, filename || `d20_roll_${String(rollNumber).padStart(2, '0')}.mp4`);
+    return true;
+  } finally {
+    captureActive = false;
+    if (capturePromise) {
+      try { await capturePromise; } catch {}
+    }
+    if (!sourceClosed) {
+      try { canvasSource.close(); } catch {}
+    }
+    if (outputStarted && !outputSettled) {
+      try { await output.cancel(); } catch {}
+    }
+    restore();
   }
 }
 
@@ -209,22 +297,35 @@ export async function generateAllWebMs() {
     return;
   }
 
-  for (let i = 0; i < total; i++) {
-    if (exportCancelled) break;
-    const n = numbersToExport[i];
-    progressEl.textContent = `Recording roll ${n}  (${i + 1} / ${total})\u2026`;
-    barFill.style.width    = `${(i / total) * 100}%`;
-    await recordSingleRoll(n, settings, `${CONFIG.dieType}_roll_${String(n).padStart(2, '0')}.mp4`);
-    if (!exportCancelled) await new Promise(r => setTimeout(r, 150));
+  let failed = false;
+  let statusText = '';
+
+  try {
+    for (let i = 0; i < total; i++) {
+      if (exportCancelled) break;
+      const n = numbersToExport[i];
+      progressEl.textContent = `Recording roll ${n}  (${i + 1} / ${total})\u2026`;
+      barFill.style.width    = `${(i / total) * 100}%`;
+      await recordSingleRoll(n, settings, `${CONFIG.dieType}_roll_${String(n).padStart(2, '0')}.mp4`);
+      if (!exportCancelled) await new Promise(r => setTimeout(r, 150));
+    }
+
+    statusText = exportCancelled ? 'Cancelled.' : `Done! ${total} roll${total !== 1 ? 's' : ''} saved.`;
+  } catch (err) {
+    failed = true;
+    exportCancelled = true;
+    statusText = `Export failed: ${getErrorMessage(err)}`;
+    console.error('Video export failed', err);
+    alert(statusText);
+  } finally {
+    if (!failed) barFill.style.width = '100%';
+    progressEl.textContent = statusText;
+    cancelBtn.disabled = true;
+
+    await new Promise(r => setTimeout(r, failed ? 4000 : 2000));
+    overlay.classList.remove('show');
+    rollState.current = 'idle';
   }
-
-  barFill.style.width    = '100%';
-  progressEl.textContent = exportCancelled ? 'Cancelled.' : `Done! ${total} roll${total !== 1 ? 's' : ''} saved.`;
-  cancelBtn.disabled     = true;
-
-  await new Promise(r => setTimeout(r, 2000));
-  overlay.classList.remove('show');
-  rollState.current = 'idle';
 }
 
 export function initExportCancelBtn() {
@@ -262,50 +363,63 @@ export async function exportTimelineItems(items, settings) {
 
   const total = items.length;
 
-  for (let i = 0; i < total; i++) {
-    if (exportCancelled) break;
-    const item = items[i];
-    progressEl.textContent = `Recording item ${i + 1} / ${total}: \u201c${item.label || item.dieType}\u201d\u2026`;
-    barFill.style.width = `${(i / total) * 100}%`;
+  let failed = false;
+  let statusText = '';
 
-    // Apply theme
-    const theme = getThemeByKey(item.themeName);
-    if (theme) {
-      applyTheme(theme);
-      await new Promise(r => setTimeout(r, 100));
+  try {
+    for (let i = 0; i < total; i++) {
+      if (exportCancelled) break;
+      const item = items[i];
+      progressEl.textContent = `Recording item ${i + 1} / ${total}: \u201c${item.label || item.dieType}\u201d\u2026`;
+      barFill.style.width = `${(i / total) * 100}%`;
+
+      // Apply theme
+      const theme = getThemeByKey(item.themeName);
+      if (theme) {
+        applyTheme(theme);
+        await new Promise(r => setTimeout(r, 100));
+      }
+
+      // Apply per-item card size and distance
+      CONFIG.modCardScale   = item.cardScale  ?? 1.0;
+      CONFIG.modCardsBottom = item.cardsBottom ?? 132;
+      const r = document.documentElement.style;
+      r.setProperty('--cards-bottom', CONFIG.modCardsBottom + 'px');
+      r.setProperty('--card-scale',   CONFIG.modCardScale);
+
+      // Apply die type
+      CONFIG.dieType = item.dieType;
+      buildDie(item.dieType);
+      rebuildTextures();
+      await new Promise(r => setTimeout(r, 250));
+
+      // Apply modifiers (without persisting to localStorage)
+      setModifiers(item.modifiers || []);
+      renderModifierCards();
+
+      const safeName = (item.label || item.dieType)
+        .replace(/[^a-zA-Z0-9\s\-_]/g, '').trim().replace(/\s+/g, '_') || item.dieType;
+      const filename = `${String(i + 1).padStart(2, '0')}_${safeName}_${item.dieType}_roll${String(item.number).padStart(2, '0')}.mp4`;
+
+      await recordSingleRoll(item.number, settings, filename);
+
+      if (!exportCancelled) await new Promise(r => setTimeout(r, 150));
     }
 
-    // Apply per-item card size and distance
-    CONFIG.modCardScale   = item.cardScale  ?? 1.0;
-    CONFIG.modCardsBottom = item.cardsBottom ?? 132;
-    const r = document.documentElement.style;
-    r.setProperty('--cards-bottom', CONFIG.modCardsBottom + 'px');
-    r.setProperty('--card-scale',   CONFIG.modCardScale);
+    statusText = exportCancelled ? 'Cancelled.' : `Done! ${total} item${total !== 1 ? 's' : ''} exported.`;
+  } catch (err) {
+    failed = true;
+    exportCancelled = true;
+    statusText = `Export failed: ${getErrorMessage(err)}`;
+    console.error('Timeline export failed', err);
+    alert(statusText);
+  } finally {
+    if (!failed) barFill.style.width = '100%';
+    progressEl.textContent = statusText;
+    cancelBtn.disabled = true;
 
-    // Apply die type
-    CONFIG.dieType = item.dieType;
-    buildDie(item.dieType);
-    rebuildTextures();
-    await new Promise(r => setTimeout(r, 250));
-
-    // Apply modifiers (without persisting to localStorage)
-    setModifiers(item.modifiers || []);
-    renderModifierCards();
-
-    const safeName = (item.label || item.dieType)
-      .replace(/[^a-zA-Z0-9\s\-_]/g, '').trim().replace(/\s+/g, '_') || item.dieType;
-    const filename = `${String(i + 1).padStart(2, '0')}_${safeName}_${item.dieType}_roll${String(item.number).padStart(2, '0')}.mp4`;
-
-    await recordSingleRoll(item.number, settings, filename);
-
-    if (!exportCancelled) await new Promise(r => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, failed ? 4000 : 2000));
+    overlay.classList.remove('show');
+    rollState.current = 'idle';
   }
-
-  barFill.style.width    = '100%';
-  progressEl.textContent = exportCancelled ? 'Cancelled.' : `Done! ${total} item${total !== 1 ? 's' : ''} exported.`;
-  cancelBtn.disabled     = true;
-
-  await new Promise(r => setTimeout(r, 2000));
-  overlay.classList.remove('show');
-  rollState.current = 'idle';
 }
