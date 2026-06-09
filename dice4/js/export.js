@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Output, Mp4OutputFormat, BufferTarget, CanvasSource } from 'mediabunny';
 import { CONFIG } from './config.js';
 import { renderer, camera } from './scene.js';
-import { getEstimatedRollDurationMs, roll, rollState } from './animation.js';
+import { roll, rollState } from './animation.js';
 import { modifierAnim, getOverlayCanvas, drawCardsToCanvas, setModifiers } from './modifiers.js';
 import { renderModifierCards } from './ui.js';
 import { activeDieState, buildDie, rebuildTextures } from './geometry.js';
@@ -35,7 +35,7 @@ function drawResultToCanvas(ctx, canvasW, canvasH) {
   ctx.restore();
 }
 
-function waitForDoneState(timeoutMs = getEstimatedRollDurationMs()) {
+function waitForDoneState(timeoutMs = 25000) {
   return new Promise(resolve => {
     const deadline = Date.now() + timeoutMs;
     (function check() {
@@ -379,6 +379,13 @@ export async function exportTimelineItems(items, settings) {
         applyTheme(theme);
         await new Promise(r => setTimeout(r, 100));
       }
+
+      // Apply per-item card size and distance
+      CONFIG.modCardScale   = item.cardScale  ?? 1.0;
+      CONFIG.modCardsBottom = item.cardsBottom ?? 132;
+      const r = document.documentElement.style;
+      r.setProperty('--cards-bottom', CONFIG.modCardsBottom + 'px');
+      r.setProperty('--card-scale',   CONFIG.modCardScale);
 
       // Apply die type
       CONFIG.dieType = item.dieType;

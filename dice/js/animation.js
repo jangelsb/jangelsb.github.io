@@ -1,165 +1,250 @@
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { renderer, scene, camera, clock } from './scene.js';
-import { activeDieState, dice, numToFace, faceTowardCamera, updateFaceNumber, resetFaceNumbers, DIE_RESTING_Y } from './geometry.js';
-import { getModifiers, runModifiers } from './modifiers.js';
+import { activeDieState, faceTowardCamera, updateFaceNumber, resetFaceNumbers, DIE_RESTING_Y } from './geometry.js';
+import { cancelModifierAnimations, getModifiers, runModifiers } from './modifiers.js';
+import { createWallMotion, getWallArena, updateWallMotion } from './roll-motion.js';
 
 // ── Shared state ──────────────────────────────────────────────────────────────
-// Use rollState.current (not a bare variable) so other modules (export.js) can
-// read and write it without coupling to this module's internal scope.
-export const rollState = { current: 'idle' };
+// Other modules use this mutable object to wait for and reset the roll lifecycle.
+export const rollState = { current: 'idle', wallBounces: 0 };
 
-// ── Internal roll vars ────────────────────────────────────────────────────────
-let tumbleStart   = 0;
-let settleStart   = 0;
-let settleFrom    = new THREE.Quaternion();
-let settleTo      = new THREE.Quaternion();
-let rollAxis      = new THREE.Vector3();
-let rollAngVelMag = 0;
-let chaoAxis      = new THREE.Vector3();
-let chaoMag       = 0;
-let pendingResult = 0;
-let idleT         = 0;
+// ── Internal roll state ───────────────────────────────────────────────────────
+let activeRoll = null;
+let rollGeneration = 0;
+let idleT = 0;
+let shakeEnd = 0;
+let shakeMag = 0;
 
 function easeOutQuint(t) { return 1 - Math.pow(1 - t, 5); }
 
+function positiveNumber(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+function snapshotSettings() {
+  const baseTumbleDur = positiveNumber(CONFIG.tumbleDur, 1.9);
+  const wallBounceEnabled = Boolean(CONFIG.wallBounceEnabled);
+  const wallExtraDur = wallBounceEnabled ? Math.max(Number(CONFIG.wallExtraDur) || 0, 0) : 0;
+
+  return {
+    dieType: CONFIG.dieType,
+    baseTumbleDur,
+    tumbleDur: baseTumbleDur + wallExtraDur,
+    settleDur: positiveNumber(CONFIG.settleDur, 0.4),
+    spinMin: positiveNumber(CONFIG.spinMin, 2),
+    chaosMag: Math.max(Number(CONFIG.chaosMag) || 0, 0),
+    decayRate: positiveNumber(CONFIG.decayRate, 3.8),
+    wallBounceEnabled,
+    wallAreaScale: Number(CONFIG.wallAreaScale) || 0.9,
+  };
+}
+
+function isCurrentRoll(roll) {
+  return activeRoll === roll && activeDieState.mesh === roll.mesh;
+}
+
+function dispatchRollComplete(roll) {
+  document.dispatchEvent(new CustomEvent('rollcomplete', {
+    detail: { result: roll.result, wallBounces: roll.wallMotion?.bounceCount || 0 },
+  }));
+}
+
+function finishRoll(roll) {
+  if (!isCurrentRoll(roll)) return;
+
+  roll.mesh.quaternion.copy(roll.settleTo);
+  roll.mesh.position.copy(roll.finalPosition);
+
+  const el = document.getElementById('result');
+  if (roll.modifiers.length === 0) {
+    rollState.current = 'done';
+    el.textContent = `Rolled: ${roll.result}`;
+    el.classList.add('show');
+    dispatchRollComplete(roll);
+    return;
+  }
+
+  rollState.current = 'modifiers';
+  const faceLabel = (roll.settings.dieType === 'd10' && roll.result === 10) ? 0 : roll.result;
+  const frontFace = roll.numToFace[faceLabel];
+
+  runModifiers(roll.result, runningTotal => {
+    if (isCurrentRoll(roll) && rollState.current === 'modifiers') {
+      updateFaceNumber(frontFace, runningTotal);
+    }
+  }, {
+    modifiers: roll.modifiers,
+    shouldContinue: () => isCurrentRoll(roll) && rollState.current === 'modifiers',
+  }).then(finalTotal => {
+    if (finalTotal === null || !isCurrentRoll(roll) || rollState.current !== 'modifiers') return;
+    el.textContent = `Rolled: ${finalTotal}`;
+    el.classList.add('show');
+    rollState.current = 'done';
+    dispatchRollComplete(roll);
+  });
+}
+
 // ── roll(n) ───────────────────────────────────────────────────────────────────
 // Backwards-plans the starting quaternion so that integrating the decaying
-// spin forward in time lands exactly on the target face orientation.
+// spin forward in time lands close to the target before the final settle.
 export function roll(n) {
-  const currentDie = activeDieState.mesh;
-  const currentNumToFace = activeDieState.numToFace;
-  const currentLabels = activeDieState.labels;
-  const maxVal = currentLabels.includes(0) ? 10 : currentLabels.length; // D10: max is 10 (shown as 0)
+  const mesh = activeDieState.mesh;
+  const labels = activeDieState.labels;
+  const maxVal = labels.includes(0) ? 10 : labels.length; // D10: max is 10 (shown as 0)
 
   n = Math.round(n);
-  if (n < 1 || n > maxVal) return;
+  if (!mesh || n < 1 || n > maxVal) return;
 
-  // For D10, face label 0 represents 10
-  const faceLabel = (CONFIG.dieType === 'd10' && n === 10) ? 0 : n;
-
+  cancelModifierAnimations();
+  shakeEnd = 0;
   resetFaceNumbers();
-  currentDie.position.set(0, DIE_RESTING_Y, 0);
 
-  pendingResult = n;
-  settleTo = faceTowardCamera(currentNumToFace[faceLabel]);
+  const settings = snapshotSettings();
+  const faceLabel = (settings.dieType === 'd10' && n === 10) ? 0 : n;
+  const settleTo = faceTowardCamera(activeDieState.numToFace[faceLabel]);
+  const finalPosition = new THREE.Vector3(0, settings.wallBounceEnabled ? 0 : DIE_RESTING_Y, 0);
 
-  // Primary axis: mostly horizontal so it reads like a throw
-  rollAxis.set(
+  const rollAxis = new THREE.Vector3(
     (Math.random() - 0.5) * 2,
     (Math.random() - 0.5) * 0.3,
     (Math.random() - 0.5) * 2
   ).normalize();
 
-  // Secondary chaos axis (perpendicular-ish to primary)
-  chaoAxis.set(
+  const chaosAxis = new THREE.Vector3(
     rollAxis.z + (Math.random() - 0.5) * 0.4,
     -(Math.random() * 0.5 + 0.2),
     -rollAxis.x + (Math.random() - 0.5) * 0.4
   ).normalize();
 
-  // ∫₀¹ exp(-k·s) ds = (1−exp(−k))/k  →  back-calculate required angular velocity
-  const numSpins   = CONFIG.spinMin + Math.random() * 1.5;
+  // Keep approximately the same angular pace when wall motion adds roll time.
+  const durationRatio = settings.tumbleDur / settings.baseTumbleDur;
+  const numSpins = (settings.spinMin + Math.random() * 1.5) * durationRatio;
   const totalAngle = numSpins * Math.PI * 2;
-  const k          = CONFIG.decayRate;
-  const integral   = (1 - Math.exp(-k)) / k;
-  rollAngVelMag    = totalAngle / (integral * CONFIG.tumbleDur);
-  chaoMag          = rollAngVelMag * CONFIG.chaosMag * (0.8 + Math.random() * 0.4);
+  const primaryIntegral = (1 - Math.exp(-settings.decayRate)) / settings.decayRate;
+  const rollAngVelMag = totalAngle / (primaryIntegral * settings.tumbleDur);
+  const chaosMag = rollAngVelMag * settings.chaosMag * (0.8 + Math.random() * 0.4);
 
-  // Chaos decays 3× faster; compute its total angle analytically
-  const kChaos          = k * 3.0;
-  const integralChaos   = (1 - Math.exp(-kChaos)) / kChaos;
-  const totalChaosAngle = chaoMag * CONFIG.tumbleDur * integralChaos;
+  const chaosDecay = settings.decayRate * 3;
+  const chaosIntegral = (1 - Math.exp(-chaosDecay)) / chaosDecay;
+  const totalChaosAngle = chaosMag * settings.tumbleDur * chaosIntegral;
+  const qPrimaryInv = new THREE.Quaternion().setFromAxisAngle(rollAxis, -totalAngle);
+  const qChaosInv = new THREE.Quaternion().setFromAxisAngle(chaosAxis, -totalChaosAngle);
+  mesh.quaternion.copy(settleTo).multiply(qChaosInv).multiply(qPrimaryInv);
 
-  // Q_start = Q_target × Q_chaos⁻¹ × Q_primary⁻¹
-  const qPrimaryInv = new THREE.Quaternion().setFromAxisAngle(rollAxis,  -totalAngle);
-  const qChaosInv   = new THREE.Quaternion().setFromAxisAngle(chaoAxis,  -totalChaosAngle);
-  currentDie.quaternion.copy(settleTo).multiply(qChaosInv).multiply(qPrimaryInv);
+  let wallMotion = null;
+  if (settings.wallBounceEnabled) {
+    const arena = getWallArena(camera, mesh, settings.wallAreaScale);
+    wallMotion = createWallMotion({ position: mesh.position, arena, duration: settings.tumbleDur });
+    mesh.position.set(wallMotion.position.x, wallMotion.position.y, 0);
+  } else {
+    mesh.position.copy(finalPosition);
+  }
+
+  activeRoll = {
+    id: ++rollGeneration,
+    mesh,
+    result: n,
+    numToFace: { ...activeDieState.numToFace },
+    modifiers: getModifiers().map(mod => ({ ...mod })),
+    settings,
+    finalPosition,
+    wallMotion,
+    settleFrom: new THREE.Quaternion(),
+    settleTo,
+    rollAxis,
+    rollAngVelMag,
+    chaosAxis,
+    chaosMag,
+    tumbleStart: performance.now() / 1000,
+    settleStart: 0,
+  };
 
   rollState.current = 'tumbling';
-  tumbleStart = performance.now() / 1000;
+  rollState.wallBounces = 0;
   document.getElementById('result').classList.remove('show');
+}
+
+export function getEstimatedRollDurationMs() {
+  const settings = activeRoll?.settings || snapshotSettings();
+  const modifierCount = activeRoll?.modifiers.length ?? getModifiers().length;
+  return Math.ceil((settings.tumbleDur + settings.settleDur) * 1000 + modifierCount * 1800 + 5000);
 }
 
 window.roll = roll; // expose for console / URL params
 
 // ── Render loop ───────────────────────────────────────────────────────────────
 renderer.setAnimationLoop(() => {
-  const dt  = clock.getDelta();
+  const dt = Math.min(clock.getDelta(), 0.05);
   const now = performance.now() / 1000;
 
   if (rollState.current === 'idle') {
     idleT += dt * 0.35;
-    const m = activeDieState.mesh;
-    if (m) m.quaternion.setFromEuler(new THREE.Euler(
+    const mesh = activeDieState.mesh;
+    if (mesh) mesh.quaternion.setFromEuler(new THREE.Euler(
       Math.sin(idleT * 0.7) * 0.45,
       idleT,
       Math.sin(idleT * 0.5) * 0.25
     ));
 
   } else if (rollState.current === 'tumbling') {
-    const s = (now - tumbleStart) / CONFIG.tumbleDur;
-    const m = activeDieState.mesh;
-
-    if (s >= 1.0) {
-      settleFrom.copy(m.quaternion);
-      settleStart = now;
-      rollState.current = 'settling';
+    const roll = activeRoll;
+    if (!roll || !isCurrentRoll(roll)) {
+      rollState.current = 'idle';
     } else {
-      const speed = Math.exp(-CONFIG.decayRate * s);
-      const primaryDQ = new THREE.Quaternion()
-        .setFromAxisAngle(rollAxis, rollAngVelMag * speed * dt);
+      const elapsed = now - roll.tumbleStart;
+      const s = elapsed / roll.settings.tumbleDur;
 
-      const chaoSpeed = Math.exp(-CONFIG.decayRate * 3.0 * s);
-      const chaoDQ = new THREE.Quaternion()
-        .setFromAxisAngle(chaoAxis, chaoMag * chaoSpeed * dt);
+      if (roll.wallMotion) {
+        updateWallMotion(roll.wallMotion, elapsed, dt);
+        roll.mesh.position.set(roll.wallMotion.position.x, roll.wallMotion.position.y, 0);
+        rollState.wallBounces = roll.wallMotion.bounceCount;
+      }
 
-      m.quaternion.multiply(primaryDQ).multiply(chaoDQ).normalize();
-    }
-
-  } else if (rollState.current === 'settling') {
-    const t = Math.min((now - settleStart) / CONFIG.settleDur, 1.0);
-    const m = activeDieState.mesh;
-    m.quaternion.slerpQuaternions(settleFrom, settleTo, easeOutQuint(t));
-
-    if (t >= 1.0) {
-      m.quaternion.copy(settleTo);
-      rollState.current = 'done';
-
-      const el = document.getElementById('result');
-
-      const mods = getModifiers();
-      if (mods.length === 0) {
-        el.textContent = `Rolled: ${pendingResult}`;
-        el.classList.add('show');
-        document.dispatchEvent(new CustomEvent('rollcomplete', { detail: { result: pendingResult } }));
+      if (s >= 1) {
+        roll.mesh.position.copy(roll.finalPosition);
+        roll.settleFrom.copy(roll.mesh.quaternion);
+        roll.settleStart = now;
+        rollState.current = 'settling';
       } else {
-        rollState.current = 'modifiers';
+        const speed = Math.exp(-roll.settings.decayRate * s);
+        const primaryDQ = new THREE.Quaternion()
+          .setFromAxisAngle(roll.rollAxis, roll.rollAngVelMag * speed * dt);
 
-        const faceLabel = (CONFIG.dieType === 'd10' && pendingResult === 10) ? 0 : pendingResult;
-        const frontFace = activeDieState.numToFace[faceLabel];
-        runModifiers(pendingResult, (runningTotal, _mod) => {
-          updateFaceNumber(frontFace, runningTotal);
-        }).then(finalTotal => {
-          el.textContent = `Rolled: ${finalTotal}`;
-          el.classList.add('show');
-          rollState.current = 'done';
-          document.dispatchEvent(new CustomEvent('rollcomplete', { detail: { result: pendingResult } }));
-        });
+        const chaosSpeed = Math.exp(-roll.settings.decayRate * 3 * s);
+        const chaosDQ = new THREE.Quaternion()
+          .setFromAxisAngle(roll.chaosAxis, roll.chaosMag * chaosSpeed * dt);
+
+        roll.mesh.quaternion.multiply(primaryDQ).multiply(chaosDQ).normalize();
       }
     }
 
+  } else if (rollState.current === 'settling') {
+    const roll = activeRoll;
+    if (!roll || !isCurrentRoll(roll)) {
+      rollState.current = 'idle';
+    } else {
+      const t = Math.min((now - roll.settleStart) / roll.settings.settleDur, 1);
+      roll.mesh.position.copy(roll.finalPosition);
+      roll.mesh.quaternion.slerpQuaternions(roll.settleFrom, roll.settleTo, easeOutQuint(t));
+      if (t >= 1) finishRoll(roll);
+    }
+
   } else if (rollState.current === 'done' || rollState.current === 'modifiers') {
-    const now2 = performance.now() / 1000;
-    const m = activeDieState.mesh;
-    if (m) {
-      if (now2 < shakeEnd) {
-        const remaining = shakeEnd - now2;
-        const decay     = remaining / 0.35;
-        const offset    = Math.sin(now2 * 60) * shakeMag * decay;
-        m.position.set(offset, DIE_RESTING_Y + offset * 0.5, 0);
+    const mesh = activeDieState.mesh;
+    const rest = activeRoll && activeRoll.mesh === mesh
+      ? activeRoll.finalPosition
+      : new THREE.Vector3(0, DIE_RESTING_Y, 0);
+
+    if (mesh) {
+      if (now < shakeEnd) {
+        const remaining = shakeEnd - now;
+        const decay = remaining / 0.35;
+        const offset = Math.sin(now * 60) * shakeMag * decay;
+        mesh.position.set(rest.x + offset, rest.y + offset * 0.5, rest.z);
       } else {
-        m.position.set(0, DIE_RESTING_Y, 0);
+        mesh.position.copy(rest);
       }
     }
   }
@@ -168,9 +253,6 @@ renderer.setAnimationLoop(() => {
 });
 
 // ── Die shake on modifier impact ──────────────────────────────────────────────
-let shakeEnd = 0;
-let shakeMag = 0;
-
 document.addEventListener('modifierimpact', () => {
   shakeEnd = performance.now() / 1000 + 0.35;
   shakeMag = 0.12;

@@ -33,11 +33,6 @@ export const modifierAnim = { skip: false };
 // clearing/drawing the shared canvas once a newer animation has taken over.
 let animGeneration = 0;
 
-export function cancelModifierAnimations() {
-  animGeneration++;
-  overlayCanvas.getContext('2d').clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-}
-
 // ── Modifier data store ───────────────────────────────────────────────────────
 // Each entry: { id, label, value }  (value is a signed integer)
 const STORAGE_KEY = 'd20-modifiers';
@@ -171,22 +166,13 @@ export function drawCardsToCanvas(ctx, canvasW, canvasH) {
 // ── Animation sequence ────────────────────────────────────────────────────────
 // Call this once the die has settled. Returns a Promise that resolves when all
 // modifiers have been applied (so the caller can update final state).
-export function runModifiers(baseRoll, onTick, options = {}) {
+export function runModifiers(baseRoll, onTick) {
   return new Promise(resolve => {
-    const queue = [...(options.modifiers || modifiers)];
-    const shouldContinue = options.shouldContinue || (() => true);
+    const queue = [...modifiers];
     let total = baseRoll;
-    let finished = false;
-
-    function finish(value) {
-      if (finished) return;
-      finished = true;
-      resolve(value);
-    }
 
     function next() {
-      if (!shouldContinue()) { finish(null); return; }
-      if (!queue.length) { finish(total); return; }
+      if (!queue.length) { resolve(total); return; }
       const mod = queue.shift();
       total += mod.value;
 
@@ -197,10 +183,9 @@ export function runModifiers(baseRoll, onTick, options = {}) {
       } else {
         const cardEl = document.querySelector(`.mod-card[data-id="${mod.id}"]`);
         flyModifier(mod, cardEl, () => {
-          if (!shouldContinue()) { finish(null); return; }
           if (onTick) onTick(total, mod);
           setTimeout(next, 300);
-        }, () => finish(null));
+        });
       }
     }
 
@@ -210,7 +195,7 @@ export function runModifiers(baseRoll, onTick, options = {}) {
 
 // ── Single modifier fly-in ────────────────────────────────────────────────────
 // All drawing happens on the persistent overlayCanvas so it's captured by export.
-function flyModifier(mod, cardEl, onImpact, onCancel) {
+function flyModifier(mod, cardEl, onImpact) {
   const faceCenterWorld = dice.position.clone().addScaledVector(
     new THREE.Vector3(0, 0, 1), FACE_INRADIUS * dice.scale.x
   );
@@ -261,8 +246,6 @@ function flyModifier(mod, cardEl, onImpact, onCancel) {
   }
 
   function frame(now) {
-    if (animGeneration !== myGen) { onCancel(); return; }
-
     const elapsed = now - startTime;
     const t  = Math.min(elapsed / TRAVEL_MS, 1.0);
     const et = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
@@ -305,7 +288,7 @@ function flyModifier(mod, cardEl, onImpact, onCancel) {
 
     if (t >= 1.0 && !impactFired) {
       impactFired = true;
-      triggerImpact(myGen, pctx, pcv, particles, label, curX, curY, fontSize, textColor, fontFamily, cardEl, onImpact, onCancel);
+      triggerImpact(myGen, pctx, pcv, particles, label, curX, curY, fontSize, textColor, fontFamily, cardEl, onImpact);
       return;
     }
     if (!impactFired) requestAnimationFrame(frame);
@@ -315,7 +298,7 @@ function flyModifier(mod, cardEl, onImpact, onCancel) {
 }
 
 // ── Impact effect ─────────────────────────────────────────────────────────────
-function triggerImpact(myGen, pctx, pcv, particles, textLabel, textX, textY, fontSize, textColor, fontFamily, cardEl, onImpact, onCancel) {
+function triggerImpact(myGen, pctx, pcv, particles, textLabel, textX, textY, fontSize, textColor, fontFamily, cardEl, onImpact) {
   const { x: cx, y: cy } = projectToScreen(dice.position);
 
   for (let i = 0; i < 60; i++) {
@@ -395,8 +378,5 @@ function triggerImpact(myGen, pctx, pcv, particles, textLabel, textX, textY, fon
   }
 
   requestAnimationFrame(cleanFrame);
-  setTimeout(() => {
-    if (animGeneration === myGen) onImpact();
-    else onCancel();
-  }, 150);
+  setTimeout(onImpact, 150);
 }

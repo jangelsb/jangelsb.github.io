@@ -19,8 +19,9 @@
   <div id="mod-cards"></div>
 </div>
 
-<!-- Main canvas roll UI: random preview only -->
+<!-- Roll UI: 2-row number grid + Random button -->
 <div id="roll-ui">
+  <div id="number-grid"></div>
   <button id="randomBtn">Random</button>
 </div>
 
@@ -97,24 +98,10 @@
 
     <!-- ── Action bar: always visible at top ─────────────────────────── -->
     <div id="studio-context">
-      <div class="studio-roll-row">
-        <label for="studio-roll-number">
-          <span>Roll result</span>
-          <span id="studio-roll-range">1-20</span>
-        </label>
-        <input type="number" id="studio-roll-number" min="1" max="20" value="1" inputmode="numeric" aria-label="Roll result">
-        <button class="s-btn" id="studio-preview-roll-btn" title="Preview selected roll (Shift+Enter)">Preview</button>
-      </div>
-      <div id="studio-roll-grid" aria-label="Roll result buttons"></div>
-      <div class="studio-keyboard-hint">
-        <span><kbd>R</kbd> focus</span>
-        <span><kbd>Enter</kbd> add</span>
-        <span><kbd>Shift+Enter</kbd> preview</span>
-      </div>
       <input type="text" id="studio-entry-name" class="s-text-input" placeholder="Entry name (optional)" maxlength="40">
       <div class="studio-ctx-btns">
         <button class="s-btn s-btn-cancel" id="studio-ctx-cancel" style="display:none">Cancel</button>
-        <button id="studio-add-tl-btn">+ Add Roll</button>
+        <button id="studio-add-tl-btn">+ Add to Timeline</button>
       </div>
     </div>
 
@@ -149,7 +136,7 @@
       </div>
     </details>
 
-    <!-- Cards: timeline-level controls -->
+    <!-- Card controls: always visible (not collapsible) -->
     <div class="s-section">
       <div class="s-row">
         <span class="s-label">Card size</span>
@@ -160,51 +147,6 @@
         <span class="s-label">Cards distance</span>
         <input type="range" id="c-modCardsBottom" min="80" max="400" step="4" value="132">
         <span class="val" id="v-modCardsBottom">132px</span>
-      </div>
-    </div>
-
-    <!-- Motion: timeline-level controls -->
-    <div class="s-section">
-      <div class="s-divider">Motion</div>
-      <div class="s-row">
-        <span class="s-label">Tumble duration</span>
-        <input type="range" id="c-tumble" min="0.6" max="3.5" step="0.1" value="1.9">
-        <span class="val" id="v-tumble">1.9s</span>
-      </div>
-      <div class="s-row">
-        <span class="s-label">Settle duration</span>
-        <input type="range" id="c-settle" min="0.1" max="2.5" step="0.05" value="0.4">
-        <span class="val" id="v-settle">0.40s</span>
-      </div>
-      <div class="s-row">
-        <span class="s-label">Spins</span>
-        <input type="range" id="c-spinMin" min="1" max="5" step="0.5" value="2">
-        <span class="val" id="v-spinMin">2.0</span>
-      </div>
-      <div class="s-row">
-        <span class="s-label">Chaos</span>
-        <input type="range" id="c-chaos" min="0" max="0.15" step="0.005" value="0.04">
-        <span class="val" id="v-chaos">4%</span>
-      </div>
-      <div class="s-row">
-        <span class="s-label">Decay</span>
-        <input type="range" id="c-decay" min="1.5" max="6" step="0.1" value="3.8">
-        <span class="val" id="v-decay">3.8</span>
-      </div>
-      <div class="s-divider">Wall Motion</div>
-      <div class="s-row">
-        <span class="s-label">Wall bounce</span>
-        <input type="checkbox" id="c-wallBounce" style="width:18px;height:18px;accent-color:#c8a84a;cursor:pointer">
-      </div>
-      <div class="s-row">
-        <span class="s-label">Bounce area</span>
-        <input type="range" id="c-wallArea" min="0.55" max="1" step="0.01" value="0.9">
-        <span class="val" id="v-wallArea">90%</span>
-      </div>
-      <div class="s-row">
-        <span class="s-label">Extra bounce time</span>
-        <input type="range" id="c-wallExtra" min="0.4" max="4" step="0.1" value="1.6">
-        <span class="val" id="v-wallExtra">1.6s</span>
       </div>
     </div>
 
@@ -288,6 +230,38 @@
       </div>
     </details>
 
+    <!-- Animation (collapsed) -->
+    <details>
+      <summary class="exp-settings-summary">Animation</summary>
+      <div class="s-section">
+        <div class="s-row">
+          <span class="s-label">Roll speed</span>
+          <input type="range" id="c-tumble" min="0.6" max="3.5" step="0.1" value="1.9">
+          <span class="val" id="v-tumble">1.9s</span>
+        </div>
+        <div class="s-row">
+          <span class="s-label">Settle speed</span>
+          <input type="range" id="c-settle" min="0.1" max="2.5" step="0.05" value="0.4">
+          <span class="val" id="v-settle">0.40s</span>
+        </div>
+        <div class="s-row">
+          <span class="s-label">Spins</span>
+          <input type="range" id="c-spinMin" min="1" max="5" step="0.5" value="2">
+          <span class="val" id="v-spinMin">2.0</span>
+        </div>
+        <div class="s-row">
+          <span class="s-label">Chaos</span>
+          <input type="range" id="c-chaos" min="0" max="0.15" step="0.005" value="0.04">
+          <span class="val" id="v-chaos">4%</span>
+        </div>
+        <div class="s-row">
+          <span class="s-label">Decay</span>
+          <input type="range" id="c-decay" min="1.5" max="6" step="0.1" value="3.8">
+          <span class="val" id="v-decay">3.8</span>
+        </div>
+      </div>
+    </details>
+
     <!-- Modifier Colors (collapsed) -->
     <details>
       <summary class="exp-settings-summary">Modifier Colors</summary>
@@ -338,7 +312,53 @@
       <summary class="exp-settings-summary">Timeline Entries</summary>
       <div class="s-section" style="margin-top:12px">
         <div id="tl-items"></div>
-        <p class="tl-edit-hint">Select an entry to edit it in Studio.</p>
+        <!-- Hidden form: accessed via Studio edit flow only -->
+        <div id="tl-item-form" style="display:none;padding-top:12px;border-top:1px solid #c8a84a22;margin-top:10px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#c8a84a;flex:1" id="tl-form-title">Edit Entry</div>
+            <button class="s-btn s-btn-cancel" id="tl-form-cancel">Cancel</button>
+            <button class="s-btn" id="tl-form-save" style="flex:1">Save Entry</button>
+          </div>
+          <div class="s-row">
+            <span class="s-label">Entry name</span>
+            <input type="text" class="s-text-input" id="tl-form-label" placeholder="e.g. Attack Roll" maxlength="40">
+          </div>
+          <div class="s-row">
+            <span class="s-label">Die Type</span>
+            <select id="tl-form-die">
+              <option value="d4">D4</option>
+              <option value="d6">D6</option>
+              <option value="d8">D8</option>
+              <option value="d10">D10</option>
+              <option value="d12">D12</option>
+              <option value="d20" selected>D20</option>
+            </select>
+          </div>
+          <div class="s-row">
+            <span class="s-label">Theme</span>
+            <select id="tl-form-theme"></select>
+          </div>
+          <div class="s-divider" style="margin-top:8px">Roll Number</div>
+          <div id="tl-form-face-picker" style="margin-bottom:8px"></div>
+          <div class="s-divider">Modifiers</div>
+          <div id="tl-form-mods-list"></div>
+          <div class="s-row" style="gap:6px;margin-top:4px">
+            <input type="text" class="s-text-input" id="tl-form-mod-label" placeholder="Name (e.g. Dexterity)" maxlength="20" style="flex:2">
+            <input type="number" id="tl-form-mod-value" placeholder="+3" style="width:58px;font-size:13px;padding:5px;text-align:center">
+            <button class="s-btn" id="tl-form-mod-add" style="padding:5px 10px;font-size:13px">+</button>
+          </div>
+          <div class="s-divider">Cards</div>
+          <div class="s-row">
+            <span class="s-label">Card size</span>
+            <input type="range" id="tl-form-cardScale" min="0.5" max="2.0" step="0.05" value="1.0">
+            <span class="val" id="v-tl-form-cardScale">1.00</span>
+          </div>
+          <div class="s-row">
+            <span class="s-label">Card distance</span>
+            <input type="range" id="tl-form-cardsBottom" min="80" max="400" step="4" value="132">
+            <span class="val" id="v-tl-form-cardsBottom">132px</span>
+          </div>
+        </div>
       </div>
     </details>
 

@@ -9,25 +9,6 @@ const modColors = accent => ({
   modifierImpactColor:   '#ffffff',
 });
 
-const GLOBAL_SETTING_KEYS = [
-  'modCardScale',
-  'modCardsBottom',
-  'tumbleDur',
-  'settleDur',
-  'spinMin',
-  'chaosMag',
-  'decayRate',
-  'wallBounceEnabled',
-  'wallAreaScale',
-  'wallExtraDur',
-];
-
-export function stripGlobalSettings(settings) {
-  const cleaned = { ...settings };
-  for (const key of GLOBAL_SETTING_KEYS) delete cleaned[key];
-  return cleaned;
-}
-
 export const BUILT_IN_THEMES = {
   bg3: {
     faceColorTop:    '#252535',
@@ -45,8 +26,6 @@ export const BUILT_IN_THEMES = {
     spinMin:         3.5,
     chaosMag:        0.05,
     decayRate:       3.8,
-    wallBounceEnabled: true,
-    wallExtraDur:      1.6,
     ...modColors('#9aabcc'),
     modifierNegativeColor: '#9aabcc',
     modCardBg1:      '#141e30',
@@ -248,8 +227,8 @@ export function getThemeDisplayName(key) {
 
 // Applies a theme object to CONFIG, rebuilds visuals, and notifies ui.js via event.
 export function applyTheme(themeObj) {
-  const { name, ...themeSettings } = themeObj;
-  Object.assign(CONFIG, stripGlobalSettings(themeSettings));
+  Object.assign(CONFIG, themeObj);
+  delete CONFIG.name; // prevent a saved theme's name from polluting CONFIG
   rebuildTextures();  // handles background color + die scale
   document.dispatchEvent(new CustomEvent('themeapplied'));
 }
@@ -264,34 +243,11 @@ export function loadUserThemes() {
 export function saveUserTheme(name) {
   const themes   = loadUserThemes();
   const existing = themes.findIndex(t => t.name === name);
-  const entry = { ...stripGlobalSettings(CONFIG), name };
+  const entry    = { ...CONFIG, name }; // name last so it always wins over CONFIG.name
   if (existing >= 0) themes[existing] = entry;
   else themes.push(entry);
   localStorage.setItem('d20-themes', JSON.stringify(themes));
   renderUserThemes();
-}
-
-export function upsertUserThemes(importedThemes) {
-  const themes = loadUserThemes();
-  let importedCount = 0;
-
-  for (const imported of importedThemes || []) {
-    if (!imported || typeof imported.name !== 'string' || !imported.name.trim()) continue;
-
-    const entry = { ...stripGlobalSettings(imported), name: imported.name.trim() };
-    const existing = themes.findIndex(theme =>
-      typeof theme.name === 'string' && theme.name.toLowerCase() === entry.name.toLowerCase()
-    );
-    if (existing >= 0) themes[existing] = entry;
-    else themes.push(entry);
-    importedCount++;
-  }
-
-  if (importedCount > 0) {
-    localStorage.setItem('d20-themes', JSON.stringify(themes));
-    renderUserThemes();
-  }
-  return importedCount;
 }
 
 export function deleteUserTheme(name) {

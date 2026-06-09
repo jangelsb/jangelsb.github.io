@@ -16,6 +16,9 @@ export const DEFAULTS = {
   spinMin:         3.5,
   chaosMag:        0.05,
   decayRate:       3.8,
+  wallBounceEnabled: true,
+  wallAreaScale:     0.9,
+  wallExtraDur:      1.6,
 
   // Die type: 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20'
   dieType:         'd20',

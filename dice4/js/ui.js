@@ -1,6 +1,6 @@
 import { CONFIG } from './config.js';
 import { dice, rebuildTextures, buildDie, activeDieState } from './geometry.js';
-import { BUILT_IN_THEMES, applyTheme, loadUserThemes, saveUserTheme, renderUserThemes, stripGlobalSettings } from './themes.js';
+import { BUILT_IN_THEMES, applyTheme, loadUserThemes, saveUserTheme, renderUserThemes } from './themes.js';
 import { addModifier, removeModifier, getModifiers } from './modifiers.js';
 
 // ── CSS custom-property helpers ───────────────────────────────────────────────
@@ -32,24 +32,10 @@ export function applyModCardStyles() {
   r.setProperty('--mod-neg-g2',     hexWithAlpha(neg, 0.267));
   r.setProperty('--cards-bottom',   (CONFIG.modCardsBottom ?? 132) + 'px');
   r.setProperty('--card-scale',      (CONFIG.modCardScale  ?? 1.0));
-  const scaleInput  = document.getElementById('c-modCardScale');
-  const scaleValue  = document.getElementById('v-modCardScale');
-  const bottomInput = document.getElementById('c-modCardsBottom');
-  const bottomValue = document.getElementById('v-modCardsBottom');
-  if (scaleInput)  scaleInput.value = CONFIG.modCardScale ?? 1.0;
-  if (scaleValue)  scaleValue.textContent = (CONFIG.modCardScale ?? 1.0).toFixed(2);
-  if (bottomInput) bottomInput.value = CONFIG.modCardsBottom ?? 132;
-  if (bottomValue) bottomValue.textContent = (CONFIG.modCardsBottom ?? 132) + 'px';
-}
-
-function syncWallControlState() {
-  const enabled = Boolean(CONFIG.wallBounceEnabled);
-  document.getElementById('c-wallArea').disabled = !enabled;
-  document.getElementById('c-wallExtra').disabled = !enabled;
 }
 
 // ── Sync all settings panel inputs from the current CONFIG values ─────────────
-export function syncInputsFromConfig() {
+function syncInputsFromConfig() {
   document.getElementById('c-faceTop').value  = CONFIG.faceColorTop;
   document.getElementById('c-faceBot').value  = CONFIG.faceColorBottom;
   document.getElementById('c-border').value   = CONFIG.borderColor;
@@ -65,9 +51,6 @@ export function syncInputsFromConfig() {
   document.getElementById('c-spinMin').value  = CONFIG.spinMin;
   document.getElementById('c-chaos').value    = CONFIG.chaosMag;
   document.getElementById('c-decay').value    = CONFIG.decayRate;
-  document.getElementById('c-wallBounce').checked = Boolean(CONFIG.wallBounceEnabled);
-  document.getElementById('c-wallArea').value = CONFIG.wallAreaScale;
-  document.getElementById('c-wallExtra').value = CONFIG.wallExtraDur;
 
   document.getElementById('v-size').textContent    = CONFIG.dieScale.toFixed(2);
   document.getElementById('v-shine').textContent   = CONFIG.shininess;
@@ -76,8 +59,6 @@ export function syncInputsFromConfig() {
   document.getElementById('v-spinMin').textContent = CONFIG.spinMin.toFixed(1);
   document.getElementById('v-chaos').textContent   = Math.round(CONFIG.chaosMag * 100) + '%';
   document.getElementById('v-decay').textContent   = CONFIG.decayRate.toFixed(1);
-  document.getElementById('v-wallArea').textContent = Math.round(CONFIG.wallAreaScale * 100) + '%';
-  document.getElementById('v-wallExtra').textContent = CONFIG.wallExtraDur.toFixed(1) + 's';
 
   document.getElementById('c-modPos').value      = CONFIG.modifierPositiveColor;
   document.getElementById('c-modNeg').value      = CONFIG.modifierNegativeColor;
@@ -96,7 +77,6 @@ export function syncInputsFromConfig() {
   const dieTypeEl = document.getElementById('c-dieType');
   if (dieTypeEl) dieTypeEl.value = CONFIG.dieType || 'd20';
 
-  syncWallControlState();
   applyModCardStyles();
 }
 
@@ -209,18 +189,6 @@ export function initUI() {
     CONFIG.decayRate = parseFloat(e.target.value);
     document.getElementById('v-decay').textContent = CONFIG.decayRate.toFixed(1);
   });
-  document.getElementById('c-wallBounce').addEventListener('change', e => {
-    CONFIG.wallBounceEnabled = e.target.checked;
-    syncWallControlState();
-  });
-  document.getElementById('c-wallArea').addEventListener('input', e => {
-    CONFIG.wallAreaScale = parseFloat(e.target.value);
-    document.getElementById('v-wallArea').textContent = Math.round(CONFIG.wallAreaScale * 100) + '%';
-  });
-  document.getElementById('c-wallExtra').addEventListener('input', e => {
-    CONFIG.wallExtraDur = parseFloat(e.target.value);
-    document.getElementById('v-wallExtra').textContent = CONFIG.wallExtraDur.toFixed(1) + 's';
-  });
 
   // Sync inputs whenever a theme is applied (themes.js dispatches 'themeapplied')
   document.addEventListener('themeapplied', syncInputsFromConfig);
@@ -244,7 +212,7 @@ export function initUI() {
 
   // Export user themes as JSON
   document.getElementById('exportThemesBtn').addEventListener('click', () => {
-    const themes = loadUserThemes().map(stripGlobalSettings);
+    const themes = loadUserThemes();
     if (!themes.length) { alert('No saved themes to export. Save at least one theme first.'); return; }
     const blob = new Blob([JSON.stringify(themes, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
@@ -272,9 +240,8 @@ export function initUI() {
       if (!valid.length) { alert('No valid themes found in file.'); return; }
       const existing = loadUserThemes();
       valid.forEach(imp => {
-        const entry = { ...stripGlobalSettings(imp), name: imp.name.trim() };
-        const idx = existing.findIndex(t => t.name === entry.name);
-        if (idx >= 0) existing[idx] = entry; else existing.push(entry);
+        const idx = existing.findIndex(t => t.name === imp.name);
+        if (idx >= 0) existing[idx] = imp; else existing.push(imp);
       });
       localStorage.setItem('d20-themes', JSON.stringify(existing));
       renderUserThemes();
@@ -347,5 +314,4 @@ export function initUI() {
 
   renderModifierCards();
   applyModCardStyles();
-  syncInputsFromConfig();
 }

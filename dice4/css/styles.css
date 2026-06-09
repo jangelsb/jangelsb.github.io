@@ -2,17 +2,51 @@
 body { background: #0d0d1a; overflow: hidden; width: 100vw; height: 100vh; }
 canvas { display: block; }
 
-/* ── Main canvas roll UI ─────────────────────────────────────────────── */
+/* ── Roll UI: number grid + random button ───────────────────────────── */
 #roll-ui {
   position: fixed;
   bottom: 18px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
   z-index: 50;
 }
 
+#number-grid {
+  display: grid;
+  gap: 4px;
+}
+
+.num-btn {
+  width: 36px;
+  height: 32px;
+  font-size: 12px;
+  font-family: Georgia, serif;
+  border-radius: 5px;
+  border: 1px solid #c8a84a33;
+  background: #0d0d1acc;
+  color: #f5e8c077;
+  cursor: pointer;
+  text-align: center;
+  padding: 0;
+  letter-spacing: 0;
+  backdrop-filter: blur(4px);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.num-btn:hover   { background: #1e1e46cc; color: #f5e8c0; border-color: #c8a84a66; }
+.num-btn:active  { background: #2a1e06cc; }
+.num-btn.last-rolled {
+  background: #2a1e06cc;
+  color: #f5e8c0;
+  border-color: #c8a84a;
+  box-shadow: 0 0 8px #c8a84a33;
+}
+
 #randomBtn {
-  padding: 6px 22px;
+  padding: 5px 0;
   font-size: 10px;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -507,6 +541,7 @@ body.export-no-result #result        { visibility: hidden; }
   border-left: 2px solid #7acca055;
   padding-left: 6px;
 }
+#tl-items.tl-items-locked { pointer-events: none; opacity: 0.35; }
 .tl-item-num {
   color: #c8a84a66;
   font-size: 10px;
@@ -576,13 +611,19 @@ body.export-no-result #result        { visibility: hidden; }
   padding: 14px 0;
   letter-spacing: 1px;
 }
-.tl-edit-hint {
-  color: #f5e8c055;
-  font-size: 10px;
-  letter-spacing: 0.5px;
-  margin-top: 9px;
-  text-align: center;
+#tl-add-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  border-width: 1px;
+  border-color: #c8a84a44;
+  background: #12122a;
+  color: #c8a84a;
 }
+#tl-add-btn:hover { background: #1e1e46; }
+
 /* small action buttons inside the panel (Save Item, Cancel, etc.) */
 .s-btn {
   padding: 6px 14px;
@@ -737,69 +778,6 @@ body.export-no-result #result        { visibility: hidden; }
   gap: 7px;
 }
 .studio-ctx-btns { display: flex; gap: 6px; }
-.studio-roll-row {
-  display: grid;
-  grid-template-columns: 1fr 74px auto;
-  align-items: stretch;
-  gap: 6px;
-}
-.studio-roll-row label {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  color: #f5e8c0;
-  font-size: 13px;
-}
-#studio-roll-range {
-  color: #f5e8c066;
-  font-size: 10px;
-  letter-spacing: 1px;
-}
-#studio-roll-number {
-  width: 74px;
-  background: #12122a;
-  color: #f5e8c0;
-  border: 1px solid #c8a84a66;
-  border-radius: 6px;
-  padding: 6px 5px 6px 9px;
-  font-family: Georgia, serif;
-  font-size: 20px;
-  text-align: center;
-  outline: none;
-}
-#studio-roll-number:focus {
-  border-color: #c8a84a;
-  box-shadow: 0 0 0 2px #c8a84a22;
-}
-#studio-preview-roll-btn {
-  min-width: 76px;
-  text-align: center;
-}
-#studio-roll-grid {
-  display: grid;
-  gap: 4px;
-}
-#studio-roll-grid .face-btn {
-  padding: 6px 0;
-}
-.studio-keyboard-hint {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  color: #f5e8c055;
-  font-size: 9px;
-  letter-spacing: 0.5px;
-}
-.studio-keyboard-hint kbd {
-  border: 1px solid #ffffff22;
-  border-radius: 3px;
-  background: #ffffff08;
-  color: #f5e8c088;
-  font-family: Georgia, serif;
-  font-size: 8px;
-  padding: 1px 3px;
-}
 
 /* ── Studio mods list ────────────────────────────────── */
 #studio-mods-list { margin-bottom: 8px; }
