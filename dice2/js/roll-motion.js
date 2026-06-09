@@ -21,9 +21,10 @@ export function getWallArena(camera, mesh, areaScale) {
     Math.abs(mesh.scale.z)
   );
   const scale = clamp(Number(areaScale) || 0.9, 0.1, 1);
+  const squareHalfExtent = Math.min(halfWidth, halfHeight) * scale;
 
-  const maxX = Math.max(halfWidth * scale - radius, MIN_HALF_EXTENT);
-  const maxY = Math.max(halfHeight * scale - radius, MIN_HALF_EXTENT);
+  const maxX = Math.max(squareHalfExtent - radius, MIN_HALF_EXTENT);
+  const maxY = Math.max(squareHalfExtent - radius, MIN_HALF_EXTENT);
   return { minX: -maxX, maxX, minY: -maxY, maxY };
 }
 

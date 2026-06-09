@@ -776,6 +776,13 @@ body.export-no-result #result        { visibility: hidden; }
   min-width: 76px;
   text-align: center;
 }
+#studio-roll-grid {
+  display: grid;
+  gap: 4px;
+}
+#studio-roll-grid .face-btn {
+  padding: 6px 0;
+}
 .studio-keyboard-hint {
   display: flex;
   justify-content: space-between;

@@ -14,7 +14,7 @@ import {
 import { CONFIG, DIE_TYPES } from './config.js';
 import { buildDie, rebuildTextures, activeDieState } from './geometry.js';
 import { setModifiers, modifierAnim, getModifiers, removeModifier } from './modifiers.js';
-import { renderModifierCards, initUI, applyModCardStyles } from './ui.js';
+import { renderModifierCards, initUI, applyModCardStyles, syncInputsFromConfig } from './ui.js';
 import { loadTimelines, saveTimeline, deleteTimeline } from './timeline.js';
 import {
   exportTimelineItems,
@@ -31,8 +31,66 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+const CARD_SETTING_KEYS = ['cardScale', 'cardsBottom'];
+const MOTION_SETTING_KEYS = [
+  'tumbleDur',
+  'settleDur',
+  'spinMin',
+  'chaosMag',
+  'decayRate',
+  'wallBounceEnabled',
+  'wallAreaScale',
+  'wallExtraDur',
+];
+const GLOBAL_SETTING_CONTROL_IDS = new Set([
+  'c-modCardScale',
+  'c-modCardsBottom',
+  'c-tumble',
+  'c-settle',
+  'c-spinMin',
+  'c-chaos',
+  'c-decay',
+  'c-wallBounce',
+  'c-wallArea',
+  'c-wallExtra',
+]);
+
+function numberSetting(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function booleanSetting(value, fallback) {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function getTimelineCards(data, legacyItem) {
+  const root = data && !Array.isArray(data) ? data : {};
+  const cards = root.cards || {};
+  return {
+    scale: numberSetting(cards.scale ?? root.cardScale ?? legacyItem.cardScale, CONFIG.modCardScale ?? 1.0),
+    bottom: numberSetting(cards.bottom ?? root.cardsBottom ?? legacyItem.cardsBottom, CONFIG.modCardsBottom ?? 132),
+  };
+}
+
+function getTimelineMotion(data, legacyItem, legacyTheme) {
+  const root = data && !Array.isArray(data) ? data : {};
+  const motion = root.motion || {};
+  return {
+    tumbleDur: numberSetting(motion.tumbleDur ?? root.tumbleDur ?? legacyItem.tumbleDur ?? legacyTheme?.tumbleDur, CONFIG.tumbleDur ?? 1.9),
+    settleDur: numberSetting(motion.settleDur ?? root.settleDur ?? legacyItem.settleDur ?? legacyTheme?.settleDur, CONFIG.settleDur ?? 1.95),
+    spinMin: numberSetting(motion.spinMin ?? root.spinMin ?? legacyItem.spinMin ?? legacyTheme?.spinMin, CONFIG.spinMin ?? 3.5),
+    chaosMag: numberSetting(motion.chaosMag ?? root.chaosMag ?? legacyItem.chaosMag ?? legacyTheme?.chaosMag, CONFIG.chaosMag ?? 0.05),
+    decayRate: numberSetting(motion.decayRate ?? root.decayRate ?? legacyItem.decayRate ?? legacyTheme?.decayRate, CONFIG.decayRate ?? 3.8),
+    wallBounceEnabled: booleanSetting(motion.wallBounceEnabled ?? root.wallBounceEnabled ?? legacyItem.wallBounceEnabled ?? legacyTheme?.wallBounceEnabled, Boolean(CONFIG.wallBounceEnabled)),
+    wallAreaScale: numberSetting(motion.wallAreaScale ?? root.wallAreaScale ?? legacyItem.wallAreaScale ?? legacyTheme?.wallAreaScale, CONFIG.wallAreaScale ?? 0.9),
+    wallExtraDur: numberSetting(motion.wallExtraDur ?? root.wallExtraDur ?? legacyItem.wallExtraDur ?? legacyTheme?.wallExtraDur, CONFIG.wallExtraDur ?? 1.6),
+  };
+}
+
 function normalizeTimelineItem(item) {
-  const { cardScale, cardsBottom, wallAreaScale, ...normalized } = item || {};
+  const normalized = { ...(item || {}) };
+  for (const key of CARD_SETTING_KEYS.concat(MOTION_SETTING_KEYS)) delete normalized[key];
   return {
     ...normalized,
     themeName: normalizeThemeName(normalized.themeName) || 'bg3',
@@ -50,35 +108,38 @@ function getTimelineSettings(data, items) {
     ? root.themes.find(theme => String(theme?.name || '').toLowerCase() === legacyThemeName)
     : null;
   const legacyTheme = legacyThemeSnapshot || getThemeByKey(legacyItem.themeName);
-  const cardScale   = Number(root.cardScale ?? legacyItem.cardScale);
-  const cardsBottom = Number(root.cardsBottom ?? legacyItem.cardsBottom);
-  const wallAreaScale = Number(root.wallAreaScale ?? legacyItem.wallAreaScale ?? legacyTheme?.wallAreaScale);
   return {
-    cardScale:   Number.isFinite(cardScale)   ? cardScale   : (CONFIG.modCardScale ?? 1.0),
-    cardsBottom: Number.isFinite(cardsBottom) ? cardsBottom : (CONFIG.modCardsBottom ?? 132),
-    wallAreaScale: Number.isFinite(wallAreaScale) ? wallAreaScale : (CONFIG.wallAreaScale ?? 0.9),
+    cards: getTimelineCards(root, legacyItem),
+    motion: getTimelineMotion(root, legacyItem, legacyTheme),
   };
 }
 
 function applyTimelineSettings(data, items) {
   const settings = getTimelineSettings(data, items);
-  CONFIG.modCardScale   = settings.cardScale;
-  CONFIG.modCardsBottom = settings.cardsBottom;
-  CONFIG.wallAreaScale  = settings.wallAreaScale;
+  CONFIG.modCardScale   = settings.cards.scale;
+  CONFIG.modCardsBottom = settings.cards.bottom;
+  Object.assign(CONFIG, settings.motion);
   applyModCardStyles();
-
-  const wallAreaInput = document.getElementById('c-wallArea');
-  const wallAreaValue = document.getElementById('v-wallArea');
-  if (wallAreaInput) wallAreaInput.value = settings.wallAreaScale;
-  if (wallAreaValue) wallAreaValue.textContent = Math.round(settings.wallAreaScale * 100) + '%';
+  syncInputsFromConfig();
 }
 
 function makeTimelineDocument(name, items) {
   return {
     name,
-    cardScale: CONFIG.modCardScale ?? 1.0,
-    cardsBottom: CONFIG.modCardsBottom ?? 132,
-    wallAreaScale: CONFIG.wallAreaScale ?? 0.9,
+    cards: {
+      scale: CONFIG.modCardScale ?? 1.0,
+      bottom: CONFIG.modCardsBottom ?? 132,
+    },
+    motion: {
+      tumbleDur: CONFIG.tumbleDur ?? 1.9,
+      settleDur: CONFIG.settleDur ?? 1.95,
+      spinMin: CONFIG.spinMin ?? 3.5,
+      chaosMag: CONFIG.chaosMag ?? 0.05,
+      decayRate: CONFIG.decayRate ?? 3.8,
+      wallBounceEnabled: Boolean(CONFIG.wallBounceEnabled),
+      wallAreaScale: CONFIG.wallAreaScale ?? 0.9,
+      wallExtraDur: CONFIG.wallExtraDur ?? 1.6,
+    },
     themes: getIncludedTimelineThemes(items),
     items: items.map(normalizeTimelineItem),
   };
@@ -100,7 +161,8 @@ function getIncludedTimelineThemes(items) {
       || userThemes.find(candidate => candidate.name.toLowerCase() === name.toLowerCase());
     const theme = builtIn ? { ...builtIn, name } : userTheme;
     if (theme) {
-      const { wallAreaScale, ...themeSnapshot } = theme;
+      const themeSnapshot = { ...theme };
+      for (const key of CARD_SETTING_KEYS.concat(MOTION_SETTING_KEYS)) delete themeSnapshot[key];
       included.set(name.toLowerCase(), themeSnapshot);
     }
   }
@@ -156,6 +218,7 @@ function getDieMax(dieType = CONFIG.dieType || 'd20') {
 function syncStudioRollInput({ select = false } = {}) {
   const input = document.getElementById('studio-roll-number');
   const range = document.getElementById('studio-roll-range');
+  const grid  = document.getElementById('studio-roll-grid');
   const max   = getDieMax();
   studioRollNumber = Math.min(Math.max(Number(studioRollNumber) || 1, 1), max);
   if (input) {
@@ -170,6 +233,11 @@ function syncStudioRollInput({ select = false } = {}) {
     }
   }
   if (range) range.textContent = `1-${max}`;
+  if (grid) {
+    grid.querySelectorAll('.studio-roll-btn').forEach(btn => {
+      btn.classList.toggle('selected', Number(btn.dataset.n) === studioRollNumber);
+    });
+  }
 }
 
 function readStudioRollInput() {
@@ -181,6 +249,27 @@ function readStudioRollInput() {
 
 function previewStudioRoll() {
   roll(readStudioRollInput());
+}
+
+function buildStudioRollGrid() {
+  const grid = document.getElementById('studio-roll-grid');
+  if (!grid) return;
+  const max = getDieMax();
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = `repeat(${Math.ceil(max / 2)}, 1fr)`;
+  for (let i = 1; i <= max; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'studio-roll-btn face-btn';
+    btn.textContent = i;
+    btn.dataset.n = String(i);
+    btn.addEventListener('click', () => {
+      studioRollNumber = i;
+      syncStudioRollInput({ select: true });
+    });
+    grid.appendChild(btn);
+  }
+  syncStudioRollInput();
 }
 
 // ── Studio modifier list ──────────────────────────────────────────────────────
@@ -273,7 +362,7 @@ function loadItemIntoStudio(itemId) {
   const nameInput = document.getElementById('studio-entry-name');
   if (nameInput) nameInput.value = item.label || '';
 
-  syncStudioRollInput();
+  buildStudioRollGrid();
   updateStudioContext();
   renderTimeline();
 }
@@ -350,9 +439,9 @@ function loadWorkingTimeline() {
     const data  = JSON.parse(localStorage.getItem(WORKING_TL_KEY) || '[]');
     const items = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
     const settings = getTimelineSettings(data, items);
-    CONFIG.modCardScale   = settings.cardScale;
-    CONFIG.modCardsBottom = settings.cardsBottom;
-    CONFIG.wallAreaScale  = settings.wallAreaScale;
+    CONFIG.modCardScale   = settings.cards.scale;
+    CONFIG.modCardsBottom = settings.cards.bottom;
+    Object.assign(CONFIG, settings.motion);
     return items.map(normalizeTimelineItem);
   } catch {
     return [];
@@ -608,7 +697,7 @@ applyModCardStyles();
 // initUI wires all Studio color/slider/theme controls
 initUI();
 
-syncStudioRollInput();
+buildStudioRollGrid();
 renderUserThemes();
 renderTimeline();
 renderSavedTimelines();
@@ -630,13 +719,13 @@ document.addEventListener('modifierschanged', renderStudioMods);
 document.getElementById('tab-studio').addEventListener('input',  e => {
   const id = e.target.id;
   if (id && (id.startsWith('c-') || id.startsWith('c-mod'))
-      && id !== 'c-dieType' && id !== 'c-modCardScale' && id !== 'c-modCardsBottom' && id !== 'c-wallArea') {
+      && id !== 'c-dieType' && !GLOBAL_SETTING_CONTROL_IDS.has(id)) {
     studioThemeDirty = true;
   }
 });
 document.getElementById('tab-studio').addEventListener('change', e => {
   const id = e.target.id;
-  if (id && (id === 'c-font' || id === 'c-bold')) {
+  if (id && (id === 'c-font' || id === 'c-bold') && !GLOBAL_SETTING_CONTROL_IDS.has(id)) {
     studioThemeDirty = true;
   }
 });
@@ -673,7 +762,7 @@ document.getElementById('c-dieType').addEventListener('change', e => {
   buildDie(type);
   rebuildTextures();
   rollState.current = 'idle';
-  syncStudioRollInput();
+  buildStudioRollGrid();
 });
 
 // ── Random button ─────────────────────────────────────────────────────────────
@@ -700,8 +789,10 @@ document.getElementById('studio-roll-number').addEventListener('keydown', e => {
   if (e.shiftKey) previewStudioRoll();
   else handleStudioSaveRoll();
 });
-['c-modCardScale', 'c-modCardsBottom', 'c-wallArea'].forEach(id => {
-  document.getElementById(id).addEventListener('input', persistWorkingTimeline);
+GLOBAL_SETTING_CONTROL_IDS.forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', persistWorkingTimeline);
+  el.addEventListener('change', persistWorkingTimeline);
 });
 
 // Track theme key from built-in theme buttons
@@ -733,11 +824,7 @@ document.getElementById('tl-save-btn').addEventListener('click', () => {
   const name   = nameEl.value.trim();
   if (!name) return;
   if (!timelineItems.length) { alert('Add at least one item before saving.'); return; }
-  saveTimeline(name, timelineItems, {
-    cardScale: CONFIG.modCardScale,
-    cardsBottom: CONFIG.modCardsBottom,
-    wallAreaScale: CONFIG.wallAreaScale,
-  });
+  saveTimeline(name, makeTimelineDocument(name, timelineItems));
   nameEl.value = '';
   renderSavedTimelines();
 });

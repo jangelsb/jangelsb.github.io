@@ -1,6 +1,6 @@
 import { CONFIG } from './config.js';
 import { dice, rebuildTextures, buildDie, activeDieState } from './geometry.js';
-import { BUILT_IN_THEMES, applyTheme, loadUserThemes, saveUserTheme, renderUserThemes } from './themes.js';
+import { BUILT_IN_THEMES, applyTheme, loadUserThemes, saveUserTheme, renderUserThemes, stripGlobalSettings } from './themes.js';
 import { addModifier, removeModifier, getModifiers } from './modifiers.js';
 
 // ── CSS custom-property helpers ───────────────────────────────────────────────
@@ -49,7 +49,7 @@ function syncWallControlState() {
 }
 
 // ── Sync all settings panel inputs from the current CONFIG values ─────────────
-function syncInputsFromConfig() {
+export function syncInputsFromConfig() {
   document.getElementById('c-faceTop').value  = CONFIG.faceColorTop;
   document.getElementById('c-faceBot').value  = CONFIG.faceColorBottom;
   document.getElementById('c-border').value   = CONFIG.borderColor;
@@ -244,7 +244,7 @@ export function initUI() {
 
   // Export user themes as JSON
   document.getElementById('exportThemesBtn').addEventListener('click', () => {
-    const themes = loadUserThemes();
+    const themes = loadUserThemes().map(stripGlobalSettings);
     if (!themes.length) { alert('No saved themes to export. Save at least one theme first.'); return; }
     const blob = new Blob([JSON.stringify(themes, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
@@ -272,8 +272,9 @@ export function initUI() {
       if (!valid.length) { alert('No valid themes found in file.'); return; }
       const existing = loadUserThemes();
       valid.forEach(imp => {
-        const idx = existing.findIndex(t => t.name === imp.name);
-        if (idx >= 0) existing[idx] = imp; else existing.push(imp);
+        const entry = { ...stripGlobalSettings(imp), name: imp.name.trim() };
+        const idx = existing.findIndex(t => t.name === entry.name);
+        if (idx >= 0) existing[idx] = entry; else existing.push(entry);
       });
       localStorage.setItem('d20-themes', JSON.stringify(existing));
       renderUserThemes();

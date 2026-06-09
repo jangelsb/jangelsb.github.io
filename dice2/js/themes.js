@@ -9,6 +9,25 @@ const modColors = accent => ({
   modifierImpactColor:   '#ffffff',
 });
 
+const GLOBAL_SETTING_KEYS = [
+  'modCardScale',
+  'modCardsBottom',
+  'tumbleDur',
+  'settleDur',
+  'spinMin',
+  'chaosMag',
+  'decayRate',
+  'wallBounceEnabled',
+  'wallAreaScale',
+  'wallExtraDur',
+];
+
+export function stripGlobalSettings(settings) {
+  const cleaned = { ...settings };
+  for (const key of GLOBAL_SETTING_KEYS) delete cleaned[key];
+  return cleaned;
+}
+
 export const BUILT_IN_THEMES = {
   bg3: {
     faceColorTop:    '#252535',
@@ -229,11 +248,8 @@ export function getThemeDisplayName(key) {
 
 // Applies a theme object to CONFIG, rebuilds visuals, and notifies ui.js via event.
 export function applyTheme(themeObj) {
-  const { name, modCardScale, modCardsBottom, wallAreaScale, ...themeSettings } = themeObj;
-  Object.assign(CONFIG, {
-    wallBounceEnabled: DEFAULTS.wallBounceEnabled,
-    wallExtraDur: DEFAULTS.wallExtraDur,
-  }, themeSettings);
+  const { name, ...themeSettings } = themeObj;
+  Object.assign(CONFIG, stripGlobalSettings(themeSettings));
   rebuildTextures();  // handles background color + die scale
   document.dispatchEvent(new CustomEvent('themeapplied'));
 }
@@ -248,8 +264,7 @@ export function loadUserThemes() {
 export function saveUserTheme(name) {
   const themes   = loadUserThemes();
   const existing = themes.findIndex(t => t.name === name);
-  const { modCardScale, modCardsBottom, wallAreaScale, ...themeSettings } = CONFIG;
-  const entry = { ...themeSettings, name };
+  const entry = { ...stripGlobalSettings(CONFIG), name };
   if (existing >= 0) themes[existing] = entry;
   else themes.push(entry);
   localStorage.setItem('d20-themes', JSON.stringify(themes));
@@ -263,7 +278,7 @@ export function upsertUserThemes(importedThemes) {
   for (const imported of importedThemes || []) {
     if (!imported || typeof imported.name !== 'string' || !imported.name.trim()) continue;
 
-    const entry = { ...imported, name: imported.name.trim() };
+    const entry = { ...stripGlobalSettings(imported), name: imported.name.trim() };
     const existing = themes.findIndex(theme =>
       typeof theme.name === 'string' && theme.name.toLowerCase() === entry.name.toLowerCase()
     );

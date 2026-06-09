@@ -16,7 +16,7 @@ export const DEFAULTS = {
   spinMin:         3.5,
   chaosMag:        0.05,
   decayRate:       3.8,
-  wallBounceEnabled: false,
+  wallBounceEnabled: true,
   wallAreaScale:     0.9,
   wallExtraDur:      1.6,
 
