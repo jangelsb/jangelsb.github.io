@@ -1,6 +1,6 @@
 // timeline.js — Timeline data persistence.
 //
-// A saved timeline: { name: string, cardScale: number, cardsBottom: number, items: TimelineItem[] }
+// A saved timeline: { name: string, cardScale: number, cardsBottom: number, wallAreaScale: number, items: TimelineItem[] }
 //
 // TimelineItem: {
 //   id:        number,
@@ -18,10 +18,10 @@ export function loadTimelines() {
   catch { return []; }
 }
 
-export function saveTimeline(name, items, cardSettings = {}) {
+export function saveTimeline(name, items, timelineSettings = {}) {
   const timelines = loadTimelines();
   const idx = timelines.findIndex(t => t.name === name);
-  const entry = { name, ...cardSettings, items };
+  const entry = { name, ...timelineSettings, items };
   if (idx >= 0) timelines[idx] = entry;
   else timelines.push(entry);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(timelines));

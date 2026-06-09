@@ -27,7 +27,6 @@ export const BUILT_IN_THEMES = {
     chaosMag:        0.05,
     decayRate:       3.8,
     wallBounceEnabled: true,
-    wallAreaScale:     0.9,
     wallExtraDur:      1.6,
     ...modColors('#9aabcc'),
     modifierNegativeColor: '#9aabcc',
@@ -230,10 +229,9 @@ export function getThemeDisplayName(key) {
 
 // Applies a theme object to CONFIG, rebuilds visuals, and notifies ui.js via event.
 export function applyTheme(themeObj) {
-  const { name, modCardScale, modCardsBottom, ...themeSettings } = themeObj;
+  const { name, modCardScale, modCardsBottom, wallAreaScale, ...themeSettings } = themeObj;
   Object.assign(CONFIG, {
     wallBounceEnabled: DEFAULTS.wallBounceEnabled,
-    wallAreaScale: DEFAULTS.wallAreaScale,
     wallExtraDur: DEFAULTS.wallExtraDur,
   }, themeSettings);
   rebuildTextures();  // handles background color + die scale
@@ -250,7 +248,7 @@ export function loadUserThemes() {
 export function saveUserTheme(name) {
   const themes   = loadUserThemes();
   const existing = themes.findIndex(t => t.name === name);
-  const { modCardScale, modCardsBottom, ...themeSettings } = CONFIG;
+  const { modCardScale, modCardsBottom, wallAreaScale, ...themeSettings } = CONFIG;
   const entry = { ...themeSettings, name };
   if (existing >= 0) themes[existing] = entry;
   else themes.push(entry);

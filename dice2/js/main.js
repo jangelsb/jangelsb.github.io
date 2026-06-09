@@ -32,7 +32,7 @@ function escapeHtml(str) {
 }
 
 function normalizeTimelineItem(item) {
-  const { cardScale, cardsBottom, ...normalized } = item || {};
+  const { cardScale, cardsBottom, wallAreaScale, ...normalized } = item || {};
   return {
     ...normalized,
     themeName: normalizeThemeName(normalized.themeName) || 'bg3',
@@ -40,22 +40,37 @@ function normalizeTimelineItem(item) {
   };
 }
 
-function getTimelineCardSettings(data, items) {
+function getTimelineSettings(data, items) {
   const root       = data && !Array.isArray(data) ? data : {};
   const legacyItem = items[0] || {};
+  const legacyThemeName = String(normalizeThemeName(legacyItem.themeName) || '')
+    .replace(/^user:/, '')
+    .toLowerCase();
+  const legacyThemeSnapshot = Array.isArray(root.themes)
+    ? root.themes.find(theme => String(theme?.name || '').toLowerCase() === legacyThemeName)
+    : null;
+  const legacyTheme = legacyThemeSnapshot || getThemeByKey(legacyItem.themeName);
   const cardScale   = Number(root.cardScale ?? legacyItem.cardScale);
   const cardsBottom = Number(root.cardsBottom ?? legacyItem.cardsBottom);
+  const wallAreaScale = Number(root.wallAreaScale ?? legacyItem.wallAreaScale ?? legacyTheme?.wallAreaScale);
   return {
     cardScale:   Number.isFinite(cardScale)   ? cardScale   : (CONFIG.modCardScale ?? 1.0),
     cardsBottom: Number.isFinite(cardsBottom) ? cardsBottom : (CONFIG.modCardsBottom ?? 132),
+    wallAreaScale: Number.isFinite(wallAreaScale) ? wallAreaScale : (CONFIG.wallAreaScale ?? 0.9),
   };
 }
 
-function applyTimelineCardSettings(data, items) {
-  const settings = getTimelineCardSettings(data, items);
+function applyTimelineSettings(data, items) {
+  const settings = getTimelineSettings(data, items);
   CONFIG.modCardScale   = settings.cardScale;
   CONFIG.modCardsBottom = settings.cardsBottom;
+  CONFIG.wallAreaScale  = settings.wallAreaScale;
   applyModCardStyles();
+
+  const wallAreaInput = document.getElementById('c-wallArea');
+  const wallAreaValue = document.getElementById('v-wallArea');
+  if (wallAreaInput) wallAreaInput.value = settings.wallAreaScale;
+  if (wallAreaValue) wallAreaValue.textContent = Math.round(settings.wallAreaScale * 100) + '%';
 }
 
 function makeTimelineDocument(name, items) {
@@ -63,6 +78,7 @@ function makeTimelineDocument(name, items) {
     name,
     cardScale: CONFIG.modCardScale ?? 1.0,
     cardsBottom: CONFIG.modCardsBottom ?? 132,
+    wallAreaScale: CONFIG.wallAreaScale ?? 0.9,
     themes: getIncludedTimelineThemes(items),
     items: items.map(normalizeTimelineItem),
   };
@@ -83,7 +99,10 @@ function getIncludedTimelineThemes(items) {
     const userTheme = userThemes.find(candidate => candidate.name === name)
       || userThemes.find(candidate => candidate.name.toLowerCase() === name.toLowerCase());
     const theme = builtIn ? { ...builtIn, name } : userTheme;
-    if (theme) included.set(name.toLowerCase(), theme);
+    if (theme) {
+      const { wallAreaScale, ...themeSnapshot } = theme;
+      included.set(name.toLowerCase(), themeSnapshot);
+    }
   }
 
   return [...included.values()].map(theme => ({ ...theme }));
@@ -330,9 +349,10 @@ function loadWorkingTimeline() {
   try {
     const data  = JSON.parse(localStorage.getItem(WORKING_TL_KEY) || '[]');
     const items = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
-    const settings = getTimelineCardSettings(data, items);
+    const settings = getTimelineSettings(data, items);
     CONFIG.modCardScale   = settings.cardScale;
     CONFIG.modCardsBottom = settings.cardsBottom;
+    CONFIG.wallAreaScale  = settings.wallAreaScale;
     return items.map(normalizeTimelineItem);
   } catch {
     return [];
@@ -512,7 +532,7 @@ function renderSavedTimelines() {
     pill.addEventListener('click', e => {
       if (e.target.closest('.pill-del')) return;
       const items = Array.isArray(t.items) ? t.items : [];
-      applyTimelineCardSettings(t, items);
+      applyTimelineSettings(t, items);
       timelineItems = items.map(normalizeTimelineItem);
       nextItemId    = Math.max(0, ...timelineItems.map(i => i.id || 0)) + 1;
       persistWorkingTimeline();
@@ -610,7 +630,7 @@ document.addEventListener('modifierschanged', renderStudioMods);
 document.getElementById('tab-studio').addEventListener('input',  e => {
   const id = e.target.id;
   if (id && (id.startsWith('c-') || id.startsWith('c-mod'))
-      && id !== 'c-dieType' && id !== 'c-modCardScale' && id !== 'c-modCardsBottom') {
+      && id !== 'c-dieType' && id !== 'c-modCardScale' && id !== 'c-modCardsBottom' && id !== 'c-wallArea') {
     studioThemeDirty = true;
   }
 });
@@ -680,7 +700,7 @@ document.getElementById('studio-roll-number').addEventListener('keydown', e => {
   if (e.shiftKey) previewStudioRoll();
   else handleStudioSaveRoll();
 });
-['c-modCardScale', 'c-modCardsBottom'].forEach(id => {
+['c-modCardScale', 'c-modCardsBottom', 'c-wallArea'].forEach(id => {
   document.getElementById(id).addEventListener('input', persistWorkingTimeline);
 });
 
@@ -716,6 +736,7 @@ document.getElementById('tl-save-btn').addEventListener('click', () => {
   saveTimeline(name, timelineItems, {
     cardScale: CONFIG.modCardScale,
     cardsBottom: CONFIG.modCardsBottom,
+    wallAreaScale: CONFIG.wallAreaScale,
   });
   nameEl.value = '';
   renderSavedTimelines();
@@ -752,7 +773,7 @@ document.getElementById('tl-import-file').addEventListener('change', e => {
     if (!items.length) { alert('No items found in file.'); return; }
     const includedThemes = Array.isArray(data?.themes) ? data.themes : [];
     const importedThemeCount = upsertUserThemes(includedThemes);
-    applyTimelineCardSettings(data, items);
+    applyTimelineSettings(data, items);
     timelineItems = remapItemsToIncludedThemes(items, includedThemes)
       .map(item => ({ ...item, id: nextItemId++ }));
     persistWorkingTimeline();
