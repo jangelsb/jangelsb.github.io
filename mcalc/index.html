@@ -102,14 +102,15 @@
         let compareChartVisibility = {};
         const defaultBuydownYear1 = 2;
         const defaultBuydownYear2 = 1;
+        const defaultLoanTermYears = 30;
         let appData = {
             activeHomeId: 1,
             homes: [
                 {
                     id: 1, name: "Lake Elsinore Build", price: 750000, downType: "amount", downValue: 225000, closingCosts: 2.0, tax: 1.8, hoa: 120, ins: 230, appreciation: 3.0, notes: "",
                     scenarios: [
-                        { id: 1, name: "Builder 2-1 Buydown", type: "buydown", rate: 5.5, bdY1: defaultBuydownYear1, bdY2: defaultBuydownYear2, armRate: 5.0, armFee: 5000 },
-                        { id: 2, name: "Standard 30Yr Fixed", type: "fixed", rate: 5.0, bdY1: 0, bdY2: 0, armRate: 5.0, armFee: 5000 }
+                        { id: 1, name: "Builder 2-1 Buydown", type: "buydown", termYears: defaultLoanTermYears, rate: 5.5, bdY1: defaultBuydownYear1, bdY2: defaultBuydownYear2, armRate: 5.0, armFee: 5000 },
+                        { id: 2, name: "Standard 30Yr Fixed", type: "fixed", termYears: defaultLoanTermYears, rate: 5.0, bdY1: 0, bdY2: 0, armRate: 5.0, armFee: 5000 }
                     ]
                 }
             ]
@@ -121,6 +122,15 @@
         if (localStorage.getItem('mortgageAnalyzerData')) {
             appData = JSON.parse(localStorage.getItem('mortgageAnalyzerData'));
         }
+
+        function normalizeAppData(data) {
+            data.homes.forEach(home => home.scenarios.forEach(scenario => {
+                scenario.termYears = Number(scenario.termYears) > 0 ? Number(scenario.termYears) : defaultLoanTermYears;
+            }));
+            return data;
+        }
+
+        appData = normalizeAppData(appData);
 
         function saveData() {
             localStorage.setItem('mortgageAnalyzerData', JSON.stringify(appData));
@@ -273,6 +283,7 @@
                 ['Down payment', item => formatCurrency(item.home.downType === 'percent' ? item.home.price * item.home.downValue / 100 : item.home.downValue)],
                 ['Cash needed to close', item => formatCurrency(item.cashToClose)],
                 ['Loan scenario', item => item.scenario.name],
+                ['Loan term', item => `${item.scenario.termYears} years`],
                 ['Year 1 monthly payment', item => formatCurrency(item.data[0].totalMonthly)],
                 ['Remaining balance after 3 years', item => formatCurrency(item.data[2].balance)],
                 ['Remaining balance after 5 years', item => formatCurrency(item.data[4].balance)],
@@ -401,6 +412,8 @@
                         <option value="buydown" ${scen.type === 'buydown' ? 'selected' : ''}>Custom Buydown</option>
                         <option value="arm" ${scen.type === 'arm' ? 'selected' : ''}>7/1 ARM</option>
                     </select>
+                    <label>Loan Term (years)</label>
+                    <input type="number" min="1" max="50" step="1" value="${scen.termYears}" oninput="updateScenario(${home.id}, ${scen.id}, 'termYears', this.value)">
                     <label>Base / Note Rate (%)</label>
                     <input type="number" step="0.1" value="${scen.rate}" oninput="updateScenario(${home.id}, ${scen.id}, 'rate', this.value)">
                     
@@ -485,7 +498,7 @@
 
         function addScenario(homeId) {
             const home = appData.homes.find(h => h.id === homeId);
-            home.scenarios.push({ id: generateId(), name: `Option ${home.scenarios.length + 1}`, type: "fixed", rate: 5.0, bdY1: defaultBuydownYear1, bdY2: defaultBuydownYear2, armRate: 5.0, armFee: 5000 });
+            home.scenarios.push({ id: generateId(), name: `Option ${home.scenarios.length + 1}`, type: "fixed", termYears: defaultLoanTermYears, rate: 5.0, bdY1: defaultBuydownYear1, bdY2: defaultBuydownYear2, armRate: 5.0, armFee: 5000 });
             saveData();
             renderApp();
         }
@@ -521,8 +534,12 @@
         function calculateAmortization(home, config, principalAmt) {
             const monthlyTax = (home.price * (home.tax / 100)) / 12;
             const fixedMonthlyCosts = monthlyTax + home.hoa + home.ins;
+            const termYears = Number(config.termYears) > 0 ? Number(config.termYears) : defaultLoanTermYears;
+            const termMonths = Math.round(termYears * 12);
             const baseMonthlyRate = (config.rate / 100) / 12;
-            const standardPI = (principalAmt * baseMonthlyRate) / (1 - Math.pow(1 + baseMonthlyRate, -360));
+            const standardPI = baseMonthlyRate === 0
+                ? principalAmt / termMonths
+                : (principalAmt * baseMonthlyRate) / (1 - Math.pow(1 + baseMonthlyRate, -termMonths));
 
             let balance = principalAmt;
             let cumulativeInterest = 0;
@@ -542,26 +559,35 @@
                     if (year === 1) {
                         displayRate = config.rate - config.bdY1;
                         let bRate = (displayRate / 100) / 12;
-                        outOfPocketPI = (principalAmt * bRate) / (1 - Math.pow(1 + bRate, -360));
+                        outOfPocketPI = bRate === 0
+                            ? principalAmt / termMonths
+                            : (principalAmt * bRate) / (1 - Math.pow(1 + bRate, -termMonths));
                     } else if (year === 2) {
                         displayRate = config.rate - config.bdY2;
                         let bRate = (displayRate / 100) / 12;
-                        outOfPocketPI = (principalAmt * bRate) / (1 - Math.pow(1 + bRate, -360));
+                        outOfPocketPI = bRate === 0
+                            ? principalAmt / termMonths
+                            : (principalAmt * bRate) / (1 - Math.pow(1 + bRate, -termMonths));
                     }
                 } else if (config.type === 'arm') {
-                    if (year === 8) {
+                    if (year === 8 && termMonths > 84) {
                         balance += config.armFee;
                         displayRate = config.armRate;
                         currentMonthlyRate = (displayRate / 100) / 12;
-                        currentPI = (balance * currentMonthlyRate) / (1 - Math.pow(1 + currentMonthlyRate, -276));
+                        const remainingMonths = Math.max(1, termMonths - 84);
+                        currentPI = currentMonthlyRate === 0
+                            ? balance / remainingMonths
+                            : (balance * currentMonthlyRate) / (1 - Math.pow(1 + currentMonthlyRate, -remainingMonths));
                         outOfPocketPI = currentPI;
                     }
-                    if (year >= 8) displayRate = config.armRate;
+                    if (year >= 8 && termMonths > 84) displayRate = config.armRate;
                 }
 
-                let totalMonthly = outOfPocketPI + fixedMonthlyCosts;
+                let totalMonthly = year * 12 <= termMonths ? outOfPocketPI + fixedMonthlyCosts : 0;
 
                 for (let month = 1; month <= 12; month++) {
+                    const monthNumber = ((year - 1) * 12) + month;
+                    if (monthNumber > termMonths || balance <= 0) break;
                     let trueRate = (config.type === 'arm' && year >= 8) ? currentMonthlyRate : baseMonthlyRate;
                     let truePI = (config.type === 'arm' && year >= 8) ? currentPI : standardPI;
                     
@@ -573,7 +599,7 @@
                     yearlyPrincipal += principalThisMonth;
                     cumulativeInterest += outOfPocketInterestThisMonth;
                     cumulativePrincipal += principalThisMonth;
-                    balance -= principalThisMonth;
+                    balance = Math.max(0, balance - principalThisMonth);
                 }
                 
                 let homeValue = home.price * Math.pow(1 + (home.appreciation / 100), year);
@@ -635,7 +661,7 @@
                         <div class="milestone-row"><span class="milestone-label">Year 10</span> <span class="milestone-val" style="font-weight:bold; color:#c5221f;">$${Math.round(r.data[9].cumulativeInterest).toLocaleString()}</span></div>
                     </div></td>`).join('')}</tr>
                     
-                <tr><td><b>Total Interest (30 Yrs)</b></td>${resultsData.map(r => `<td>$${Math.round(r.data[29].cumulativeInterest).toLocaleString()}</td>`).join('')}</tr>
+                <tr><td><b>Total Interest (Loan Term)</b></td>${resultsData.map(r => `<td>$${Math.round(r.data[29].cumulativeInterest).toLocaleString()}</td>`).join('')}</tr>
             </tbody></table>`;
 
             let contentHtml = `
@@ -800,6 +826,7 @@
                 const dd = String(now.getDate()).padStart(2, '0');
                 const fileName = `${yyyy}-${mm}-${dd}-mortgage_analyzer_backup.json`;
 
+            appData = normalizeAppData(appData);
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
                 const downloadAnchorNode = document.createElement('a');
                 downloadAnchorNode.setAttribute("href", dataStr);
@@ -817,7 +844,7 @@
                 try {
                     const importedData = JSON.parse(e.target.result);
                     if (importedData && importedData.homes) {
-                        appData = importedData;
+                        appData = normalizeAppData(importedData);
                         saveData();
                         renderApp();
                         alert("Data imported successfully!");
