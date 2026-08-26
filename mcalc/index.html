@@ -377,6 +377,7 @@
                         },
                         title: { display: true, text: `${metricLabels[compareChartMetric]} Across Homes` },
                         tooltip: {
+                            itemSort: (first, second) => second.parsed.y - first.parsed.y,
                             callbacks: {
                                 label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}`
                             }
