@@ -583,7 +583,9 @@
                     if (year >= 8 && termMonths > 84) displayRate = config.armRate;
                 }
 
-                let totalMonthly = year * 12 <= termMonths ? outOfPocketPI + fixedMonthlyCosts : 0;
+                const loanIsActive = (year - 1) * 12 < termMonths;
+                const displayedPI = loanIsActive ? outOfPocketPI : 0;
+                let totalMonthly = displayedPI + fixedMonthlyCosts;
 
                 for (let month = 1; month <= 12; month++) {
                     const monthNumber = ((year - 1) * 12) + month;
@@ -606,7 +608,7 @@
                 let equity = homeValue - Math.max(0, balance);
 
                 yearlyData.push({
-                    year, rate: displayRate.toFixed(3), pi: outOfPocketPI, totalMonthly,
+                    year, rate: displayRate.toFixed(3), pi: displayedPI, totalMonthly,
                     yearlyPrincipal, yearlyInterest, cumulativePrincipal, cumulativeInterest,
                     balance: Math.max(0, balance), homeValue, equity
                 });
