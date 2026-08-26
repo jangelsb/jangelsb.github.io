@@ -81,10 +81,6 @@
 
     <div id="appContent"></div>
 
-    <div style="text-align:center; padding: 10px; color:#1a73e8; font-weight:bold; background:#e8f0fe; border-radius:4px; margin: 15px 0;">
-        ⚡ Results and graphs update automatically as you type
-    </div>
-
     <div id="resultsContainer"></div>
 
     <script>
@@ -95,7 +91,7 @@
             activeHomeId: 1,
             homes: [
                 {
-                    id: 1, name: "Lake Elsinore Build", price: 750000, downType: "amount", downValue: 225000, closingCosts: 2.0, tax: 1.8, hoa: 120, ins: 230, appreciation: 3.0, expectedRent: 0, notes: "",
+                    id: 1, name: "Lake Elsinore Build", price: 750000, downType: "amount", downValue: 225000, closingCosts: 2.0, tax: 1.8, hoa: 120, ins: 230, appreciation: 3.0, notes: "",
                     scenarios: [
                         { id: 1, name: "Builder 2-1 Buydown", type: "buydown", rate: 5.5, bdY1: 2, bdY2: 1, armRate: 5.0, armFee: 5000 },
                         { id: 2, name: "Standard 30Yr Fixed", type: "fixed", rate: 5.0, bdY1: 0, bdY2: 0, armRate: 5.0, armFee: 5000 }
@@ -224,7 +220,6 @@
                         <div><label>Monthly HOA ($)</label><input type="number" value="${home.hoa}" oninput="updateHome(${home.id}, 'hoa', this.value)"></div>
                         <div><label>Monthly Ins. ($)</label><input type="number" value="${home.ins}" oninput="updateHome(${home.id}, 'ins', this.value)"></div>
                         <div><label>Annual Appreciation (%)</label><input type="number" step="0.1" value="${home.appreciation}" oninput="updateHome(${home.id}, 'appreciation', this.value)"></div>
-                        <div><label>Expected Rent ($/mo)</label><input type="number" value="${home.expectedRent || 0}" oninput="updateHome(${home.id}, 'expectedRent', this.value)"></div>
                     </div>
                     
                     <label>Property Notes & Thoughts:</label>
@@ -419,18 +414,13 @@
             let contentHtml = `
                 <div id="res-summary" class="card result-pane" style="display:${activeResultTab === 'summary' ? 'block' : 'none'}; border-top:none; border-radius: 0 0 8px 8px;">
                     ${sumTable}
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:12px;">
-                        <div>
-                            <label style="font-weight:600; font-size:13px; color:#555;">Chart Metric</label>
-                            <select id="chartMetricSelect" onchange="switchChartMetric(this.value)" style="padding:8px; border-radius:4px;">
-                                <option value="balance" ${activeChartMetric === 'balance' ? 'selected' : ''}>Remaining Balance</option>
-                                <option value="cumulativeInterest" ${activeChartMetric === 'cumulativeInterest' ? 'selected' : ''}>Cumulative Interest Paid</option>
-                                <option value="equity" ${activeChartMetric === 'equity' ? 'selected' : ''}>Net Equity (Value - Balance)</option>
-                                <option value="monthlyPayment" ${activeChartMetric === 'monthlyPayment' ? 'selected' : ''}>Monthly Payment (P&I + Fixed)</option>
-                                <option value="annualRent" ${activeChartMetric === 'annualRent' ? 'selected' : ''}>Expected Rent (annual)</option>
-                            </select>
-                        </div>
-                        <div style="color:#5f6368; font-size:13px;">Select which metric to display on the chart</div>
+                    <div style="display:flex; justify-content:flex-start; align-items:center; gap:12px; margin-top:12px;">
+                        <select id="chartMetricSelect" onchange="switchChartMetric(this.value)" style="padding:8px; border-radius:4px;">
+                            <option value="balance" ${activeChartMetric === 'balance' ? 'selected' : ''}>Remaining Balance</option>
+                            <option value="cumulativeInterest" ${activeChartMetric === 'cumulativeInterest' ? 'selected' : ''}>Cumulative Interest Paid</option>
+                            <option value="equity" ${activeChartMetric === 'equity' ? 'selected' : ''}>Net Equity (Value - Balance)</option>
+                            <option value="monthlyPayment" ${activeChartMetric === 'monthlyPayment' ? 'selected' : ''}>Monthly Payment (P&I + Fixed)</option>
+                        </select>
                     </div>
                     <div class="chart-container"><canvas id="balanceChart"></canvas></div>
                 </div>
@@ -486,14 +476,12 @@
             
             const colors = ['#1a73e8', '#ea4335', '#34a853', '#fbbc04', '#673ab7'];
             // Map metric to the appropriate row value
-            const home = getActiveHome();
             function metricValue(row, metric) {
                 switch(metric) {
                     case 'balance': return row.balance;
                     case 'cumulativeInterest': return row.cumulativeInterest;
                     case 'equity': return row.equity;
                     case 'monthlyPayment': return row.totalMonthly;
-                    case 'annualRent': return (home.expectedRent || 0) * 12;
                     default: return row.balance;
                 }
             }
@@ -518,7 +506,6 @@
                                 case 'cumulativeInterest': return 'Cumulative Interest Paid Over Time';
                                 case 'equity': return 'Net Equity Over Time';
                                 case 'monthlyPayment': return 'Monthly Payment Over Time';
-                                case 'annualRent': return 'Expected Rent (annual)';
                                 default: return '';
                             }
                         })() },
@@ -529,7 +516,6 @@
                                     const scenarioIdx = context.datasetIndex;
                                     const yearIdx = context.dataIndex;
                                     const dataRow = resultsData[scenarioIdx].data[yearIdx];
-                                    const homeLocal = getActiveHome();
                                     const metric = activeChartMetric;
                                     const format = v => (Math.round(v).toLocaleString());
 
@@ -550,9 +536,7 @@
                                         case 'monthlyPayment':
                                             lines.push(`   Monthly Pmt: $${format(dataRow.totalMonthly)}`);
                                             break;
-                                        case 'annualRent':
-                                            lines.push(`   Expected Rent (annual): $${format((homeLocal.expectedRent||0)*12)}`);
-                                            break;
+                                        
                                         default:
                                             lines.push(`   Balance: $${format(dataRow.balance)}`);
                                     }
