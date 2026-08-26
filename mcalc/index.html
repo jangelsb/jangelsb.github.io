@@ -386,7 +386,7 @@
             resultsData.forEach(res => sumTable += `<th>${res.scenario.name}</th>`);
             sumTable += `</tr></thead><tbody>
                 
-                <tr><td><b>Target 20% Down Payment</b><br><span style="font-size:11px; font-weight:normal;">(For avoiding PMI)</span></td><td colspan="${resultsData.length}" style="text-align:center; background:#e8f0fe; font-weight:bold; color:#1a73e8;">$${Math.round(home.price * 0.20).toLocaleString()}</td></tr>
+                <tr><td><b>Down payment</b></td>${resultsData.map(r => `<td>$${Math.round(home.downType === 'percent' ? (home.price * (home.downValue / 100)) : home.downValue).toLocaleString()}</td>`).join('')}</tr>
                 <tr><td><b>Actual Cash Needed to Close</b></td>${resultsData.map(r => `<td>$${Math.round(r.cashToClose).toLocaleString()}</td>`).join('')}</tr>
                 <tr><td><b>Year 1 Monthly Payment</b></td>${resultsData.map(r => `<td>$${Math.round(r.data[0].totalMonthly).toLocaleString()}</td>`).join('')}</tr>
                 
