@@ -142,7 +142,7 @@
             const container = document.getElementById('homeTabsContainer');
             let html = '';
             appData.homes.forEach(home => {
-                const isActive = home.id === appData.activeHomeId ? 'active' : '';
+                const isActive = activeView === 'home' && home.id === appData.activeHomeId ? 'active' : '';
                 html += `<button class="home-tab ${isActive}" onclick="switchHome(${home.id})">${home.name}</button>`;
             });
             html += `<button class="home-tab ${activeView === 'compare' ? 'active' : ''}" onclick="showComparison()">Compare Homes</button>`;
