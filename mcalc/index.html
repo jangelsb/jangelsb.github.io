@@ -98,6 +98,7 @@
         let activeView = 'home';
         let compareChartMetric = 'monthlyPayment';
         let compareScenarioIds = {};
+        let compareHomeIds = {};
         const defaultBuydownYear1 = 2;
         const defaultBuydownYear2 = 1;
         let appData = {
@@ -228,12 +229,31 @@
             renderComparison();
         }
 
+        function isHomeIncludedInComparison(homeId) {
+            return compareHomeIds[homeId] !== false;
+        }
+
+        function updateComparisonHome(homeId, isIncluded) {
+            compareHomeIds[homeId] = isIncluded;
+            renderComparison();
+        }
+
         function renderComparison() {
             const container = document.getElementById('appContent');
-            const comparisonData = appData.homes.map(getComparisonData).filter(Boolean);
+            const comparisonData = appData.homes
+                .filter(home => isHomeIncludedInComparison(home.id))
+                .map(getComparisonData)
+                .filter(Boolean);
+
+            const homeSelectionControls = appData.homes.map(home => `
+                <label style="display:flex; align-items:center; gap:6px; margin:0; font-weight:600;">
+                    <input type="checkbox" ${isHomeIncludedInComparison(home.id) ? 'checked' : ''} onchange="updateComparisonHome(${home.id}, this.checked)" style="width:auto;">
+                    ${home.name}
+                </label>
+            `).join('');
 
             if (comparisonData.length === 0) {
-                container.innerHTML = '<div class="card"><h2>Compare Homes</h2><p>Add at least one loan scenario to compare properties.</p></div>';
+                container.innerHTML = `<div class="card"><h2>Compare Homes</h2><p>Select at least one home to compare.</p><div class="comparison-controls">${homeSelectionControls}</div></div>`;
                 document.getElementById('resultsContainer').innerHTML = '';
                 return;
             }
@@ -270,6 +290,7 @@
             container.innerHTML = `
                 <div class="card">
                     <div class="flex-between"><div><h2>Compare Homes</h2><p style="margin:0; color:#5f6368;">Choose one loan scenario for each property.</p></div></div>
+                    <div class="comparison-controls" style="margin-top:15px;">${homeSelectionControls}</div>
                     <div class="comparison-controls" style="margin-top:15px;">${controls}</div>
                     ${table}
                 </div>
