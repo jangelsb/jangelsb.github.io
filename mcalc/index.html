@@ -55,6 +55,7 @@
         tr:nth-child(even) { background-color: #f8f9fa; }
         .summary-table th { background: #1a73e8; color: white; border-color: #1a73e8; }
         .chart-container { position: relative; height: 450px; width: 100%; margin-top: 20px; }
+        .chart-select { padding: 6px 8px; border-radius: 4px; font-size: 13px; width: 220px; border: 1px solid #ccc; }
         
         /* Nested Milestone Grids to avoid too many rows */
         .milestone-box { display: flex; flex-direction: column; gap: 4px; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid #dee2e6; }
@@ -414,8 +415,9 @@
             let contentHtml = `
                 <div id="res-summary" class="card result-pane" style="display:${activeResultTab === 'summary' ? 'block' : 'none'}; border-top:none; border-radius: 0 0 8px 8px;">
                     ${sumTable}
-                    <div style="display:flex; justify-content:flex-start; align-items:center; gap:12px; margin-top:12px;">
-                        <select id="chartMetricSelect" onchange="switchChartMetric(this.value)" style="padding:8px; border-radius:4px;">
+                    <div style="display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-top:12px;">
+                        <h3 id="chartTitle" style="margin:0; color:#1a73e8; font-size:18px;">Remaining Balance Over Time</h3>
+                        <select id="chartMetricSelect" class="chart-select" onchange="switchChartMetric(this.value)">
                             <option value="balance" ${activeChartMetric === 'balance' ? 'selected' : ''}>Remaining Balance</option>
                             <option value="cumulativeInterest" ${activeChartMetric === 'cumulativeInterest' ? 'selected' : ''}>Cumulative Interest Paid</option>
                             <option value="equity" ${activeChartMetric === 'equity' ? 'selected' : ''}>Net Equity (Value - Balance)</option>
@@ -492,6 +494,18 @@
                 borderColor: colors[i % colors.length],
                 backgroundColor: 'transparent'
             }));
+
+            // update chart title element above the chart
+            const titleEl = document.getElementById('chartTitle');
+            if (titleEl) {
+                const titleMap = {
+                    balance: 'Remaining Loan Balance Over Time',
+                    cumulativeInterest: 'Cumulative Interest Paid Over Time',
+                    equity: 'Net Equity Over Time',
+                    monthlyPayment: 'Monthly Payment Over Time'
+                };
+                titleEl.textContent = titleMap[activeChartMetric] || '';
+            }
 
             myChart = new Chart(ctx, {
                 type: 'line',
