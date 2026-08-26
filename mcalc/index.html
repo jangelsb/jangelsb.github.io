@@ -99,6 +99,7 @@
         let compareChartMetric = 'monthlyPayment';
         let compareScenarioIds = {};
         let compareHomeIds = {};
+        let compareChartVisibility = {};
         const defaultBuydownYear1 = 2;
         const defaultBuydownYear2 = 1;
         let appData = {
@@ -326,13 +327,22 @@
             `;
 
             const ctx = document.getElementById('comparisonChart').getContext('2d');
-            if (myChart) myChart.destroy();
+            if (myChart) {
+                myChart.data.datasets.forEach((dataset, index) => {
+                    if (dataset.homeId !== undefined) {
+                        compareChartVisibility[dataset.homeId] = myChart.isDatasetVisible(index);
+                    }
+                });
+                myChart.destroy();
+            }
             myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: Array.from({length: 30}, (_, index) => `Yr ${index + 1}`),
                     datasets: comparisonData.map((item, index) => ({
                         label: `${item.home.name} - ${item.scenario.name}`,
+                        homeId: item.home.id,
+                        hidden: compareChartVisibility[item.home.id] === false,
                         data: item.data.map(row => metricValue(row, compareChartMetric)),
                         borderColor: colors[index % colors.length],
                         backgroundColor: 'transparent'
@@ -343,7 +353,17 @@
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { position: 'top' },
+                        legend: {
+                            position: 'top',
+                            onClick: (event, legendItem, legend) => {
+                                const chart = legend.chart;
+                                const datasetIndex = legendItem.datasetIndex;
+                                chart.isDatasetVisible(datasetIndex)
+                                    ? chart.hide(datasetIndex)
+                                    : chart.show(datasetIndex);
+                                compareChartVisibility[chart.data.datasets[datasetIndex].homeId] = chart.isDatasetVisible(datasetIndex);
+                            }
+                        },
                         title: { display: true, text: `${metricLabels[compareChartMetric]} Across Homes` },
                         tooltip: {
                             callbacks: {
