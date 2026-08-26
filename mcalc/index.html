@@ -56,6 +56,13 @@
         .summary-table th { background: #1a73e8; color: white; border-color: #1a73e8; }
         .chart-container { position: relative; height: 450px; width: 100%; margin-top: 20px; }
         .chart-select { padding: 6px 8px; border-radius: 4px; font-size: 13px; width: 220px; border: 1px solid #ccc; }
+        .comparison-table { min-width: 720px; }
+        .comparison-table th:first-child, .comparison-table td:first-child { text-align: left; position: sticky; left: 0; z-index: 1; }
+        .comparison-table th:first-child { background: #1a73e8; }
+        .comparison-table td:first-child { background: white; font-weight: 600; }
+        .comparison-scroll { overflow-x: auto; }
+        .comparison-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+        .comparison-control { min-width: 220px; }
         
         /* Nested Milestone Grids to avoid too many rows */
         .milestone-box { display: flex; flex-direction: column; gap: 4px; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid #dee2e6; }
@@ -88,6 +95,9 @@
         // --- State Management ---
         let activeResultTab = 'summary'; // Remembers your tab while typing
         let activeChartMetric = 'balance'; // default metric for the chart
+        let activeView = 'home';
+        let compareChartMetric = 'monthlyPayment';
+        let compareScenarioIds = {};
         const defaultBuydownYear1 = 2;
         const defaultBuydownYear2 = 1;
         let appData = {
@@ -120,8 +130,12 @@
         // --- Core UI Rendering ---
         function renderApp() {
             renderHomeTabs();
-            renderActiveHome();
-            runCalculations(); // Automatically calculate on load/render
+            if (activeView === 'compare') {
+                renderComparison();
+            } else {
+                renderActiveHome();
+                runCalculations(); // Automatically calculate on load/render
+            }
         }
 
         function renderHomeTabs() {
@@ -131,13 +145,20 @@
                 const isActive = home.id === appData.activeHomeId ? 'active' : '';
                 html += `<button class="home-tab ${isActive}" onclick="switchHome(${home.id})">${home.name}</button>`;
             });
+            html += `<button class="home-tab ${activeView === 'compare' ? 'active' : ''}" onclick="showComparison()">Compare Homes</button>`;
             html += `<button class="btn-success" style="margin-left:10px" onclick="addHome()">+ Add Home</button>`;
             container.innerHTML = html;
         }
 
         function switchHome(id) {
             appData.activeHomeId = id;
+            activeView = 'home';
             saveData();
+            renderApp();
+        }
+
+        function showComparison() {
+            activeView = 'compare';
             renderApp();
         }
 
@@ -178,6 +199,147 @@
                 saveData();
                 renderApp();
             }
+        }
+
+        function getComparisonData(home) {
+            const scenarioId = compareScenarioIds[home.id];
+            const scenario = home.scenarios.find(item => item.id === scenarioId) || home.scenarios[0];
+            if (!scenario) return null;
+
+            compareScenarioIds[home.id] = scenario.id;
+            const downCash = home.downType === 'percent' ? home.price * (home.downValue / 100) : home.downValue;
+            const principal = home.price - downCash;
+            const upfrontClosingCosts = principal * (home.closingCosts / 100);
+
+            return {
+                home,
+                scenario,
+                cashToClose: downCash + upfrontClosingCosts,
+                data: calculateAmortization(home, scenario, principal)
+            };
+        }
+
+        function formatCurrency(value) {
+            return `$${Math.round(value).toLocaleString()}`;
+        }
+
+        function updateComparisonScenario(homeId, scenarioId) {
+            compareScenarioIds[homeId] = Number(scenarioId);
+            renderComparison();
+        }
+
+        function renderComparison() {
+            const container = document.getElementById('appContent');
+            const comparisonData = appData.homes.map(getComparisonData).filter(Boolean);
+
+            if (comparisonData.length === 0) {
+                container.innerHTML = '<div class="card"><h2>Compare Homes</h2><p>Add at least one loan scenario to compare properties.</p></div>';
+                document.getElementById('resultsContainer').innerHTML = '';
+                return;
+            }
+
+            const controls = comparisonData.map(item => `
+                <div class="comparison-control">
+                    <label>${item.home.name}</label>
+                    <select onchange="updateComparisonScenario(${item.home.id}, this.value)">
+                        ${item.home.scenarios.map(scenario => `<option value="${scenario.id}" ${scenario.id === item.scenario.id ? 'selected' : ''}>${scenario.name}</option>`).join('')}
+                    </select>
+                </div>
+            `).join('');
+
+            const rows = [
+                ['Purchase price', item => formatCurrency(item.home.price)],
+                ['Down payment', item => formatCurrency(item.home.downType === 'percent' ? item.home.price * item.home.downValue / 100 : item.home.downValue)],
+                ['Cash needed to close', item => formatCurrency(item.cashToClose)],
+                ['Loan scenario', item => item.scenario.name],
+                ['Year 1 monthly payment', item => formatCurrency(item.data[0].totalMonthly)],
+                ['Remaining balance after 3 years', item => formatCurrency(item.data[2].balance)],
+                ['Remaining balance after 5 years', item => formatCurrency(item.data[4].balance)],
+                ['Remaining balance after 10 years', item => formatCurrency(item.data[9].balance)],
+                ['Net equity after 3 years', item => formatCurrency(item.data[2].equity)],
+                ['Net equity after 5 years', item => formatCurrency(item.data[4].equity)],
+                ['Net equity after 10 years', item => formatCurrency(item.data[9].equity)],
+                ['Interest paid after 3 years', item => formatCurrency(item.data[2].cumulativeInterest)],
+                ['Interest paid after 5 years', item => formatCurrency(item.data[4].cumulativeInterest)],
+                ['Interest paid after 10 years', item => formatCurrency(item.data[9].cumulativeInterest)],
+                ['Total interest over 30 years', item => formatCurrency(item.data[29].cumulativeInterest)]
+            ];
+
+            const table = `<div class="comparison-scroll"><table class="comparison-table"><thead><tr><th>Metric</th>${comparisonData.map(item => `<th>${item.home.name}</th>`).join('')}</tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${label}</td>${comparisonData.map(value).map(result => `<td>${result}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+
+            container.innerHTML = `
+                <div class="card">
+                    <div class="flex-between"><div><h2>Compare Homes</h2><p style="margin:0; color:#5f6368;">Choose one loan scenario for each property.</p></div></div>
+                    <div class="comparison-controls" style="margin-top:15px;">${controls}</div>
+                    ${table}
+                </div>
+            `;
+
+            renderComparisonChart(comparisonData);
+        }
+
+        function renderComparisonChart(comparisonData) {
+            const container = document.getElementById('resultsContainer');
+            const metricLabels = {
+                monthlyPayment: 'Monthly Payment',
+                balance: 'Remaining Loan Balance',
+                cumulativeInterest: 'Cumulative Interest Paid',
+                equity: 'Net Equity'
+            };
+            const metricValue = (row, metric) => metric === 'monthlyPayment' ? row.totalMonthly : row[metric];
+            const colors = ['#1a73e8', '#ea4335', '#34a853', '#fbbc04', '#673ab7'];
+
+            container.innerHTML = `
+                <div class="card">
+                    <div class="comparison-controls">
+                        <h3 style="margin:0; color:#1a73e8;">${metricLabels[compareChartMetric]}</h3>
+                        <select class="chart-select" onchange="switchComparisonChartMetric(this.value)">
+                            <option value="monthlyPayment" ${compareChartMetric === 'monthlyPayment' ? 'selected' : ''}>Monthly Payment</option>
+                            <option value="balance" ${compareChartMetric === 'balance' ? 'selected' : ''}>Remaining Loan Balance</option>
+                            <option value="cumulativeInterest" ${compareChartMetric === 'cumulativeInterest' ? 'selected' : ''}>Cumulative Interest Paid</option>
+                            <option value="equity" ${compareChartMetric === 'equity' ? 'selected' : ''}>Net Equity</option>
+                        </select>
+                    </div>
+                    <div class="chart-container"><canvas id="comparisonChart"></canvas></div>
+                </div>
+            `;
+
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 30}, (_, index) => `Yr ${index + 1}`),
+                    datasets: comparisonData.map((item, index) => ({
+                        label: `${item.home.name} - ${item.scenario.name}`,
+                        data: item.data.map(row => metricValue(row, compareChartMetric)),
+                        borderColor: colors[index % colors.length],
+                        backgroundColor: 'transparent'
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: true, text: `${metricLabels[compareChartMetric]} Across Homes` },
+                        tooltip: {
+                            callbacks: {
+                                label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { callback: value => '$' + value.toLocaleString() } }
+                    }
+                }
+            });
+        }
+
+        function switchComparisonChartMetric(metric) {
+            compareChartMetric = metric;
+            renderComparison();
         }
 
         function renderActiveHome() {
