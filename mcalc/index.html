@@ -88,13 +88,15 @@
         // --- State Management ---
         let activeResultTab = 'summary'; // Remembers your tab while typing
         let activeChartMetric = 'balance'; // default metric for the chart
+        const defaultBuydownYear1 = 2;
+        const defaultBuydownYear2 = 1;
         let appData = {
             activeHomeId: 1,
             homes: [
                 {
                     id: 1, name: "Lake Elsinore Build", price: 750000, downType: "amount", downValue: 225000, closingCosts: 2.0, tax: 1.8, hoa: 120, ins: 230, appreciation: 3.0, notes: "",
                     scenarios: [
-                        { id: 1, name: "Builder 2-1 Buydown", type: "buydown", rate: 5.5, bdY1: 2, bdY2: 1, armRate: 5.0, armFee: 5000 },
+                        { id: 1, name: "Builder 2-1 Buydown", type: "buydown", rate: 5.5, bdY1: defaultBuydownYear1, bdY2: defaultBuydownYear2, armRate: 5.0, armFee: 5000 },
                         { id: 2, name: "Standard 30Yr Fixed", type: "fixed", rate: 5.0, bdY1: 0, bdY2: 0, armRate: 5.0, armFee: 5000 }
                     ]
                 }
@@ -144,6 +146,24 @@
             newHome.id = generateId();
             newHome.name = "New Property";
             newHome.notes = "";
+            appData.homes.push(newHome);
+            appData.activeHomeId = newHome.id;
+            saveData();
+            renderApp();
+        }
+
+        function duplicateHome(homeId) {
+            const sourceHome = appData.homes.find(h => h.id === homeId);
+            if (!sourceHome) return;
+
+            const newHome = JSON.parse(JSON.stringify(sourceHome));
+            newHome.id = generateId();
+            newHome.name = `${sourceHome.name} Copy`;
+            newHome.scenarios = newHome.scenarios.map(scenario => ({
+                ...scenario,
+                id: generateId()
+            }));
+
             appData.homes.push(newHome);
             appData.activeHomeId = newHome.id;
             saveData();
@@ -201,7 +221,10 @@
                 <div class="card">
                     <div class="flex-between" style="border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 15px;">
                         <input type="text" value="${home.name}" style="font-size: 24px; font-weight: bold; border: none; background: transparent; width: 60%; color: #1a73e8;" oninput="updateHome(${home.id}, 'name', this.value)">
-                        <button class="btn-danger" onclick="deleteHome(${home.id})">Delete Property</button>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn-secondary" onclick="duplicateHome(${home.id})">Duplicate Property</button>
+                            <button class="btn-danger" onclick="deleteHome(${home.id})">Delete Property</button>
+                        </div>
                     </div>
                     
                     <div class="grid-globals">
@@ -259,7 +282,7 @@
 
         function addScenario(homeId) {
             const home = appData.homes.find(h => h.id === homeId);
-            home.scenarios.push({ id: generateId(), name: `Option ${home.scenarios.length + 1}`, type: "fixed", rate: 5.0, bdY1: 2, bdY2: 1, armRate: 5.0, armFee: 5000 });
+            home.scenarios.push({ id: generateId(), name: `Option ${home.scenarios.length + 1}`, type: "fixed", rate: 5.0, bdY1: defaultBuydownYear1, bdY2: defaultBuydownYear2, armRate: 5.0, armFee: 5000 });
             saveData();
             renderApp();
         }
