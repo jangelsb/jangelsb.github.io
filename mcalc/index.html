@@ -63,6 +63,12 @@
         .comparison-scroll { overflow-x: auto; }
         .comparison-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
         .comparison-control { min-width: 220px; }
+        .chart-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: 260px; margin-bottom: 8px; }
+        .chart-controls h3 { margin: 0; color: #1a73e8; font-size: 20px; }
+        .chart-controls .chart-select { width: 260px; }
+        .chart-range { width: min(520px, 100%); }
+        .chart-range-label { margin: 0; font-size: 13px; color: #5f6368; font-weight: 600; }
+        .chart-range input { display: block; width: 100%; margin: 2px 0 0; }
         
         /* Nested Milestone Grids to avoid too many rows */
         .milestone-box { display: flex; flex-direction: column; gap: 4px; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid #dee2e6; }
@@ -325,16 +331,16 @@
 
             container.innerHTML = `
                 <div class="card">
-                    <div class="comparison-controls">
-                        <h3 style="margin:0; color:#1a73e8;">${metricLabels[compareChartMetric]}</h3>
+                    <div class="chart-controls">
+                        <h3>${metricLabels[compareChartMetric]}</h3>
                         <select class="chart-select" onchange="switchComparisonChartMetric(this.value)">
                             <option value="monthlyPayment" ${compareChartMetric === 'monthlyPayment' ? 'selected' : ''}>Monthly Payment</option>
                             <option value="balance" ${compareChartMetric === 'balance' ? 'selected' : ''}>Remaining Loan Balance</option>
                             <option value="cumulativeInterest" ${compareChartMetric === 'cumulativeInterest' ? 'selected' : ''}>Cumulative Interest Paid</option>
                             <option value="equity" ${compareChartMetric === 'equity' ? 'selected' : ''}>Net Equity</option>
                         </select>
-                        <div class="comparison-control">
-                            <label for="comparisonYears">Show through year: <span id="comparisonYearsValue">${compareChartYears}</span></label>
+                        <div class="chart-range">
+                            <label id="comparisonYearsLabel" class="chart-range-label" for="comparisonYears">Years 1-${compareChartYears}</label>
                             <input id="comparisonYears" type="range" min="1" max="30" step="1" value="${compareChartYears}" oninput="switchComparisonChartYears(this.value)">
                         </div>
                     </div>
@@ -402,8 +408,8 @@
 
         function switchComparisonChartYears(years) {
             compareChartYears = Number(years);
-            const value = document.getElementById('comparisonYearsValue');
-            if (value) value.textContent = compareChartYears;
+            const label = document.getElementById('comparisonYearsLabel');
+            if (label) label.textContent = `Years 1-${compareChartYears}`;
             if (!myChart) return;
 
             myChart.data.labels = Array.from({length: compareChartYears}, (_, index) => `Yr ${index + 1}`);
