@@ -97,6 +97,7 @@
         let activeChartMetric = 'balance'; // default metric for the chart
         let activeView = 'home';
         let compareChartMetric = 'monthlyPayment';
+        let compareChartYears = 30;
         let compareScenarioIds = {};
         let compareHomeIds = {};
         let compareChartVisibility = {};
@@ -332,6 +333,10 @@
                             <option value="cumulativeInterest" ${compareChartMetric === 'cumulativeInterest' ? 'selected' : ''}>Cumulative Interest Paid</option>
                             <option value="equity" ${compareChartMetric === 'equity' ? 'selected' : ''}>Net Equity</option>
                         </select>
+                        <div class="comparison-control">
+                            <label for="comparisonYears">Show through year: <span id="comparisonYearsValue">${compareChartYears}</span></label>
+                            <input id="comparisonYears" type="range" min="1" max="30" step="1" value="${compareChartYears}" oninput="switchComparisonChartYears(this.value)">
+                        </div>
                     </div>
                     <div class="chart-container"><canvas id="comparisonChart"></canvas></div>
                 </div>
@@ -349,12 +354,12 @@
             myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: Array.from({length: 30}, (_, index) => `Yr ${index + 1}`),
+                    labels: Array.from({length: compareChartYears}, (_, index) => `Yr ${index + 1}`),
                     datasets: comparisonData.map((item, index) => ({
                         label: `${item.home.name} - ${item.scenario.name}`,
                         homeId: item.home.id,
                         hidden: compareChartVisibility[item.home.id] === false,
-                        data: item.data.map(row => metricValue(row, compareChartMetric)),
+                        data: item.data.slice(0, compareChartYears).map(row => metricValue(row, compareChartMetric)),
                         borderColor: colors[index % colors.length],
                         backgroundColor: 'transparent'
                     }))
@@ -375,7 +380,7 @@
                                 compareChartVisibility[chart.data.datasets[datasetIndex].homeId] = chart.isDatasetVisible(datasetIndex);
                             }
                         },
-                        title: { display: true, text: `${metricLabels[compareChartMetric]} Across Homes` },
+                        title: { display: true, text: `${metricLabels[compareChartMetric]} Across Homes (Years 1-${compareChartYears})` },
                         tooltip: {
                             itemSort: (first, second) => second.parsed.y - first.parsed.y,
                             callbacks: {
@@ -393,6 +398,23 @@
         function switchComparisonChartMetric(metric) {
             compareChartMetric = metric;
             renderComparison();
+        }
+
+        function switchComparisonChartYears(years) {
+            compareChartYears = Number(years);
+            const value = document.getElementById('comparisonYearsValue');
+            if (value) value.textContent = compareChartYears;
+            if (!myChart) return;
+
+            myChart.data.labels = Array.from({length: compareChartYears}, (_, index) => `Yr ${index + 1}`);
+            myChart.data.datasets.forEach(dataset => {
+                const item = getComparisonData(appData.homes.find(home => home.id === dataset.homeId));
+                if (item) dataset.data = item.data.slice(0, compareChartYears).map(row => {
+                    return compareChartMetric === 'monthlyPayment' ? row.totalMonthly : row[compareChartMetric];
+                });
+            });
+            myChart.options.plugins.title.text = `${compareChartMetric === 'monthlyPayment' ? 'Monthly Payment' : compareChartMetric === 'balance' ? 'Remaining Loan Balance' : compareChartMetric === 'cumulativeInterest' ? 'Cumulative Interest Paid' : 'Net Equity'} Across Homes (Years 1-${compareChartYears})`;
+            myChart.update();
         }
 
         function renderActiveHome() {
