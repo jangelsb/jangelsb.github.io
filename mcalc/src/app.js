@@ -3,6 +3,7 @@ import {
     DEFAULT_BUYDOWN_YEAR_2,
     DEFAULT_LOAN_TERM_YEARS,
     clone,
+    compareChartCalloutValues,
     escapeHtml,
     generateId,
     getScenarioLabel,
@@ -427,7 +428,10 @@ function renderComparisonChart(comparisonData) {
                 state.compareChartVisibility[legend.chart.data.datasets[datasetIndex].homeId] = !current;
             }},
             title: { display: true, text: `${metricLabel(state.compareChartMetric)} Across Homes (Years 1-${state.compareChartYears})` },
-            tooltip: { callbacks: { label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}` } }
+            tooltip: {
+                itemSort: compareChartCalloutValues,
+                callbacks: { label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}` }
+            }
         }, scales: { y: { beginAtZero: true, ticks: { callback: value => `$${value.toLocaleString()}` } } } }
     });
 }
@@ -469,7 +473,7 @@ function renderHomeChart() {
     chart = new Chart($('#balanceChart').getContext('2d'), {
         type: 'line',
         data: { labels: Array.from({ length: 30 }, (_, index) => `Yr ${index + 1}`), datasets: resultsData.map((result, index) => ({ label: getScenarioLabel(result.scenario), data: result.data.slice(0, 30).map(row => metricValue(row, state.activeChartMetric)), borderColor: colors[index % colors.length], backgroundColor: 'transparent' })) },
-        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { tooltip: { callbacks: { label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: value => `$${value.toLocaleString()}` } } } }
+        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { tooltip: { itemSort: compareChartCalloutValues, callbacks: { label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: value => `$${value.toLocaleString()}` } } } }
     });
 }
 

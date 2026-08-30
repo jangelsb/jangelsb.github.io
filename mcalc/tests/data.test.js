@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getScenarioLabel, normalizeAppData, sortHomesForDisplay } from '../src/data.js';
+import { compareChartCalloutValues, getScenarioLabel, normalizeAppData, sortHomesForDisplay } from '../src/data.js';
 import { parseImportedData } from '../src/storage.js';
 
 test('normalizes legacy data and fills safe defaults', () => {
@@ -47,4 +47,15 @@ test('sorts homes case-insensitively without mutating the stored list', () => {
     const sorted = sortHomesForDisplay(homes);
     assert.deepEqual(sorted.map(home => home.name), ['Alpha', 'bravo', 'zillow']);
     assert.deepEqual(homes.map(home => home.name), ['zillow', 'Alpha', 'bravo']);
+});
+
+test('sorts chart callout items by their displayed value instead of home order', () => {
+    const a = { dataset: { label: 'Lower' }, parsed: { y: 100 }, raw: 100 };
+    const b = { dataset: { label: 'Higher' }, parsed: { y: 500 }, raw: 500 };
+    const c = { dataset: { label: 'Middle' }, parsed: { y: 250 }, raw: 250 };
+
+    assert.ok(compareChartCalloutValues(a, b) < 0);
+    assert.ok(compareChartCalloutValues(b, a) > 0);
+    assert.ok(compareChartCalloutValues(c, b) < 0);
+    assert.deepEqual([a, c, b].sort(compareChartCalloutValues), [b, c, a]);
 });

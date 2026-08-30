@@ -148,6 +148,17 @@ export function sortHomesForDisplay(homes) {
     });
 }
 
+export function compareChartCalloutValues(left, right) {
+    const leftValue = Number.isFinite(Number(left?.parsed?.y)) ? Number(left.parsed.y) : Number(left?.raw ?? 0);
+    const rightValue = Number.isFinite(Number(right?.parsed?.y)) ? Number(right.parsed.y) : Number(right?.raw ?? 0);
+    const byValue = rightValue - leftValue;
+    if (byValue !== 0) return byValue;
+
+    const leftLabel = String(left?.dataset?.label ?? '');
+    const rightLabel = String(right?.dataset?.label ?? '');
+    return leftLabel.localeCompare(rightLabel, undefined, { sensitivity: 'base' }) || String(left?.dataset?.dataIndex ?? 0).localeCompare(String(right?.dataset?.dataIndex ?? 0));
+}
+
 export function escapeHtml(value) {
     return String(value ?? '')
         .replaceAll('&', '&amp;')
