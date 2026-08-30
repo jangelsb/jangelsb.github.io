@@ -54,8 +54,8 @@ test('sorts chart callout items by their displayed value instead of home order',
     const b = { dataset: { label: 'Higher' }, parsed: { y: 500 }, raw: 500 };
     const c = { dataset: { label: 'Middle' }, parsed: { y: 250 }, raw: 250 };
 
-    assert.ok(compareChartCalloutValues(a, b) < 0);
-    assert.ok(compareChartCalloutValues(b, a) > 0);
-    assert.ok(compareChartCalloutValues(c, b) < 0);
+    assert.ok(compareChartCalloutValues(a, b) > 0);
+    assert.ok(compareChartCalloutValues(b, a) < 0);
+    assert.ok(compareChartCalloutValues(c, b) > 0);
     assert.deepEqual([a, c, b].sort(compareChartCalloutValues), [b, c, a]);
 });
