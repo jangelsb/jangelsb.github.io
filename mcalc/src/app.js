@@ -5,6 +5,7 @@ import {
     clone,
     escapeHtml,
     generateId,
+    getScenarioLabel,
     normalizeAppData
 } from './data.js';
 import { calculateAmortization, calculateLoanInputs } from './calculations.js';
@@ -83,8 +84,7 @@ function renderActiveHome() {
     const scenarios = home.scenarios.map(scenario => `
         <div class="scenario-box" data-home-id="${home.id}">
             <div class="scenario-header">
-                <input type="text" value="${escapeHtml(scenario.name)}"
-                    data-scenario-id="${scenario.id}" data-scenario-field="name">
+                <span class="scenario-name">${escapeHtml(getScenarioLabel(scenario))}</span>
                 <button class="btn-danger" data-action="delete-scenario"
                     data-home-id="${home.id}" data-scenario-id="${scenario.id}">Delete</button>
             </div>
@@ -179,6 +179,7 @@ function updateScenario(homeId, scenarioId, field, value) {
     const scenario = scenarioById(homeById(homeId), scenarioId);
     if (!scenario) return;
     scenario[field] = ['name', 'type'].includes(field) ? value : Number.parseFloat(value) || 0;
+    scenario.name = getScenarioLabel(scenario);
     persist();
 
     if (field === 'type') {
@@ -240,7 +241,7 @@ function addScenario(homeId) {
     const usedIds = appData.homes.flatMap(item => item.scenarios.map(scenario => scenario.id));
     home.scenarios.push({
         id: generateId(usedIds),
-        name: `Option ${home.scenarios.length + 1}`,
+        name: getScenarioLabel({ type: 'fixed', rate: 5, bdY1: DEFAULT_BUYDOWN_YEAR_1, bdY2: DEFAULT_BUYDOWN_YEAR_2 }),
         type: 'fixed',
         termYears: DEFAULT_LOAN_TERM_YEARS,
         rate: 5,
@@ -309,7 +310,7 @@ function renderComparison() {
     const controls = comparisonData.map(item => `
         <div class="comparison-control"><label>${escapeHtml(item.home.name)}</label>
             <select data-compare-scenario-home-id="${item.home.id}">
-                ${item.home.scenarios.map(scenario => `<option value="${scenario.id}" ${scenario.id === item.scenario.id ? 'selected' : ''}>${escapeHtml(scenario.name)}</option>`).join('')}
+                ${item.home.scenarios.map(scenario => `<option value="${scenario.id}" ${scenario.id === item.scenario.id ? 'selected' : ''}>${escapeHtml(getScenarioLabel(scenario))}</option>`).join('')}
             </select>
         </div>`).join('');
 
@@ -317,7 +318,7 @@ function renderComparison() {
         ['Purchase price', item => formatCurrency(item.home.price)],
         ['Down payment', item => formatCurrency(calculateLoanInputs(item.home).downPayment)],
         ['Cash needed to close', item => formatCurrency(item.cashToClose)],
-        ['Loan scenario', item => escapeHtml(item.scenario.name)],
+        ['Loan scenario', item => escapeHtml(getScenarioLabel(item.scenario))],
         ['Loan term', item => `${item.scenario.termYears} years`],
         ['Year 1 monthly payment', item => formatCurrency(item.data[0].totalMonthly)],
         ['Remaining balance after 3 years', item => formatCurrency(item.data[2].balance)],
@@ -375,7 +376,7 @@ function renderComparisonChart(comparisonData) {
         data: {
             labels: Array.from({ length: state.compareChartYears }, (_, index) => `Yr ${index + 1}`),
             datasets: comparisonData.map((item, index) => ({
-                label: `${item.home.name} - ${item.scenario.name}`,
+                label: `${item.home.name} - ${getScenarioLabel(item.scenario)}`,
                 homeId: item.home.id,
                 hidden: state.compareChartVisibility[item.home.id] === false,
                 data: item.data.slice(0, state.compareChartYears).map(row => metricValue(row, state.compareChartMetric)),
@@ -401,12 +402,12 @@ function renderResults(home) {
         state.activeResultTab = 'summary';
     }
 
-    const tabs = `<div class="result-tabs"><button id="tab-summary" class="result-tab ${state.activeResultTab === 'summary' ? 'active' : ''}" data-action="result-tab" data-result-tab="summary">Summary & Graphs</button>${resultsData.map((result, index) => `<button id="tab-data-${index}" class="result-tab ${state.activeResultTab === 'data-' + index ? 'active' : ''}" data-action="result-tab" data-result-tab="data-${index}">${escapeHtml(result.scenario.name)}</button>`).join('')}</div>`;
+    const tabs = `<div class="result-tabs"><button id="tab-summary" class="result-tab ${state.activeResultTab === 'summary' ? 'active' : ''}" data-action="result-tab" data-result-tab="summary">Summary & Graphs</button>${resultsData.map((result, index) => `<button id="tab-data-${index}" class="result-tab ${state.activeResultTab === 'data-' + index ? 'active' : ''}" data-action="result-tab" data-result-tab="data-${index}">${escapeHtml(getScenarioLabel(result.scenario))}</button>`).join('')}</div>`;
     const downPayment = calculateLoanInputs(home).downPayment;
     const downPercent = home.price ? (downPayment / home.price * 100).toFixed(1).replace(/\.0$/, '') : '0';
     const milestone = (result, field, color = '') => `<div class="milestone-box"><div class="milestone-row"><span class="milestone-label">Year 3</span><span class="milestone-val">${formatCurrency(result.data[2][field])}</span></div><hr><div class="milestone-row"><span class="milestone-label">Year 5</span><span class="milestone-val">${formatCurrency(result.data[4][field])}</span></div><hr><div class="milestone-row"><span class="milestone-label">Year 10</span><span class="milestone-val" style="${color ? `color:${color};` : ''}font-weight:bold;">${formatCurrency(result.data[9][field])}</span></div></div>`;
     const finalInterest = result => formatCurrency(result.data[result.data.length - 1].cumulativeInterest);
-    const summary = `<table class="summary-table"><thead><tr><th>Metric</th>${resultsData.map(result => `<th>${escapeHtml(result.scenario.name)}</th>`).join('')}</tr></thead><tbody>
+    const summary = `<table class="summary-table"><thead><tr><th>Metric</th>${resultsData.map(result => `<th>${escapeHtml(getScenarioLabel(result.scenario))}</th>`).join('')}</tr></thead><tbody>
         <tr><td><b>Down payment @ ${downPercent}%</b></td>${resultsData.map(() => `<td>${formatCurrency(downPayment)}</td>`).join('')}</tr>
         <tr><td><b>Actual Cash Needed to Close</b></td>${resultsData.map(result => `<td>${formatCurrency(result.cashToClose)}</td>`).join('')}</tr>
         <tr><td><b>Year 1 Monthly Payment</b></td>${resultsData.map(result => `<td>${formatCurrency(result.data[0].totalMonthly)}</td>`).join('')}</tr>
@@ -432,7 +433,7 @@ function renderHomeChart() {
     const colors = ['#1a73e8', '#ea4335', '#34a853', '#fbbc04', '#673ab7'];
     chart = new Chart($('#balanceChart').getContext('2d'), {
         type: 'line',
-        data: { labels: Array.from({ length: 30 }, (_, index) => `Yr ${index + 1}`), datasets: resultsData.map((result, index) => ({ label: result.scenario.name, data: result.data.slice(0, 30).map(row => metricValue(row, state.activeChartMetric)), borderColor: colors[index % colors.length], backgroundColor: 'transparent' })) },
+        data: { labels: Array.from({ length: 30 }, (_, index) => `Yr ${index + 1}`), datasets: resultsData.map((result, index) => ({ label: getScenarioLabel(result.scenario), data: result.data.slice(0, 30).map(row => metricValue(row, state.activeChartMetric)), borderColor: colors[index % colors.length], backgroundColor: 'transparent' })) },
         options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { tooltip: { callbacks: { label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: value => `$${value.toLocaleString()}` } } } }
     });
 }

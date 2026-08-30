@@ -27,6 +27,23 @@ const DEFAULT_FIXED_SCENARIO = {
     armFee: 5000
 };
 
+function formatScenarioNumber(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return '0';
+    return number.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+}
+
+export function getScenarioLabel(scenario) {
+    const rate = formatScenarioNumber(scenario.rate);
+    if (scenario.type === 'buydown') {
+        return `${formatScenarioNumber(scenario.bdY1)}:${formatScenarioNumber(scenario.bdY2)} @ ${rate}`;
+    }
+    if (scenario.type === 'arm') {
+        return `7/1 ARM @ ${rate}`;
+    }
+    return `fixed @ ${rate}`;
+}
+
 export function createDefaultAppData() {
     return {
         version: 2,
@@ -59,7 +76,7 @@ function normalizeScenario(scenario, index) {
     const source = scenario && typeof scenario === 'object' ? scenario : {};
     return {
         id: source.id ?? index + 1,
-        name: typeof source.name === 'string' ? source.name : `Option ${index + 1}`,
+        name: getScenarioLabel(source),
         type: ['fixed', 'buydown', 'arm'].includes(source.type) ? source.type : 'fixed',
         termYears: numberOr(source.termYears, DEFAULT_LOAN_TERM_YEARS) > 0
             ? numberOr(source.termYears, DEFAULT_LOAN_TERM_YEARS)

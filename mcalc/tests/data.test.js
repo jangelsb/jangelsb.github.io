@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeAppData } from '../src/data.js';
+import { getScenarioLabel, normalizeAppData } from '../src/data.js';
 import { parseImportedData } from '../src/storage.js';
 
 test('normalizes legacy data and fills safe defaults', () => {
@@ -22,4 +22,17 @@ test('replaces an empty home list with a usable default property', () => {
 
 test('rejects imported data without a homes array', () => {
     assert.throws(() => parseImportedData(JSON.stringify({ scenarioGroups: [] })), /Invalid mortgage analyzer data/);
+});
+
+test('generates readable labels for each loan type', () => {
+    assert.equal(getScenarioLabel({ type: 'buydown', rate: 5.5, bdY1: 2, bdY2: 1 }), '2:1 @ 5.5');
+    assert.equal(getScenarioLabel({ type: 'fixed', rate: 6.5 }), 'fixed @ 6.5');
+    assert.equal(getScenarioLabel({ type: 'arm', rate: 6.5 }), '7/1 ARM @ 6.5');
+});
+
+test('normalization replaces legacy custom scenario names with generated labels', () => {
+    const result = normalizeAppData({
+        homes: [{ scenarios: [{ name: 'My Custom Loan', type: 'fixed', rate: 6.5 }] }]
+    });
+    assert.equal(result.homes[0].scenarios[0].name, 'fixed @ 6.5');
 });
