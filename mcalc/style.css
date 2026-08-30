@@ -54,7 +54,7 @@ tr:nth-child(even) { background-color: #f8f9fa; }
 .chart-range label { margin: 0; }
 .comparison-table { min-width: 720px; }
 .comparison-table th:first-child, .comparison-table td:first-child { text-align: left; position: sticky; left: 0; z-index: 1; }
-.comparison-table th:first-child { background: #1a73e8; }
+.comparison-table th:first-child { background: #f1f3f4; color: #1f2937; }
 .comparison-table td:first-child { background: white; font-weight: 600; }
 .table-scroll, .comparison-scroll { overflow-x: auto; }
 .comparison-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
