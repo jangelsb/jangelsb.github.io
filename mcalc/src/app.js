@@ -54,8 +54,11 @@ function destroyChart() {
 }
 
 function persist() {
-    saveAppData(appData);
-    scheduleShareUrlUpdate();
+    try {
+        saveAppData(appData);
+    } finally {
+        scheduleShareUrlUpdate();
+    }
 }
 
 async function loadInitialShareState() {
@@ -94,8 +97,26 @@ async function updateShareUrlNow() {
     if (sequence !== shareUpdateSequence) return window.location.href;
     const url = new URL(window.location.href);
     url.hash = hash.slice(1);
-    window.history.replaceState(null, '', url);
+    window.history.replaceState(null, '', url.href);
     return url.href;
+}
+
+async function copyTextToClipboard(value) {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return;
+    }
+
+    const input = document.createElement('textarea');
+    input.value = value;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+    const copied = document.execCommand('copy');
+    input.remove();
+    if (!copied) throw new Error('Clipboard access is unavailable.');
 }
 
 function scheduleShareUrlUpdate() {
@@ -1082,7 +1103,7 @@ $('#shareButton').addEventListener('click', async () => {
     const button = $('#shareButton');
     try {
         const shareUrl = await updateShareUrlNow();
-        await navigator.clipboard.writeText(shareUrl);
+        await copyTextToClipboard(shareUrl);
         button.textContent = 'Copied!';
         setTimeout(() => { button.textContent = 'Copy Share Link'; }, 1500);
     } catch (error) {
