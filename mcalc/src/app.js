@@ -6,7 +6,8 @@ import {
     escapeHtml,
     generateId,
     getScenarioLabel,
-    normalizeAppData
+    normalizeAppData,
+    sortHomesForDisplay
 } from './data.js';
 import { calculateAmortization, calculateLoanInputs } from './calculations.js';
 import { loadAppData, parseImportedData, saveAppData } from './storage.js';
@@ -67,7 +68,7 @@ function renderApp() {
 }
 
 function renderTabsAndControls() {
-    const tabs = appData.homes.map(home => {
+    const tabs = sortHomesForDisplay(appData.homes).map(home => {
         const active = state.activeView === 'home' && home.id === appData.activeHomeId ? 'active' : '';
         return `<button class="home-tab ${active}" data-action="switch-home" data-home-id="${home.id}">${escapeHtml(home.name)}</button>`;
     }).join('');
@@ -294,9 +295,10 @@ function isHomeIncluded(homeId) {
 }
 
 function renderComparison() {
-    const included = appData.homes.filter(home => isHomeIncluded(home.id));
+    const homes = sortHomesForDisplay(appData.homes);
+    const included = homes.filter(home => isHomeIncluded(home.id));
     const comparisonData = included.map(getComparisonData).filter(Boolean);
-    const homeSelection = appData.homes.map(home => `
+    const homeSelection = homes.map(home => `
         <label class="checkbox-label"><input type="checkbox" data-compare-home-id="${home.id}" ${isHomeIncluded(home.id) ? 'checked' : ''}> ${escapeHtml(home.name)}</label>
     `).join('');
 

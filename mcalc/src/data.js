@@ -141,6 +141,13 @@ export function generateId(usedIds = []) {
     return id;
 }
 
+export function sortHomesForDisplay(homes) {
+    return [...homes].sort((left, right) => {
+        const byName = String(left.name ?? '').localeCompare(String(right.name ?? ''), undefined, { sensitivity: 'base' });
+        return byName || String(left.id).localeCompare(String(right.id));
+    });
+}
+
 export function escapeHtml(value) {
     return String(value ?? '')
         .replaceAll('&', '&amp;')

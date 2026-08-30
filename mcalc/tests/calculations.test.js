@@ -16,7 +16,7 @@ const home = {
 const fixed = { type: 'fixed', termYears: 30, rate: 6, bdY1: 0, bdY2: 0, armRate: 5, armFee: 5000 };
 
 test('calculates a standard monthly payment', () => {
-    assert.ok(Math.abs(monthlyPayment(240000, 6, 360) - 1438.89) < 0.01);
+    assert.ok(Math.abs(monthlyPayment(240000, 6, 360) - 1438.92) < 0.01);
 });
 
 test('calculates loan inputs from a dollar down payment', () => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getScenarioLabel, normalizeAppData } from '../src/data.js';
+import { getScenarioLabel, normalizeAppData, sortHomesForDisplay } from '../src/data.js';
 import { parseImportedData } from '../src/storage.js';
 
 test('normalizes legacy data and fills safe defaults', () => {
@@ -35,4 +35,16 @@ test('normalization replaces legacy custom scenario names with generated labels'
         homes: [{ scenarios: [{ name: 'My Custom Loan', type: 'fixed', rate: 6.5 }] }]
     });
     assert.equal(result.homes[0].scenarios[0].name, 'fixed @ 6.5');
+});
+
+test('sorts homes case-insensitively without mutating the stored list', () => {
+    const homes = [
+        { id: 1, name: 'zillow' },
+        { id: 2, name: 'Alpha' },
+        { id: 3, name: 'bravo' }
+    ];
+
+    const sorted = sortHomesForDisplay(homes);
+    assert.deepEqual(sorted.map(home => home.name), ['Alpha', 'bravo', 'zillow']);
+    assert.deepEqual(homes.map(home => home.name), ['zillow', 'Alpha', 'bravo']);
 });
