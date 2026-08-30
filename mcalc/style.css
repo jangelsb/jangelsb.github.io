@@ -24,7 +24,7 @@ button { cursor: pointer; border: none; border-radius: 4px; font-weight: bold; t
 .btn-danger:hover { background: #8e1816; }
 .home-tabs { display: block; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
 .home-tab-list { display: flex; flex-wrap: wrap; gap: 5px; }
-.home-action-list { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 5px; }
+.home-action-list { display: flex; align-items: flex-start; gap: 5px; margin-top: 5px; }
 .home-tab { background: #e0e0e0; padding: 10px 20px; font-size: 15px; color: #555; }
 .home-tab.active { background: #1a73e8; color: white; }
 .compare-home-tab { background: #dbeafe; color: #1d4ed8; }
@@ -61,6 +61,9 @@ tr:nth-child(even) { background-color: #f8f9fa; }
 .comparison-control { min-width: 220px; }
 .comparison-scenarios { margin-top: 15px; }
 .comparison-card-controls { margin-top: 8px; }
+.comparison-results-card > h2 { margin-bottom: 6px; }
+.comparison-results-card > .comparison-card-controls { display: grid; grid-template-columns: minmax(210px, 1fr) minmax(240px, 1.2fr) minmax(320px, 2fr); align-items: start; gap: 16px; }
+.comparison-results-card .comparison-control { min-width: 0; }
 .comparison-title-control { flex: 1 1 240px; }
 .comparison-description-control { flex: 2 1 320px; }
 .comparison-description-control textarea { min-height: 52px; }
@@ -73,4 +76,5 @@ tr:nth-child(even) { background-color: #f8f9fa; }
 .milestone-val { font-weight: 500; white-space: nowrap; }
 .milestone-box hr { margin: 2px 0; border: 0; border-top: 1px dashed #e0e0e0; }
 .muted { margin: 0; color: #5f6368; }
-@media (max-width: 640px) { body { padding: 12px; } .top-bar { align-items: flex-start; flex-direction: column; } .property-header { align-items: flex-start; flex-direction: column; } .property-name { width: 100%; } }
+@media (max-width: 820px) { .comparison-results-card > .comparison-card-controls { grid-template-columns: repeat(2, minmax(220px, 1fr)); } .comparison-description-control { grid-column: 1 / -1; } }
+@media (max-width: 640px) { body { padding: 12px; } .top-bar { align-items: flex-start; flex-direction: column; } .property-header { align-items: flex-start; flex-direction: column; } .property-name { width: 100%; } .comparison-results-card > .comparison-card-controls { display: flex; flex-direction: column; align-items: stretch; } }

@@ -81,8 +81,8 @@ function renderTabsAndControls() {
         return `<button class="home-tab ${active}" data-action="switch-home" data-home-id="${home.id}">${escapeHtml(home.name)}</button>`;
     }).join('');
 
-    $('#homeTabsContainer').innerHTML = `<div class="home-tab-list">${tabs}</div>
-        <div class="home-action-list"><button class="btn-success" data-action="add-home">+ Add Home</button>${appData.homes.length > 1 ? `<button class="home-tab compare-home-tab ${state.activeView === 'compare' ? 'active' : ''}" data-action="show-comparison">Compare Homes</button>` : ''}</div>`;
+    $('#homeTabsContainer').innerHTML = `<div class="home-tab-list">${tabs}<button class="btn-success" data-action="add-home">+ Add Home</button></div>
+        ${appData.homes.length > 1 ? `<div class="home-action-list"><button class="home-tab compare-home-tab ${state.activeView === 'compare' ? 'active' : ''}" data-action="show-comparison">Compare Homes</button></div>` : ''}`;
 }
 
 function getActiveComparison() {
