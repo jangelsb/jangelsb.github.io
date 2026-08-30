@@ -8,7 +8,7 @@ test('normalizes legacy data and fills safe defaults', () => {
         homes: [{ id: 4, name: 'Test Home', scenarios: [{ id: 9, name: 'Loan', type: 'fixed', termYears: 0 }] }]
     });
 
-    assert.equal(result.version, 2);
+    assert.equal(result.version, 3);
     assert.equal(result.activeHomeId, 4);
     assert.deepEqual(result.scenarioGroups, []);
     assert.equal(result.homes[0].scenarios[0].termYears, 30);
@@ -30,11 +30,27 @@ test('generates readable labels for each loan type', () => {
     assert.equal(getScenarioLabel({ type: 'arm', rate: 6.5 }), '7/1 ARM @ 6.5');
 });
 
-test('normalization replaces legacy custom scenario names with generated labels', () => {
+test('normalization preserves saved scenario names', () => {
     const result = normalizeAppData({
         homes: [{ scenarios: [{ name: 'My Custom Loan', type: 'fixed', rate: 6.5 }] }]
     });
-    assert.equal(result.homes[0].scenarios[0].name, 'fixed @ 6.5');
+    assert.equal(result.homes[0].scenarios[0].name, 'My Custom Loan');
+});
+
+test('migrates the legacy closing-cost percentage and adds incentive defaults', () => {
+    const result = normalizeAppData({
+        homes: [{ closingCosts: 3, scenarios: [{ type: 'fixed', rate: 6 }] }]
+    });
+
+    assert.equal(result.homes[0].closingCostEstimateMode, 'percentOfLoan');
+    assert.equal(result.homes[0].closingCostEstimatePercent, 3);
+    assert.equal(result.homes[0].incentivePool, 0);
+    assert.deepEqual(result.homes[0].scenarios[0].incentiveAllocation, {
+        rateBuydown: 0,
+        closingCosts: 0,
+        priceReduction: 0,
+        designUpgrades: 0
+    });
 });
 
 test('sorts homes case-insensitively without mutating the stored list', () => {

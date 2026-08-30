@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { calculateAmortization, calculateLoanInputs, monthlyPayment } from '../src/calculations.js';
+import { calculateAmortization, calculateLoanInputs, calculateScenario, monthlyPayment } from '../src/calculations.js';
 
 const home = {
     price: 300000,
@@ -26,6 +26,77 @@ test('calculates loan inputs from a dollar down payment', () => {
         closingCosts: 4800,
         cashToClose: 64800
     });
+});
+
+test('supports a fixed-dollar closing-cost estimate', () => {
+    const result = calculateLoanInputs({
+        ...home,
+        closingCostEstimateMode: 'fixed',
+        closingCostEstimateAmount: 9000
+    });
+
+    assert.equal(result.closingCosts, 9000);
+    assert.equal(result.cashToClose, 69000);
+});
+
+test('applies incentive allocations to the final scenario without double-counting points', () => {
+    const incentiveHome = {
+        ...home,
+        price: 600000,
+        downType: 'percent',
+        downValue: 20,
+        closingCostEstimateMode: 'fixed',
+        closingCostEstimateAmount: 12000,
+        incentivePool: 30000,
+        tax: 0,
+        hoa: 0,
+        ins: 0
+    };
+    const scenario = {
+        ...fixed,
+        rate: 6.5,
+        incentiveAllocation: {
+            rateBuydown: 15000,
+            closingCosts: 5000,
+            priceReduction: 10000,
+            designUpgrades: 0
+        }
+    };
+
+    const result = calculateScenario(incentiveHome, scenario);
+
+    assert.equal(result.finalPrice, 590000);
+    assert.equal(result.loanAmount, 472000);
+    assert.ok(Math.abs(result.pointsPurchased - 3.1779661) < 0.0001);
+    assert.ok(Math.abs(result.finalRate - 5.7055085) < 0.0001);
+    assert.equal(result.estimatedClosingCosts, 12000);
+    assert.equal(result.closingCredit, 5000);
+    assert.equal(result.cashToClose, 125000);
+    assert.equal(result.incentiveUsed, 30000);
+});
+
+test('caps closing-cost and upgrade credits at their eligible costs', () => {
+    const result = calculateScenario({
+        ...home,
+        incentivePool: 20000,
+        closingCostEstimateMode: 'fixed',
+        closingCostEstimateAmount: 4000
+    }, {
+        ...fixed,
+        designCost: 3000,
+        incentiveAllocation: {
+            rateBuydown: 0,
+            closingCosts: 10000,
+            priceReduction: 0,
+            designUpgrades: 10000
+        }
+    });
+
+    assert.equal(result.closingCredit, 4000);
+    assert.equal(result.designCredit, 3000);
+    assert.equal(result.incentiveUsed, 7000);
+    assert.equal(result.incentiveRemaining, 13000);
+    assert.equal(result.cashToClose, 60000);
 });
 
 test('includes taxes, HOA, and insurance in the total monthly payment', () => {

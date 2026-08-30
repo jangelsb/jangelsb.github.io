@@ -1,4 +1,4 @@
-import { DEFAULT_LOAN_TERM_YEARS } from './data.js';
+import { DEFAULT_LOAN_TERM_YEARS, INCENTIVE_BUCKETS } from './data.js';
 
 export function monthlyPayment(principal, annualRate, numberOfMonths) {
     if (numberOfMonths <= 0) return 0;
@@ -7,21 +7,109 @@ export function monthlyPayment(principal, annualRate, numberOfMonths) {
     return (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -numberOfMonths));
 }
 
-function downPaymentAmount(home) {
-    return home.downType === 'percent'
-        ? home.price * (home.downValue / 100)
-        : home.downValue;
+function nonNegativeNumber(value) {
+    return Math.max(0, Number.isFinite(Number(value)) ? Number(value) : 0);
 }
 
-export function calculateLoanInputs(home) {
-    const downPayment = downPaymentAmount(home);
-    const principal = Math.max(0, home.price - downPayment);
-    const closingCosts = principal * (home.closingCosts / 100);
+function downPaymentAmount(home, purchasePrice = home.price) {
+    return home.downType === 'percent'
+        ? Math.min(purchasePrice, purchasePrice * (nonNegativeNumber(home.downValue) / 100))
+        : Math.min(purchasePrice, nonNegativeNumber(home.downValue));
+}
+
+function closingCostEstimate(home, principal) {
+    if (home.closingCostEstimateMode === 'fixed') {
+        return nonNegativeNumber(home.closingCostEstimateAmount);
+    }
+    const percent = home.closingCostEstimatePercent ?? home.closingCosts ?? 0;
+    return principal * (nonNegativeNumber(percent) / 100);
+}
+
+export function calculateLoanInputs(home, purchasePrice = home.price) {
+    const finalPrice = nonNegativeNumber(purchasePrice);
+    const downPayment = downPaymentAmount(home, finalPrice);
+    const principal = Math.max(0, finalPrice - downPayment);
+    const closingCosts = closingCostEstimate(home, principal);
     return {
         downPayment,
         principal,
         closingCosts,
         cashToClose: downPayment + closingCosts
+    };
+}
+
+function normalizedAllocation(config, incentivePool) {
+    const source = config?.incentiveAllocation || config?.allocation || {};
+    const requested = INCENTIVE_BUCKETS.reduce((result, bucket) => {
+        result[bucket] = nonNegativeNumber(source[bucket]);
+        return result;
+    }, {});
+    const requestedTotal = INCENTIVE_BUCKETS.reduce((total, bucket) => total + requested[bucket], 0);
+    const scale = requestedTotal > incentivePool && requestedTotal > 0
+        ? incentivePool / requestedTotal
+        : 1;
+    const allocation = INCENTIVE_BUCKETS.reduce((result, bucket) => {
+        result[bucket] = requested[bucket] * scale;
+        return result;
+    }, {});
+    return { requested, allocation, requestedTotal, scale };
+}
+
+export function calculateScenario(home, config) {
+    const incentivePool = nonNegativeNumber(home.incentivePool);
+    const allocationState = normalizedAllocation(config, incentivePool);
+    const allocation = allocationState.allocation;
+    const basePrice = nonNegativeNumber(home.price);
+    const priceReduction = Math.min(basePrice, allocation.priceReduction);
+    const finalPrice = basePrice - priceReduction;
+    const loanInputs = calculateLoanInputs(home, finalPrice);
+    const pointCost = loanInputs.principal * 0.01;
+    const pointsPurchased = pointCost > 0 ? allocation.rateBuydown / pointCost : 0;
+    const rateReduction = pointsPurchased * 0.25;
+    const baseRate = nonNegativeNumber(config.rate);
+    const finalRate = Math.max(0, baseRate - rateReduction);
+    const closingCredit = Math.min(allocation.closingCosts, loanInputs.closingCosts);
+    const designCost = nonNegativeNumber(config.designCost);
+    const designCredit = Math.min(allocation.designUpgrades, designCost);
+    const remainingClosingCosts = Math.max(0, loanInputs.closingCosts - closingCredit);
+    const remainingDesignCost = Math.max(0, designCost - designCredit);
+    const effectiveHome = { ...home, price: finalPrice };
+    const effectiveConfig = { ...config, rate: finalRate };
+    const amortization = calculateAmortization(effectiveHome, effectiveConfig, loanInputs.principal);
+    const appliedAllocation = {
+        rateBuydown: allocation.rateBuydown,
+        closingCosts: closingCredit,
+        priceReduction,
+        designUpgrades: designCredit
+    };
+    const incentiveUsed = INCENTIVE_BUCKETS.reduce((total, bucket) => total + appliedAllocation[bucket], 0);
+    const incentiveRemaining = Math.max(0, incentivePool - incentiveUsed);
+
+    return {
+        home,
+        scenario: config,
+        incentivePool,
+        requestedAllocation: allocationState.requested,
+        allocation,
+        appliedAllocation,
+        incentiveUsed,
+        incentiveRemaining,
+        basePrice,
+        finalPrice,
+        downPayment: loanInputs.downPayment,
+        loanAmount: loanInputs.principal,
+        baseRate,
+        finalRate,
+        pointsPurchased,
+        rateReduction,
+        estimatedClosingCosts: loanInputs.closingCosts,
+        closingCredit,
+        remainingClosingCosts,
+        designCost,
+        designCredit,
+        remainingDesignCost,
+        cashToClose: loanInputs.downPayment + remainingClosingCosts + remainingDesignCost,
+        amortization
     };
 }
 

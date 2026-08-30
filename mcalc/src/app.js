@@ -2,15 +2,17 @@ import {
     DEFAULT_BUYDOWN_YEAR_1,
     DEFAULT_BUYDOWN_YEAR_2,
     DEFAULT_LOAN_TERM_YEARS,
+    INCENTIVE_BUCKETS,
     clone,
     compareChartCalloutValues,
     escapeHtml,
     generateId,
+    getScenarioDisplayName,
     getScenarioLabel,
     normalizeAppData,
     sortHomesForDisplay
 } from './data.js';
-import { calculateAmortization, calculateLoanInputs } from './calculations.js';
+import { calculateScenario } from './calculations.js';
 import {
     applyComparisonHomeConfigs,
     buildComparisonHomeConfigs,
@@ -109,6 +111,43 @@ function renderComparisonManager() {
         <div class="button-row comparison-card-actions">${actions}</div>`;
 }
 
+const incentiveBucketLabels = {
+    rateBuydown: 'Rate buydown',
+    closingCosts: 'Closing costs',
+    priceReduction: 'Price reduction',
+    designUpgrades: 'Design / lot upgrades'
+};
+
+function scenarioAllocation(scenario) {
+    return INCENTIVE_BUCKETS.reduce((result, bucket) => {
+        result[bucket] = Math.max(0, Number(scenario.incentiveAllocation?.[bucket]) || 0);
+        return result;
+    }, {});
+}
+
+function renderIncentiveAllocation(home, scenario) {
+    const allocation = scenarioAllocation(scenario);
+    const total = INCENTIVE_BUCKETS.reduce((sum, bucket) => sum + allocation[bucket], 0);
+    const pool = Math.max(0, Number(home.incentivePool) || 0);
+    const remaining = pool - total;
+    const status = remaining >= 0
+        ? `${formatCurrency(remaining)} unallocated`
+        : `${formatCurrency(Math.abs(remaining))} over the incentive pool`;
+    const rows = INCENTIVE_BUCKETS.map(bucket => `<div class="allocation-row">
+            <div class="allocation-label"><label for="allocation-${scenario.id}-${bucket}">${incentiveBucketLabels[bucket]}</label><output>${formatCurrency(allocation[bucket])}</output></div>
+            <input id="allocation-${scenario.id}-${bucket}" type="range" min="0" max="${pool}" step="100" value="${allocation[bucket]}"
+                data-home-id="${home.id}" data-scenario-id="${scenario.id}" data-allocation-field="${bucket}">
+            <input type="number" min="0" max="${pool}" step="100" value="${allocation[bucket]}" aria-label="${incentiveBucketLabels[bucket]} amount"
+                data-home-id="${home.id}" data-scenario-id="${scenario.id}" data-allocation-field="${bucket}">
+        </div>`).join('');
+    return `<div class="incentive-allocation">
+        <div class="allocation-heading"><strong>Builder incentive allocation</strong><span>${formatCurrency(pool)} available</span></div>
+        <p class="muted">Allocate the pool across the four options. Rate points are separate from closing-cost credits.</p>
+        ${rows}
+        <div class="allocation-total"><span>Total allocated</span><strong>${formatCurrency(total)}</strong><span class="allocation-status ${remaining < 0 ? 'allocation-over' : ''}">${status}</span></div>
+    </div>`;
+}
+
 function renderActiveHome() {
     const home = getActiveHome();
     if (!home) return;
@@ -116,7 +155,8 @@ function renderActiveHome() {
     const scenarios = home.scenarios.map(scenario => `
         <div class="scenario-box" data-home-id="${home.id}">
             <div class="scenario-header">
-                <span class="scenario-name">${escapeHtml(getScenarioLabel(scenario))}</span>
+                <input class="scenario-name-input" type="text" value="${escapeHtml(getScenarioDisplayName(scenario))}"
+                    data-home-id="${home.id}" data-scenario-id="${scenario.id}" data-scenario-field="name" aria-label="Scenario name">
                 <button class="btn-danger" data-action="delete-scenario"
                     data-home-id="${home.id}" data-scenario-id="${scenario.id}">Delete</button>
             </div>
@@ -132,6 +172,10 @@ function renderActiveHome() {
             <label>Base / Note Rate (%)</label>
             <input type="number" step="0.1" value="${scenario.rate}"
                 data-scenario-id="${scenario.id}" data-scenario-field="rate">
+
+            <label>Design / Lot Upgrade Cost ($)</label>
+            <input type="number" min="0" step="100" value="${scenario.designCost}"
+                data-scenario-id="${scenario.id}" data-scenario-field="designCost">
 
             <div class="dynamic-fields" style="display:${scenario.type === 'buydown' ? 'block' : 'none'}">
                 <label>Year 1 Rate Drop (%)</label>
@@ -150,6 +194,7 @@ function renderActiveHome() {
                 <input type="number" value="${scenario.armFee}"
                     data-scenario-id="${scenario.id}" data-scenario-field="armFee">
             </div>
+            ${renderIncentiveAllocation(home, scenario)}
         </div>`).join('');
 
     $('#appContent').innerHTML = `
@@ -172,7 +217,15 @@ function renderActiveHome() {
                     </select>
                     <input type="number" step="0.1" value="${home.downValue}" data-home-id="${home.id}" data-home-field="downValue">
                 </div></div>
-                <div><label>Est. Closing Costs (%)</label><input type="number" step="0.1" value="${home.closingCosts}" data-home-id="${home.id}" data-home-field="closingCosts"></div>
+                <div><label>Builder Incentive Pool ($)</label><input type="number" min="0" step="100" value="${home.incentivePool}" data-home-id="${home.id}" data-home-field="incentivePool"></div>
+                <div><label>Closing Cost Estimate</label><div class="input-group">
+                    <select data-home-id="${home.id}" data-home-field="closingCostEstimateMode">
+                        <option value="percentOfLoan" ${home.closingCostEstimateMode === 'percentOfLoan' ? 'selected' : ''}>% of loan</option>
+                        <option value="fixed" ${home.closingCostEstimateMode === 'fixed' ? 'selected' : ''}>$ amount</option>
+                    </select>
+                    <input type="number" min="0" step="0.1" value="${home.closingCostEstimateMode === 'fixed' ? home.closingCostEstimateAmount : home.closingCostEstimatePercent}"
+                        data-home-id="${home.id}" data-home-field="${home.closingCostEstimateMode === 'fixed' ? 'closingCostEstimateAmount' : 'closingCostEstimatePercent'}">
+                </div><p class="muted field-help">Excludes discount points; those use the rate-buydown allocation.</p></div>
                 <div><label>Property Tax (%/yr)</label><input type="number" step="0.01" value="${home.tax}" data-home-id="${home.id}" data-home-field="tax"></div>
                 <div><label>Monthly HOA ($)</label><input type="number" value="${home.hoa}" data-home-id="${home.id}" data-home-field="hoa"></div>
                 <div><label>Monthly Ins. ($)</label><input type="number" value="${home.ins}" data-home-id="${home.id}" data-home-field="ins"></div>
@@ -184,9 +237,10 @@ function renderActiveHome() {
         </div>
 
         <div class="card">
-            <div class="flex-between"><h2>Loan Scenarios</h2>
+            <div class="flex-between"><h2>Purchase Scenarios</h2>
                 <button class="btn-success" data-action="add-scenario" data-home-id="${home.id}">+ Add Scenario</button>
             </div>
+            <p class="muted">Save a complete loan and builder-incentive strategy for this property.</p>
             <div class="grid-scenarios">${scenarios || '<p>No scenarios yet. Add one to see results.</p>'}</div>
         </div>`;
 }
@@ -194,13 +248,15 @@ function renderActiveHome() {
 function updateHome(homeId, field, value) {
     const home = homeById(homeId);
     if (!home) return;
-    home[field] = ['name', 'notes', 'downType'].includes(field) ? value : Number.parseFloat(value) || 0;
+    home[field] = ['name', 'notes', 'downType', 'closingCostEstimateMode'].includes(field)
+        ? value
+        : Number.parseFloat(value) || 0;
     persist();
 
     if (field === 'name') {
         renderTabsAndControls();
     }
-    if (field === 'downType') {
+    if (field === 'downType' || field === 'closingCostEstimateMode' || field === 'incentivePool') {
         renderApp();
     } else {
         runCalculations();
@@ -211,7 +267,6 @@ function updateScenario(homeId, scenarioId, field, value) {
     const scenario = scenarioById(homeById(homeId), scenarioId);
     if (!scenario) return;
     scenario[field] = ['name', 'type'].includes(field) ? value : Number.parseFloat(value) || 0;
-    scenario.name = getScenarioLabel(scenario);
     persist();
 
     if (field === 'type') {
@@ -221,12 +276,47 @@ function updateScenario(homeId, scenarioId, field, value) {
     }
 }
 
+function updateScenarioAllocation(homeId, scenarioId, field, value, inputElement) {
+    const home = homeById(homeId);
+    const scenario = scenarioById(home, scenarioId);
+    if (!home || !scenario || !INCENTIVE_BUCKETS.includes(field)) return;
+    const allocation = scenarioAllocation(scenario);
+    const nextValue = Math.max(0, Number.parseFloat(value) || 0);
+    const otherTotal = INCENTIVE_BUCKETS
+        .filter(bucket => bucket !== field)
+        .reduce((sum, bucket) => sum + allocation[bucket], 0);
+    const pool = Math.max(0, Number(home.incentivePool) || 0);
+    const appliedValue = Math.min(nextValue, Math.max(0, pool - otherTotal));
+    scenario.incentiveAllocation[field] = appliedValue;
+    if (inputElement) {
+        const row = inputElement.closest('.allocation-row');
+        row?.querySelectorAll('input').forEach(input => { input.value = appliedValue; });
+        const output = row?.querySelector('output');
+        if (output) output.textContent = formatCurrency(appliedValue);
+        const allocationBox = inputElement.closest('.incentive-allocation');
+        const total = INCENTIVE_BUCKETS.reduce((sum, bucket) => sum + scenarioAllocation(scenario)[bucket], 0);
+        const remaining = pool - total;
+        const totalValue = allocationBox?.querySelector('.allocation-total strong');
+        const status = allocationBox?.querySelector('.allocation-status');
+        if (totalValue) totalValue.textContent = formatCurrency(total);
+        if (status) {
+            status.textContent = remaining >= 0
+                ? `${formatCurrency(remaining)} unallocated`
+                : `${formatCurrency(Math.abs(remaining))} over the incentive pool`;
+            status.classList.toggle('allocation-over', remaining < 0);
+        }
+    }
+    persist();
+    runCalculations();
+}
+
 function addHome() {
     const source = appData.homes[0];
     const newHome = clone(source);
     newHome.id = generateId(appData.homes.map(home => home.id));
     newHome.name = 'New Property';
     newHome.notes = '';
+    newHome.incentivePool = 0;
     newHome.scenarios = newHome.scenarios.map((scenario, index) => ({
         ...scenario,
         id: generateId(appData.homes.flatMap(home => home.scenarios.map(item => item.id)).concat(index))
@@ -283,7 +373,15 @@ function addScenario(homeId) {
         bdY1: DEFAULT_BUYDOWN_YEAR_1,
         bdY2: DEFAULT_BUYDOWN_YEAR_2,
         armRate: 5,
-        armFee: 5000
+        armFee: 5000,
+        name: 'New Scenario',
+        designCost: 0,
+        incentiveAllocation: {
+            rateBuydown: 0,
+            closingCosts: 0,
+            priceReduction: 0,
+            designUpgrades: 0
+        }
     });
     persist();
     renderApp();
@@ -311,12 +409,10 @@ function runCalculations() {
         return;
     }
 
-    const loanInputs = calculateLoanInputs(home);
-    resultsData = home.scenarios.map(scenario => ({
-        scenario,
-        cashToClose: loanInputs.cashToClose,
-        data: calculateAmortization(home, scenario, loanInputs.principal)
-    }));
+    resultsData = home.scenarios.map(scenario => {
+        const result = calculateScenario(home, scenario);
+        return { ...result, scenario, data: result.amortization };
+    });
     renderResults(home);
 }
 
@@ -325,8 +421,8 @@ function getComparisonData(home) {
     const scenario = scenarioById(home, selectedId) || home.scenarios[0];
     if (!scenario) return null;
     state.compareScenarioIds[home.id] = scenario.id;
-    const loanInputs = calculateLoanInputs(home);
-    return { home, scenario, cashToClose: loanInputs.cashToClose, data: calculateAmortization(home, scenario, loanInputs.principal) };
+    const result = calculateScenario(home, scenario);
+    return { ...result, home, scenario, data: result.amortization };
 }
 
 function isHomeIncluded(homeId) {
@@ -352,15 +448,25 @@ function renderComparison() {
     const controls = comparisonData.map(item => `
         <div class="comparison-control"><label>${escapeHtml(item.home.name)}</label>
             <select data-compare-scenario-home-id="${item.home.id}">
-                ${item.home.scenarios.map(scenario => `<option value="${scenario.id}" ${scenario.id === item.scenario.id ? 'selected' : ''}>${escapeHtml(getScenarioLabel(scenario))}</option>`).join('')}
+                ${item.home.scenarios.map(scenario => `<option value="${scenario.id}" ${scenario.id === item.scenario.id ? 'selected' : ''}>${escapeHtml(getScenarioDisplayName(scenario))}</option>`).join('')}
             </select>
         </div>`).join('');
 
     const rows = [
-        ['Purchase price', item => formatCurrency(item.home.price)],
-        ['Down payment', item => formatCurrency(calculateLoanInputs(item.home).downPayment)],
+        ['Purchase price', item => formatCurrency(item.finalPrice)],
+        ['Down payment', item => formatCurrency(item.downPayment)],
+        ['Loan amount', item => formatCurrency(item.loanAmount)],
+        ['Interest rate', item => `${item.finalRate.toFixed(3)}%`],
+        ['Rate-buydown points', item => item.pointsPurchased.toFixed(2)],
+        ['Incentive used', item => formatCurrency(item.incentiveUsed)],
+        ['Incentive remaining', item => formatCurrency(item.incentiveRemaining)],
+        ['Estimated closing costs', item => formatCurrency(item.estimatedClosingCosts)],
+        ['Closing-cost credit', item => formatCurrency(item.closingCredit)],
+        ['Remaining closing costs', item => formatCurrency(item.remainingClosingCosts)],
+        ['Design/lot credit', item => formatCurrency(item.designCredit)],
+        ['Remaining upgrade cost', item => formatCurrency(item.remainingDesignCost)],
         ['Cash needed to close', item => formatCurrency(item.cashToClose)],
-        ['Loan scenario', item => escapeHtml(getScenarioLabel(item.scenario))],
+        ['Purchase scenario', item => escapeHtml(getScenarioDisplayName(item.scenario))],
         ['Loan term', item => `${item.scenario.termYears} years`],
         ['Year 1 monthly payment', item => formatCurrency(item.data[0].totalMonthly)],
         ['Remaining balance after 3 years', item => formatCurrency(item.data[2].balance)],
@@ -372,11 +478,11 @@ function renderComparison() {
         ['Interest paid after 3 years', item => formatCurrency(item.data[2].cumulativeInterest)],
         ['Interest paid after 5 years', item => formatCurrency(item.data[4].cumulativeInterest)],
         ['Interest paid after 10 years', item => formatCurrency(item.data[9].cumulativeInterest)],
-        ['Total interest over 30 years', item => formatCurrency(item.data[29].cumulativeInterest)]
+        ['Total interest over loan term', item => formatCurrency(item.data[item.data.length - 1].cumulativeInterest)]
     ];
     const table = `<div class="comparison-scroll"><table class="comparison-table"><thead><tr><th>Metric</th>${comparisonData.map(item => `<th>${escapeHtml(item.home.name)}</th>`).join('')}</tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${label}</td>${comparisonData.map(item => `<td>${value(item)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
     $('#appContent').innerHTML = `<div class="card comparison-results-card">
-        <h2>Compare Homes</h2><p class="muted">Choose one loan scenario for each property.</p>
+        <h2>Compare Homes</h2><p class="muted">Choose one complete purchase scenario for each property.</p>
         ${comparisonManager}
         <div class="comparison-controls">${homeSelection}</div>
         <div class="comparison-controls comparison-scenarios">${controls}</div>
@@ -412,7 +518,7 @@ function renderComparisonChart(comparisonData) {
         data: {
             labels: Array.from({ length: state.compareChartYears }, (_, index) => `Yr ${index + 1}`),
             datasets: comparisonData.map((item, index) => ({
-                label: `${item.home.name} - ${getScenarioLabel(item.scenario)}`,
+                label: `${item.home.name} - ${getScenarioDisplayName(item.scenario)}`,
                 homeId: item.home.id,
                 hidden: state.compareChartVisibility[item.home.id] === false,
                 data: item.data.slice(0, state.compareChartYears).map(row => metricValue(row, state.compareChartMetric)),
@@ -441,14 +547,22 @@ function renderResults(home) {
         state.activeResultTab = 'summary';
     }
 
-    const tabs = `<div class="result-tabs"><button id="tab-summary" class="result-tab ${state.activeResultTab === 'summary' ? 'active' : ''}" data-action="result-tab" data-result-tab="summary">Summary & Graphs</button>${resultsData.map((result, index) => `<button id="tab-data-${index}" class="result-tab ${state.activeResultTab === 'data-' + index ? 'active' : ''}" data-action="result-tab" data-result-tab="data-${index}">${escapeHtml(getScenarioLabel(result.scenario))}</button>`).join('')}</div>`;
-    const downPayment = calculateLoanInputs(home).downPayment;
-    const downPercent = home.price ? (downPayment / home.price * 100).toFixed(1).replace(/\.0$/, '') : '0';
+    const tabs = `<div class="result-tabs"><button id="tab-summary" class="result-tab ${state.activeResultTab === 'summary' ? 'active' : ''}" data-action="result-tab" data-result-tab="summary">Summary & Graphs</button>${resultsData.map((result, index) => `<button id="tab-data-${index}" class="result-tab ${state.activeResultTab === 'data-' + index ? 'active' : ''}" data-action="result-tab" data-result-tab="data-${index}">${escapeHtml(getScenarioDisplayName(result.scenario))}</button>`).join('')}</div>`;
     const milestone = (result, field, color = '') => `<div class="milestone-box"><div class="milestone-row"><span class="milestone-label">Year 3</span><span class="milestone-val">${formatCurrency(result.data[2][field])}</span></div><hr><div class="milestone-row"><span class="milestone-label">Year 5</span><span class="milestone-val">${formatCurrency(result.data[4][field])}</span></div><hr><div class="milestone-row"><span class="milestone-label">Year 10</span><span class="milestone-val" style="${color ? `color:${color};` : ''}font-weight:bold;">${formatCurrency(result.data[9][field])}</span></div></div>`;
     const finalInterest = result => formatCurrency(result.data[result.data.length - 1].cumulativeInterest);
-    const summary = `<table class="summary-table"><thead><tr><th>Metric</th>${resultsData.map(result => `<th>${escapeHtml(getScenarioLabel(result.scenario))}</th>`).join('')}</tr></thead><tbody>
-        <tr><td><b>Down payment @ ${downPercent}%</b></td>${resultsData.map(() => `<td>${formatCurrency(downPayment)}</td>`).join('')}</tr>
-        <tr><td><b>Actual Cash Needed to Close</b></td>${resultsData.map(result => `<td>${formatCurrency(result.cashToClose)}</td>`).join('')}</tr>
+    const summary = `<table class="summary-table"><thead><tr><th>Metric</th>${resultsData.map(result => `<th>${escapeHtml(getScenarioDisplayName(result.scenario))}</th>`).join('')}</tr></thead><tbody>
+        <tr><td><b>Final Purchase Price</b></td>${resultsData.map(result => `<td>${formatCurrency(result.finalPrice)}</td>`).join('')}</tr>
+        <tr><td><b>Down Payment</b></td>${resultsData.map(result => `<td>${formatCurrency(result.downPayment)}</td>`).join('')}</tr>
+        <tr><td><b>Loan Amount</b></td>${resultsData.map(result => `<td>${formatCurrency(result.loanAmount)}</td>`).join('')}</tr>
+        <tr><td><b>Final Interest Rate</b></td>${resultsData.map(result => `<td>${result.finalRate.toFixed(3)}%</td>`).join('')}</tr>
+        <tr><td><b>Rate-Buydown Points</b></td>${resultsData.map(result => `<td>${result.pointsPurchased.toFixed(2)}</td>`).join('')}</tr>
+        <tr><td><b>Builder Incentive Used</b></td>${resultsData.map(result => `<td>${formatCurrency(result.incentiveUsed)}</td>`).join('')}</tr>
+        <tr><td><b>Estimated Closing Costs</b></td>${resultsData.map(result => `<td>${formatCurrency(result.estimatedClosingCosts)}</td>`).join('')}</tr>
+        <tr><td><b>Closing-Cost Credit</b></td>${resultsData.map(result => `<td>${formatCurrency(result.closingCredit)}</td>`).join('')}</tr>
+        <tr><td><b>Remaining Closing Costs</b></td>${resultsData.map(result => `<td>${formatCurrency(result.remainingClosingCosts)}</td>`).join('')}</tr>
+        <tr><td><b>Design/Lot Credit</b></td>${resultsData.map(result => `<td>${formatCurrency(result.designCredit)}</td>`).join('')}</tr>
+        <tr><td><b>Remaining Upgrade Cost</b></td>${resultsData.map(result => `<td>${formatCurrency(result.remainingDesignCost)}</td>`).join('')}</tr>
+        <tr><td><b>Cash Needed to Close</b></td>${resultsData.map(result => `<td>${formatCurrency(result.cashToClose)}</td>`).join('')}</tr>
         <tr><td><b>Year 1 Monthly Payment</b></td>${resultsData.map(result => `<td>${formatCurrency(result.data[0].totalMonthly)}</td>`).join('')}</tr>
         <tr><td><b>Remaining Balance</b></td>${resultsData.map(result => `<td>${milestone(result, 'balance')}</td>`).join('')}</tr>
         <tr><td><b>Net Equity (Value - Balance)</b></td>${resultsData.map(result => `<td>${milestone(result, 'equity', '#137333')}</td>`).join('')}</tr>
@@ -472,7 +586,7 @@ function renderHomeChart() {
     const colors = ['#1a73e8', '#ea4335', '#34a853', '#fbbc04', '#673ab7'];
     chart = new Chart($('#balanceChart').getContext('2d'), {
         type: 'line',
-        data: { labels: Array.from({ length: 30 }, (_, index) => `Yr ${index + 1}`), datasets: resultsData.map((result, index) => ({ label: getScenarioLabel(result.scenario), data: result.data.slice(0, 30).map(row => metricValue(row, state.activeChartMetric)), borderColor: colors[index % colors.length], backgroundColor: 'transparent' })) },
+        data: { labels: Array.from({ length: 30 }, (_, index) => `Yr ${index + 1}`), datasets: resultsData.map((result, index) => ({ label: getScenarioDisplayName(result.scenario), data: result.data.slice(0, 30).map(row => metricValue(row, state.activeChartMetric)), borderColor: colors[index % colors.length], backgroundColor: 'transparent' })) },
         options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { tooltip: { itemSort: compareChartCalloutValues, callbacks: { label: context => `${context.dataset.label}: ${formatCurrency(context.raw)}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: value => `$${value.toLocaleString()}` } } } }
     });
 }
@@ -564,6 +678,7 @@ function handleInput(event) {
     const target = event.target;
     if (target.dataset.homeField) updateHome(target.dataset.homeId, target.dataset.homeField, target.value);
     if (target.dataset.scenarioField) updateScenario(target.closest('.scenario-box')?.dataset.homeId || getActiveHome().id, target.dataset.scenarioId, target.dataset.scenarioField, target.value);
+    if (target.dataset.allocationField) updateScenarioAllocation(target.dataset.homeId, target.dataset.scenarioId, target.dataset.allocationField, target.value, target);
     if (target.dataset.comparisonField) {
         const comparison = getActiveComparison();
         if (comparison) {

@@ -2,6 +2,8 @@ export const STORAGE_KEY = 'mortgageAnalyzerData';
 export const DEFAULT_BUYDOWN_YEAR_1 = 2;
 export const DEFAULT_BUYDOWN_YEAR_2 = 1;
 export const DEFAULT_LOAN_TERM_YEARS = 30;
+export const DEFAULT_CLOSING_COST_PERCENT = 2;
+export const INCENTIVE_BUCKETS = ['rateBuydown', 'closingCosts', 'priceReduction', 'designUpgrades'];
 
 const DEFAULT_SCENARIO = {
     id: 1,
@@ -12,7 +14,14 @@ const DEFAULT_SCENARIO = {
     bdY1: DEFAULT_BUYDOWN_YEAR_1,
     bdY2: DEFAULT_BUYDOWN_YEAR_2,
     armRate: 5,
-    armFee: 5000
+    armFee: 5000,
+    designCost: 0,
+    incentiveAllocation: {
+        rateBuydown: 0,
+        closingCosts: 0,
+        priceReduction: 0,
+        designUpgrades: 0
+    }
 };
 
 const DEFAULT_FIXED_SCENARIO = {
@@ -24,7 +33,14 @@ const DEFAULT_FIXED_SCENARIO = {
     bdY1: 0,
     bdY2: 0,
     armRate: 5,
-    armFee: 5000
+    armFee: 5000,
+    designCost: 0,
+    incentiveAllocation: {
+        rateBuydown: 0,
+        closingCosts: 0,
+        priceReduction: 0,
+        designUpgrades: 0
+    }
 };
 
 function formatScenarioNumber(value) {
@@ -44,9 +60,15 @@ export function getScenarioLabel(scenario) {
     return `fixed @ ${rate}`;
 }
 
+export function getScenarioDisplayName(scenario) {
+    return typeof scenario?.name === 'string' && scenario.name.trim()
+        ? scenario.name.trim()
+        : getScenarioLabel(scenario);
+}
+
 export function createDefaultAppData() {
     return {
-        version: 2,
+        version: 3,
         activeHomeId: 1,
         activeGroupId: null,
         homes: [{
@@ -55,7 +77,10 @@ export function createDefaultAppData() {
             price: 750000,
             downType: 'amount',
             downValue: 225000,
-            closingCosts: 2,
+            closingCostEstimateMode: 'percentOfLoan',
+            closingCostEstimatePercent: DEFAULT_CLOSING_COST_PERCENT,
+            closingCostEstimateAmount: 0,
+            incentivePool: 0,
             tax: 1.8,
             hoa: 120,
             ins: 230,
@@ -72,11 +97,21 @@ function numberOr(value, fallback = 0) {
     return Number.isFinite(number) ? number : fallback;
 }
 
+function normalizeAllocation(source) {
+    const allocation = source?.incentiveAllocation || source?.allocation || {};
+    return INCENTIVE_BUCKETS.reduce((result, bucket) => {
+        result[bucket] = Math.max(0, numberOr(allocation[bucket]));
+        return result;
+    }, {});
+}
+
 function normalizeScenario(scenario, index) {
     const source = scenario && typeof scenario === 'object' ? scenario : {};
     return {
         id: source.id ?? index + 1,
-        name: getScenarioLabel(source),
+        name: typeof source.name === 'string' && source.name.trim()
+            ? source.name.trim()
+            : getScenarioLabel(source),
         type: ['fixed', 'buydown', 'arm'].includes(source.type) ? source.type : 'fixed',
         termYears: numberOr(source.termYears, DEFAULT_LOAN_TERM_YEARS) > 0
             ? numberOr(source.termYears, DEFAULT_LOAN_TERM_YEARS)
@@ -85,7 +120,9 @@ function normalizeScenario(scenario, index) {
         bdY1: numberOr(source.bdY1),
         bdY2: numberOr(source.bdY2),
         armRate: numberOr(source.armRate),
-        armFee: numberOr(source.armFee)
+        armFee: numberOr(source.armFee),
+        designCost: Math.max(0, numberOr(source.designCost ?? source.upgrades?.selectedCost)),
+        incentiveAllocation: normalizeAllocation(source)
     };
 }
 
@@ -94,6 +131,13 @@ function normalizeHome(home, index) {
     const scenarios = Array.isArray(source.scenarios)
         ? source.scenarios.map(normalizeScenario)
         : [];
+    const closingCostEstimateMode = source.closingCostEstimateMode === 'fixed'
+        ? 'fixed'
+        : source.closingCostEstimateMode === 'percentOfLoan'
+            ? 'percentOfLoan'
+            : source.closingCostEstimateAmount !== undefined && source.closingCosts === undefined
+                ? 'fixed'
+                : 'percentOfLoan';
 
     return {
         id: source.id ?? index + 1,
@@ -101,7 +145,13 @@ function normalizeHome(home, index) {
         price: numberOr(source.price),
         downType: source.downType === 'percent' ? 'percent' : 'amount',
         downValue: numberOr(source.downValue),
-        closingCosts: numberOr(source.closingCosts),
+        closingCostEstimateMode,
+        closingCostEstimatePercent: numberOr(
+            source.closingCostEstimatePercent ?? source.closingCosts,
+            DEFAULT_CLOSING_COST_PERCENT
+        ),
+        closingCostEstimateAmount: Math.max(0, numberOr(source.closingCostEstimateAmount)),
+        incentivePool: Math.max(0, numberOr(source.incentivePool ?? source.builderIncentive)),
         tax: numberOr(source.tax),
         hoa: numberOr(source.hoa),
         ins: numberOr(source.ins),
@@ -121,7 +171,7 @@ export function normalizeAppData(data) {
 
     return {
         ...source,
-        version: 2,
+        version: 3,
         activeHomeId,
         activeGroupId: source.activeGroupId ?? null,
         homes: safeHomes,
