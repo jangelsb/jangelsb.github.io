@@ -132,6 +132,8 @@ function renderIncentiveAllocation(home, scenario) {
     const total = INCENTIVE_BUCKETS.reduce((sum, bucket) => sum + allocation[bucket], 0);
     const pool = Math.max(0, Number(home.incentivePool) || 0);
     if (pool === 0) return '';
+    const scenarioResult = calculateScenario(home, scenario);
+    const allocationCaps = scenarioResult.allocationCaps;
     const remaining = pool - total;
     const status = remaining >= 0
         ? `${formatCurrency(remaining)} unallocated`
@@ -142,6 +144,7 @@ function renderIncentiveAllocation(home, scenario) {
                 data-home-id="${home.id}" data-scenario-id="${scenario.id}" data-allocation-field="${bucket}">
             <input type="number" min="0" max="${pool}" step="100" value="${allocation[bucket]}" aria-label="${incentiveBucketLabels[bucket]} amount"
                 data-home-id="${home.id}" data-scenario-id="${scenario.id}" data-allocation-field="${bucket}">
+            <button class="btn-secondary allocation-max" type="button" title="Maximum eligible: ${formatCurrency(allocationCaps[bucket])}" data-action="max-allocation" data-home-id="${home.id}" data-scenario-id="${scenario.id}" data-allocation-field="${bucket}">Max</button>
         </div>`).join('');
     return `<div class="incentive-allocation">
         <div class="allocation-heading"><strong>Builder incentive allocation</strong><span>${formatCurrency(pool)} available</span></div>
@@ -322,6 +325,21 @@ function updateScenarioAllocation(homeId, scenarioId, field, value, inputElement
     }
     persist();
     runCalculations();
+}
+
+function maxScenarioAllocation(homeId, scenarioId, field) {
+    const home = homeById(homeId);
+    const scenario = scenarioById(home, scenarioId);
+    if (!home || !scenario || !INCENTIVE_BUCKETS.includes(field)) return;
+    const allocation = scenarioAllocation(scenario);
+    const otherTotal = INCENTIVE_BUCKETS
+        .filter(bucket => bucket !== field)
+        .reduce((sum, bucket) => sum + allocation[bucket], 0);
+    const availablePool = Math.max(0, (Number(home.incentivePool) || 0) - otherTotal);
+    const cap = calculateScenario(home, scenario).allocationCaps[field];
+    scenario.incentiveAllocation[field] = Math.min(availablePool, Number.isFinite(cap) ? cap : availablePool);
+    persist();
+    renderApp();
 }
 
 function addHome() {
@@ -773,6 +791,7 @@ function handleClick(event) {
     else if (action === 'delete-home') deleteHome(target.dataset.homeId);
     else if (action === 'add-scenario') addScenario(target.dataset.homeId);
     else if (action === 'delete-scenario') deleteScenario(target.dataset.homeId, target.dataset.scenarioId);
+    else if (action === 'max-allocation') maxScenarioAllocation(target.dataset.homeId, target.dataset.scenarioId, target.dataset.allocationField);
     else if (action === 'save-comparison') saveCurrentComparison();
     else if (action === 'delete-comparison') deleteCurrentComparison();
     else if (action === 'result-tab') {

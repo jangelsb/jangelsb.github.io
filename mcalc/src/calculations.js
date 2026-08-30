@@ -86,6 +86,12 @@ export function calculateScenario(home, config) {
     const designCredit = Math.min(allocation.designUpgrades, designCost);
     const remainingClosingCosts = Math.max(0, loanInputs.closingCosts - closingCredit);
     const remainingDesignCost = Math.max(0, designCost - designCredit);
+    const allocationCaps = {
+        rateBuydown: maxRateBuydownPoints * pointCost,
+        closingCosts: loanInputs.closingCosts,
+        priceReduction: basePrice,
+        designUpgrades: designCost
+    };
     const effectiveHome = { ...home, price: finalPrice };
     const effectiveConfig = { ...config, rate: finalRate };
     const amortization = calculateAmortization(effectiveHome, effectiveConfig, loanInputs.principal);
@@ -119,6 +125,7 @@ export function calculateScenario(home, config) {
         rateReductionPerPoint,
         rateReduction,
         rateBuydownUnapplied: Math.max(0, allocation.rateBuydown - appliedRateBuydown),
+        allocationCaps,
         estimatedClosingCosts: loanInputs.closingCosts,
         closingCredit,
         remainingClosingCosts,
