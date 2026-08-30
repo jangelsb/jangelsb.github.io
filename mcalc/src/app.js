@@ -21,6 +21,7 @@ import {
     CREATE_NEW_COMPARISON
 } from './comparisons.js';
 import { loadAppData, parseImportedData, saveAppData } from './storage.js';
+import { decodeShareHash, encodeShareState } from './url-state.js';
 
 const state = {
     activeResultTab: 'summary',
@@ -35,9 +36,13 @@ const state = {
     newComparison: { name: '', description: '' }
 };
 
-let appData = loadAppData();
+const initialShareState = await loadInitialShareState();
+let appData = initialShareState?.appData || loadAppData();
+if (initialShareState?.ui) Object.assign(state, initialShareState.ui);
 let chart = null;
 let resultsData = [];
+let shareUpdateTimer = null;
+let shareUpdateSequence = 0;
 
 const $ = selector => document.querySelector(selector);
 
@@ -50,6 +55,55 @@ function destroyChart() {
 
 function persist() {
     saveAppData(appData);
+    scheduleShareUrlUpdate();
+}
+
+async function loadInitialShareState() {
+    if (!window.location.hash.startsWith('#s=')) return null;
+    try {
+        return await decodeShareHash(window.location.hash);
+    } catch (error) {
+        console.warn('Could not load shared mortgage data; using local data.', error);
+        alert('This share link is invalid or unsupported. Your local calculator data was kept.');
+        return null;
+    }
+}
+
+function shareUiState() {
+    return {
+        activeResultTab: state.activeResultTab,
+        activeChartMetric: state.activeChartMetric,
+        activeView: state.activeView,
+        compareChartMetric: state.compareChartMetric,
+        compareChartYears: state.compareChartYears,
+        compareScenarioIds: state.compareScenarioIds,
+        compareHomeIds: state.compareHomeIds,
+        compareChartVisibility: state.compareChartVisibility,
+        activeComparisonId: state.activeComparisonId,
+        newComparison: state.newComparison
+    };
+}
+
+async function updateShareUrlNow() {
+    if (shareUpdateTimer) {
+        clearTimeout(shareUpdateTimer);
+        shareUpdateTimer = null;
+    }
+    const sequence = ++shareUpdateSequence;
+    const hash = await encodeShareState(appData, shareUiState());
+    if (sequence !== shareUpdateSequence) return window.location.href;
+    const url = new URL(window.location.href);
+    url.hash = hash.slice(1);
+    window.history.replaceState(null, '', url);
+    return url.href;
+}
+
+function scheduleShareUrlUpdate() {
+    if (shareUpdateTimer) clearTimeout(shareUpdateTimer);
+    shareUpdateTimer = setTimeout(() => {
+        shareUpdateTimer = null;
+        updateShareUrlNow().catch(error => console.warn('Could not update share URL.', error));
+    }, 300);
 }
 
 function getActiveHome() {
@@ -708,6 +762,7 @@ function renderComparisonChart(comparisonData) {
                 const current = legend.chart.isDatasetVisible(datasetIndex);
                 legend.chart[current ? 'hide' : 'show'](datasetIndex);
                 state.compareChartVisibility[legend.chart.data.datasets[datasetIndex].homeId] = !current;
+                scheduleShareUrlUpdate();
             }},
             title: { display: true, text: `${metricLabel(state.compareChartMetric)} Across Homes (Years 1-${state.compareChartYears})` },
             tooltip: {
@@ -887,6 +942,7 @@ function handleInput(event) {
         } else {
             state.newComparison[target.dataset.comparisonField] = target.value;
         }
+        scheduleShareUrlUpdate();
     }
     if (target.dataset.comparisonYears) {
         state.compareChartYears = Number(target.value);
@@ -901,6 +957,7 @@ function handleInput(event) {
             chart.options.plugins.title.text = `${metricLabel(state.compareChartMetric)} Across Homes (Years 1-${state.compareChartYears})`;
             chart.update();
         }
+        scheduleShareUrlUpdate();
     }
 }
 
@@ -924,10 +981,12 @@ function handleChange(event) {
         state.activeChartMetric = target.value;
         $('#chartTitle').textContent = chartTitle(target.value);
         renderHomeChart();
+        scheduleShareUrlUpdate();
     }
     if (target.dataset.chartContext === 'comparison') {
         state.compareChartMetric = target.value;
         renderComparison();
+        scheduleShareUrlUpdate();
     }
 }
 
@@ -952,6 +1011,7 @@ function handleClick(event) {
     } else if (action === 'show-comparison') {
         state.activeView = 'compare';
         renderApp();
+        scheduleShareUrlUpdate();
     } else if (action === 'add-home') addHome();
     else if (action === 'duplicate-home') duplicateHome(target.dataset.homeId);
     else if (action === 'delete-home') deleteHome(target.dataset.homeId);
@@ -966,6 +1026,7 @@ function handleClick(event) {
         document.querySelectorAll('.result-tab').forEach(tab => tab.classList.remove('active'));
         $(`#res-${state.activeResultTab}`).style.display = 'block';
         target.classList.add('active');
+        scheduleShareUrlUpdate();
     }
 }
 
@@ -1008,7 +1069,7 @@ $('#exportButton').addEventListener('click', exportJSON);
 $('#importButton').addEventListener('click', () => $('#importFile').click());
 
 const savedActiveComparison = appData.scenarioGroups.find(group => group.id === Number(appData.activeGroupId));
-if (savedActiveComparison) {
+if (savedActiveComparison && !initialShareState) {
     const applied = applyComparisonHomeConfigs(savedActiveComparison.homeConfigs);
     state.compareHomeIds = applied.compareHomeIds;
     state.compareScenarioIds = applied.compareScenarioIds;
@@ -1016,3 +1077,15 @@ if (savedActiveComparison) {
 }
 
 renderApp();
+
+$('#shareButton').addEventListener('click', async () => {
+    const button = $('#shareButton');
+    try {
+        const shareUrl = await updateShareUrlNow();
+        await navigator.clipboard.writeText(shareUrl);
+        button.textContent = 'Copied!';
+        setTimeout(() => { button.textContent = 'Copy Share Link'; }, 1500);
+    } catch (error) {
+        alert('The share link could not be copied. You can copy the current URL from the address bar.');
+    }
+});
