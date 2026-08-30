@@ -66,7 +66,6 @@ function scenarioById(home, scenarioId) {
 function renderApp() {
     if (appData.homes.length < 2 && state.activeView === 'compare') state.activeView = 'home';
     renderTabsAndControls();
-    renderComparisonCard();
     if (state.activeView === 'compare') {
         renderComparison();
         return;
@@ -82,26 +81,15 @@ function renderTabsAndControls() {
         return `<button class="home-tab ${active}" data-action="switch-home" data-home-id="${home.id}">${escapeHtml(home.name)}</button>`;
     }).join('');
 
-    $('#homeTabsContainer').innerHTML = `${tabs}
-        <button class="btn-success add-home" data-action="add-home">+ Add Home</button>`;
+    $('#homeTabsContainer').innerHTML = `<div class="home-tab-list">${tabs}</div>
+        <div class="home-action-list"><button class="btn-success" data-action="add-home">+ Add Home</button>${appData.homes.length > 1 ? `<button class="home-tab compare-home-tab ${state.activeView === 'compare' ? 'active' : ''}" data-action="show-comparison">Compare Homes</button>` : ''}</div>`;
 }
 
 function getActiveComparison() {
     return appData.scenarioGroups.find(group => group.id === state.activeComparisonId) || null;
 }
 
-function renderComparisonCard() {
-    const container = $('#comparisonCardContainer');
-    if (appData.homes.length < 2) {
-        container.innerHTML = '';
-        return;
-    }
-
-    if (state.activeView !== 'compare') {
-        container.innerHTML = '<div class="card comparison-card comparison-card-compact" data-action="show-comparison" role="button" tabindex="0"><h2>Compare Homes</h2></div>';
-        return;
-    }
-
+function renderComparisonManager() {
     const comparison = getActiveComparison();
     const name = comparison?.name ?? state.newComparison.name;
     const description = comparison?.description ?? state.newComparison.description;
@@ -112,15 +100,12 @@ function renderComparisonCard() {
         ? '<button class="btn-danger" data-action="delete-comparison">Delete Comparison</button>'
         : '<button class="btn-success" data-action="save-comparison">Save New Comparison</button>';
 
-    container.innerHTML = `<div class="card comparison-card comparison-card-expanded">
-        <div class="flex-between comparison-card-header"><div><h2>Compare Homes</h2><p class="muted">Save and reuse a comparison of your properties.</p></div></div>
-        <div class="comparison-controls comparison-card-controls">
+    return `<div class="comparison-controls comparison-card-controls">
             <div class="comparison-control"><label for="comparisonSelector">Comparison</label><select id="comparisonSelector" data-action="select-comparison"><option value="${CREATE_NEW_COMPARISON}" ${selectedValue === CREATE_NEW_COMPARISON ? 'selected' : ''}>Create new</option>${options}</select></div>
             <div class="comparison-control comparison-title-control"><label for="comparisonName">Title</label><input id="comparisonName" value="${escapeHtml(name)}" placeholder="Comparison title" data-comparison-field="name"></div>
             <div class="comparison-control comparison-description-control"><label for="comparisonDescription">Description / Notes</label><textarea id="comparisonDescription" placeholder="Add notes about this comparison..." data-comparison-field="description">${escapeHtml(description)}</textarea></div>
         </div>
-        <div class="button-row comparison-card-actions">${actions}</div>
-    </div>`;
+        <div class="button-row comparison-card-actions">${actions}</div>`;
 }
 
 function renderActiveHome() {
@@ -354,9 +339,10 @@ function renderComparison() {
     const homeSelection = homes.map(home => `
         <label class="checkbox-label"><input type="checkbox" data-compare-home-id="${home.id}" ${isHomeIncluded(home.id) ? 'checked' : ''}> ${escapeHtml(home.name)}</label>
     `).join('');
+    const comparisonManager = renderComparisonManager();
 
     if (!comparisonData.length) {
-        $('#appContent').innerHTML = `<div class="card"><h2>Compare Homes</h2><p>Select at least one home to compare.</p><div class="comparison-controls">${homeSelection}</div></div>`;
+        $('#appContent').innerHTML = `<div class="card comparison-results-card"><h2>Compare Homes</h2><p>Select at least one home to compare.</p>${comparisonManager}<div class="comparison-controls">${homeSelection}</div></div>`;
         $('#resultsContainer').innerHTML = '';
         destroyChart();
         return;
@@ -388,8 +374,9 @@ function renderComparison() {
         ['Total interest over 30 years', item => formatCurrency(item.data[29].cumulativeInterest)]
     ];
     const table = `<div class="comparison-scroll"><table class="comparison-table"><thead><tr><th>Metric</th>${comparisonData.map(item => `<th>${escapeHtml(item.home.name)}</th>`).join('')}</tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${label}</td>${comparisonData.map(item => `<td>${value(item)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-    $('#appContent').innerHTML = `<div class="card">
-        <h2>Comparison Results</h2><p class="muted">Choose one loan scenario for each property.</p>
+    $('#appContent').innerHTML = `<div class="card comparison-results-card">
+        <h2>Compare Homes</h2><p class="muted">Choose one loan scenario for each property.</p>
+        ${comparisonManager}
         <div class="comparison-controls">${homeSelection}</div>
         <div class="comparison-controls comparison-scenarios">${controls}</div>
         ${table}
@@ -525,7 +512,7 @@ function startNewComparison() {
     state.newComparison = { name: '', description: '' };
     appData.activeGroupId = null;
     persist();
-    renderComparisonCard();
+    renderApp();
 }
 
 function loadComparisonFromGroup(groupId) {
@@ -639,7 +626,6 @@ function handleClick(event) {
         persist();
         renderApp();
     } else if (action === 'show-comparison') {
-        if (event.target.closest('input, textarea, select, button, label')) return;
         state.activeView = 'compare';
         renderApp();
     } else if (action === 'add-home') addHome();
