@@ -55,8 +55,14 @@ tr:nth-child(even) { background-color: #f8f9fa; }
 .table-scroll, .comparison-scroll { overflow-x: auto; }
 .comparison-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
 .comparison-control { min-width: 220px; }
-.comparison-toolbar { margin-bottom: 15px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
 .comparison-scenarios { margin-top: 15px; }
+.comparison-card { border-left: 4px solid #1a73e8; }
+.comparison-card-header { gap: 16px; }
+.comparison-card-controls { margin-top: 15px; }
+.comparison-title-control { flex: 1 1 240px; }
+.comparison-description-control { flex: 2 1 320px; }
+.comparison-description-control textarea { min-height: 42px; }
+.comparison-card-actions { justify-content: flex-end; margin-top: 15px; }
 .checkbox-label { display: flex; align-items: center; gap: 6px; margin: 0; }
 .checkbox-label input { width: auto; }
 .milestone-box { display: flex; flex-direction: column; gap: 4px; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid #dee2e6; }
@@ -65,7 +71,4 @@ tr:nth-child(even) { background-color: #f8f9fa; }
 .milestone-val { font-weight: 500; white-space: nowrap; }
 .milestone-box hr { margin: 2px 0; border: 0; border-top: 1px dashed #e0e0e0; }
 .muted { margin: 0; color: #5f6368; }
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-.modal-card { background: white; border-radius: 8px; padding: 20px; width: 90%; max-width: 500px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-.modal-actions { justify-content: flex-end; margin-top: 20px; }
 @media (max-width: 640px) { body { padding: 12px; } .top-bar { align-items: flex-start; flex-direction: column; } .property-header { align-items: flex-start; flex-direction: column; } .property-name { width: 100%; } }

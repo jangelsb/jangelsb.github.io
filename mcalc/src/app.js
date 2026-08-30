@@ -10,6 +10,11 @@ import {
     sortHomesForDisplay
 } from './data.js';
 import { calculateAmortization, calculateLoanInputs } from './calculations.js';
+import {
+    applyComparisonHomeConfigs,
+    buildComparisonHomeConfigs,
+    CREATE_NEW_COMPARISON
+} from './comparisons.js';
 import { loadAppData, parseImportedData, saveAppData } from './storage.js';
 
 const state = {
@@ -20,7 +25,9 @@ const state = {
     compareChartYears: 30,
     compareScenarioIds: {},
     compareHomeIds: {},
-    compareChartVisibility: {}
+    compareChartVisibility: {},
+    activeComparisonId: null,
+    newComparison: { name: '', description: '' }
 };
 
 let appData = loadAppData();
@@ -57,7 +64,9 @@ function scenarioById(home, scenarioId) {
 }
 
 function renderApp() {
+    if (appData.homes.length < 2 && state.activeView === 'compare') state.activeView = 'home';
     renderTabsAndControls();
+    renderComparisonCard();
     if (state.activeView === 'compare') {
         renderComparison();
         return;
@@ -74,8 +83,35 @@ function renderTabsAndControls() {
     }).join('');
 
     $('#homeTabsContainer').innerHTML = `${tabs}
-        <button class="home-tab ${state.activeView === 'compare' ? 'active' : ''}" data-action="show-comparison">Compare Homes</button>
         <button class="btn-success add-home" data-action="add-home">+ Add Home</button>`;
+}
+
+function getActiveComparison() {
+    return appData.scenarioGroups.find(group => group.id === state.activeComparisonId) || null;
+}
+
+function renderComparisonCard() {
+    const container = $('#comparisonCardContainer');
+    if (appData.homes.length < 2) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const comparison = getActiveComparison();
+    const name = comparison?.name ?? state.newComparison.name;
+    const description = comparison?.description ?? state.newComparison.description;
+    const selectedValue = comparison ? String(comparison.id) : CREATE_NEW_COMPARISON;
+    const options = appData.scenarioGroups.map(group => `<option value="${group.id}" ${String(group.id) === selectedValue ? 'selected' : ''}>${escapeHtml(group.name)}</option>`).join('');
+
+    container.innerHTML = `<div class="card comparison-card">
+        <div class="flex-between comparison-card-header"><div><h2>Compare Homes</h2><p class="muted">Save and reuse a comparison of your properties.</p></div><button class="btn-primary" data-action="show-comparison">Open Comparison</button></div>
+        <div class="comparison-controls comparison-card-controls">
+            <div class="comparison-control"><label for="comparisonSelector">Comparison</label><select id="comparisonSelector" data-action="select-comparison"><option value="${CREATE_NEW_COMPARISON}" ${selectedValue === CREATE_NEW_COMPARISON ? 'selected' : ''}>Create new</option>${options}</select></div>
+            <div class="comparison-control comparison-title-control"><label for="comparisonName">Title</label><input id="comparisonName" value="${escapeHtml(name)}" placeholder="Comparison title" data-comparison-field="name"></div>
+            <div class="comparison-control comparison-description-control"><label for="comparisonDescription">Description / Notes</label><textarea id="comparisonDescription" placeholder="Add notes about this comparison..." data-comparison-field="description">${escapeHtml(description)}</textarea></div>
+        </div>
+        <div class="button-row comparison-card-actions"><button class="btn-success" data-action="save-comparison">Save Comparison</button>${comparison ? '<button class="btn-danger" data-action="delete-comparison">Delete Comparison</button>' : ''}</div>
+    </div>`;
 }
 
 function renderActiveHome() {
@@ -231,6 +267,9 @@ function deleteHome(homeId) {
     }
     if (!confirm('Are you sure you want to delete this home?')) return;
     appData.homes = appData.homes.filter(home => home.id !== Number(homeId));
+    appData.scenarioGroups.forEach(group => {
+        group.homeConfigs = group.homeConfigs.filter(config => config.homeId !== Number(homeId));
+    });
     appData.activeHomeId = appData.homes[0].id;
     persist();
     renderApp();
@@ -259,6 +298,11 @@ function deleteScenario(homeId, scenarioId) {
     const home = homeById(homeId);
     if (!home) return;
     home.scenarios = home.scenarios.filter(scenario => scenario.id !== Number(scenarioId));
+    appData.scenarioGroups.forEach(group => group.homeConfigs.forEach(config => {
+        if (Number(config.homeId) === Number(homeId) && Number(config.scenarioId) === Number(scenarioId)) {
+            config.scenarioId = home.scenarios[0]?.id || null;
+        }
+    }));
     persist();
     renderApp();
 }
@@ -335,15 +379,8 @@ function renderComparison() {
         ['Total interest over 30 years', item => formatCurrency(item.data[29].cumulativeInterest)]
     ];
     const table = `<div class="comparison-scroll"><table class="comparison-table"><thead><tr><th>Metric</th>${comparisonData.map(item => `<th>${escapeHtml(item.home.name)}</th>`).join('')}</tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${label}</td>${comparisonData.map(item => `<td>${value(item)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-    const savedGroups = appData.scenarioGroups.length ? `
-        <div class="comparison-control"><label>Load Saved Comparison</label><select data-action="load-group">
-            <option value="">-- Choose a saved comparison --</option>
-            ${appData.scenarioGroups.map(group => `<option value="${group.id}">${escapeHtml(group.name)}</option>`).join('')}
-        </select></div>` : '';
-
     $('#appContent').innerHTML = `<div class="card">
-        <div class="comparison-controls comparison-toolbar">${savedGroups}<button class="btn-secondary" data-action="open-save-modal">Save This Comparison</button></div>
-        <h2>Compare Homes</h2><p class="muted">Choose one loan scenario for each property.</p>
+        <h2>Comparison Results</h2><p class="muted">Choose one loan scenario for each property.</p>
         <div class="comparison-controls">${homeSelection}</div>
         <div class="comparison-controls comparison-scenarios">${controls}</div>
         ${table}
@@ -440,50 +477,76 @@ function renderHomeChart() {
     });
 }
 
+function currentComparisonConfigs() {
+    return buildComparisonHomeConfigs(appData.homes, state.compareScenarioIds, state.compareHomeIds);
+}
+
 function saveCurrentComparison() {
-    const name = $('#groupName').value.trim();
-    if (!name) return;
-    appData.scenarioGroups.push({
-        id: generateId(appData.scenarioGroups.map(group => group.id)),
-        name,
-        description: $('#groupDesc').value,
-        homeConfigs: appData.homes.map(home => ({ homeId: home.id, scenarioId: state.compareScenarioIds[home.id] || home.scenarios[0]?.id || null, isIncluded: isHomeIncluded(home.id) })),
-        createdDate: new Date().toISOString()
-    });
+    const name = $('#comparisonName')?.value.trim() || '';
+    const description = $('#comparisonDescription')?.value || '';
+    if (!name) {
+        alert('Add a title before saving this comparison.');
+        $('#comparisonName')?.focus();
+        return;
+    }
+
+    const comparison = getActiveComparison();
+    if (comparison) {
+        comparison.name = name;
+        comparison.description = description;
+        comparison.homeConfigs = currentComparisonConfigs();
+    } else {
+        const newComparison = {
+            id: generateId(appData.scenarioGroups.map(group => group.id)),
+            name,
+            description,
+            homeConfigs: currentComparisonConfigs(),
+            createdDate: new Date().toISOString()
+        };
+        appData.scenarioGroups.push(newComparison);
+        state.activeComparisonId = newComparison.id;
+    }
+    appData.activeGroupId = state.activeComparisonId;
     persist();
-    closeGroupModal();
     renderApp();
 }
 
-function openSaveComparisonModal() {
-    let modal = $('#groupModalContainer');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'groupModalContainer';
-        modal.className = 'modal-backdrop';
-        document.body.appendChild(modal);
-    }
-    modal.innerHTML = `<div class="modal-card"><h2>Save This Comparison</h2><form id="saveComparisonForm"><label>Comparison Name</label><input type="text" id="groupName" required><label>Description (optional)</label><textarea id="groupDesc"></textarea><div class="button-row modal-actions"><button type="button" class="btn-secondary" data-action="close-modal">Cancel</button><button type="submit" class="btn-success">Save Comparison</button></div></form></div>`;
-    modal.style.display = 'flex';
-    $('#groupName').focus();
-}
-
-function closeGroupModal() {
-    const modal = $('#groupModalContainer');
-    if (modal) modal.style.display = 'none';
+function startNewComparison() {
+    state.activeComparisonId = null;
+    state.newComparison = { name: '', description: '' };
+    appData.activeGroupId = null;
+    persist();
+    renderComparisonCard();
 }
 
 function loadComparisonFromGroup(groupId) {
     const group = appData.scenarioGroups.find(item => item.id === Number(groupId));
     if (!group) return;
-    state.compareHomeIds = {};
-    state.compareScenarioIds = {};
-    group.homeConfigs.forEach(config => {
-        state.compareHomeIds[config.homeId] = config.isIncluded;
-        state.compareScenarioIds[config.homeId] = config.scenarioId;
-    });
-    state.activeView = 'compare';
+    const applied = applyComparisonHomeConfigs(group.homeConfigs);
+    state.compareHomeIds = applied.compareHomeIds;
+    state.compareScenarioIds = applied.compareScenarioIds;
+    state.activeComparisonId = group.id;
+    appData.activeGroupId = group.id;
+    persist();
     renderApp();
+}
+
+function deleteCurrentComparison() {
+    const comparison = getActiveComparison();
+    if (!comparison || !confirm(`Delete comparison "${comparison.name}"?`)) return;
+    appData.scenarioGroups = appData.scenarioGroups.filter(group => group.id !== comparison.id);
+    state.activeComparisonId = null;
+    state.newComparison = { name: '', description: '' };
+    appData.activeGroupId = null;
+    persist();
+    renderApp();
+}
+
+function updateCurrentComparisonSelection() {
+    const comparison = getActiveComparison();
+    if (!comparison) return;
+    comparison.homeConfigs = currentComparisonConfigs();
+    persist();
 }
 
 function exportJSON() {
@@ -501,6 +564,19 @@ function handleInput(event) {
     const target = event.target;
     if (target.dataset.homeField) updateHome(target.dataset.homeId, target.dataset.homeField, target.value);
     if (target.dataset.scenarioField) updateScenario(target.closest('.scenario-box')?.dataset.homeId || getActiveHome().id, target.dataset.scenarioId, target.dataset.scenarioField, target.value);
+    if (target.dataset.comparisonField) {
+        const comparison = getActiveComparison();
+        if (comparison) {
+            comparison[target.dataset.comparisonField] = target.value;
+            persist();
+            if (target.dataset.comparisonField === 'name') {
+                const option = $('#comparisonSelector option:checked');
+                if (option) option.textContent = target.value;
+            }
+        } else {
+            state.newComparison[target.dataset.comparisonField] = target.value;
+        }
+    }
     if (target.dataset.comparisonYears) {
         state.compareChartYears = Number(target.value);
         const label = target.closest('.chart-range')?.querySelector('label');
@@ -521,11 +597,17 @@ function handleChange(event) {
     const target = event.target;
     if (target.dataset.compareHomeId) {
         state.compareHomeIds[target.dataset.compareHomeId] = target.checked;
+        updateCurrentComparisonSelection();
         renderComparison();
     }
     if (target.dataset.compareScenarioHomeId) {
         state.compareScenarioIds[target.dataset.compareScenarioHomeId] = Number(target.value);
+        updateCurrentComparisonSelection();
         renderComparison();
+    }
+    if (target.dataset.action === 'select-comparison') {
+        if (target.value === CREATE_NEW_COMPARISON) startNewComparison();
+        else loadComparisonFromGroup(target.value);
     }
     if (target.dataset.chartContext === 'home') {
         state.activeChartMetric = target.value;
@@ -536,7 +618,6 @@ function handleChange(event) {
         state.compareChartMetric = target.value;
         renderComparison();
     }
-    if (target.dataset.action === 'load-group') loadComparisonFromGroup(target.value);
 }
 
 function handleClick(event) {
@@ -546,7 +627,6 @@ function handleClick(event) {
     if (action === 'switch-home') {
         appData.activeHomeId = Number(target.dataset.homeId);
         state.activeView = 'home';
-        appData.activeGroupId = null;
         persist();
         renderApp();
     } else if (action === 'show-comparison') {
@@ -557,8 +637,8 @@ function handleClick(event) {
     else if (action === 'delete-home') deleteHome(target.dataset.homeId);
     else if (action === 'add-scenario') addScenario(target.dataset.homeId);
     else if (action === 'delete-scenario') deleteScenario(target.dataset.homeId, target.dataset.scenarioId);
-    else if (action === 'open-save-modal') openSaveComparisonModal();
-    else if (action === 'close-modal') closeGroupModal();
+    else if (action === 'save-comparison') saveCurrentComparison();
+    else if (action === 'delete-comparison') deleteCurrentComparison();
     else if (action === 'result-tab') {
         state.activeResultTab = target.dataset.resultTab;
         document.querySelectorAll('.result-pane').forEach(pane => { pane.style.display = 'none'; });
@@ -571,12 +651,6 @@ function handleClick(event) {
 document.addEventListener('input', handleInput);
 document.addEventListener('change', handleChange);
 document.addEventListener('click', handleClick);
-document.addEventListener('submit', event => {
-    if (event.target.id === 'saveComparisonForm') {
-        event.preventDefault();
-        saveCurrentComparison();
-    }
-});
 $('#importFile').addEventListener('change', event => {
     const file = event.target.files[0];
     if (!file) return;
@@ -584,6 +658,17 @@ $('#importFile').addEventListener('change', event => {
     reader.onload = () => {
         try {
             appData = parseImportedData(reader.result);
+            state.activeComparisonId = null;
+            state.newComparison = { name: '', description: '' };
+            state.compareHomeIds = {};
+            state.compareScenarioIds = {};
+            const importedComparison = appData.scenarioGroups.find(group => group.id === Number(appData.activeGroupId));
+            if (importedComparison) {
+                const applied = applyComparisonHomeConfigs(importedComparison.homeConfigs);
+                state.compareHomeIds = applied.compareHomeIds;
+                state.compareScenarioIds = applied.compareScenarioIds;
+                state.activeComparisonId = importedComparison.id;
+            }
             persist();
             renderApp();
             alert('Data imported successfully!');
@@ -597,4 +682,13 @@ $('#importFile').addEventListener('change', event => {
 
 $('#exportButton').addEventListener('click', exportJSON);
 $('#importButton').addEventListener('click', () => $('#importFile').click());
+
+const savedActiveComparison = appData.scenarioGroups.find(group => group.id === Number(appData.activeGroupId));
+if (savedActiveComparison) {
+    const applied = applyComparisonHomeConfigs(savedActiveComparison.homeConfigs);
+    state.compareHomeIds = applied.compareHomeIds;
+    state.compareScenarioIds = applied.compareScenarioIds;
+    state.activeComparisonId = savedActiveComparison.id;
+}
+
 renderApp();
