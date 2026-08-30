@@ -43,3 +43,17 @@ test('normalizes unsafe UI values from a share URL', async () => {
     assert.equal(result.ui.activeChartMetric, 'balance');
     assert.equal(result.ui.compareChartYears, 30);
 });
+
+test('decodes the uncompressed compatibility format', async () => {
+    const appData = createDefaultAppData();
+    appData.homes[0].name = 'Compatibility Home';
+    const payload = encodeURIComponent(JSON.stringify({
+        version: 1,
+        appData,
+        ui: {}
+    }));
+
+    const result = await decodeShareHash(`#s=1.u.${payload}`);
+
+    assert.equal(result.appData.homes[0].name, 'Compatibility Home');
+});

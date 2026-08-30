@@ -21,7 +21,7 @@ import {
     CREATE_NEW_COMPARISON
 } from './comparisons.js';
 import { loadAppData, parseImportedData, saveAppData } from './storage.js';
-import { decodeShareHash, encodeShareState } from './url-state.js';
+import { decodeShareHash, encodeShareStateSync } from './url-state.js?v=share-links-6';
 
 const state = {
     activeResultTab: 'summary',
@@ -87,23 +87,24 @@ function shareUiState() {
     };
 }
 
-async function updateShareUrlNow() {
+function updateShareUrlNow() {
     if (shareUpdateTimer) {
         clearTimeout(shareUpdateTimer);
         shareUpdateTimer = null;
     }
     const sequence = ++shareUpdateSequence;
-    const hash = await encodeShareState(appData, shareUiState());
+    const hash = encodeShareStateSync(appData, shareUiState());
     if (sequence !== shareUpdateSequence) return window.location.href;
-    const url = new URL(window.location.href);
-    url.hash = hash.slice(1);
-    window.history.replaceState(null, '', url.href);
-    return url.href;
+    const baseUrl = window.location.href.split('#', 1)[0];
+    const nextUrl = `${baseUrl}${hash}`;
+    if (window.history?.replaceState) window.history.replaceState(null, '', nextUrl);
+    else window.location.hash = hash.slice(1);
+    return nextUrl;
 }
 
 async function copyTextToClipboard(value) {
-    if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(value);
+    if (window.navigator?.clipboard?.writeText) {
+        await window.navigator.clipboard.writeText(value);
         return;
     }
 
@@ -114,16 +115,37 @@ async function copyTextToClipboard(value) {
     input.style.opacity = '0';
     document.body.appendChild(input);
     input.select();
-    const copied = document.execCommand('copy');
+    const copied = document.execCommand?.('copy');
     input.remove();
-    if (!copied) throw new Error('Clipboard access is unavailable.');
+    if (copied) return;
+    if (window.prompt) {
+        window.prompt('Copy this share link:', value);
+        return;
+    }
+    throw new Error('Clipboard access is unavailable.');
+}
+
+async function copyShareLink() {
+    const button = $('#shareButton');
+    try {
+        const shareUrl = updateShareUrlNow();
+        await copyTextToClipboard(shareUrl);
+        button.textContent = 'Copied!';
+        setTimeout(() => { button.textContent = 'Copy Share Link'; }, 1500);
+    } catch (error) {
+        alert('The share link could not be copied. You can copy the current URL from the address bar.');
+    }
 }
 
 function scheduleShareUrlUpdate() {
     if (shareUpdateTimer) clearTimeout(shareUpdateTimer);
     shareUpdateTimer = setTimeout(() => {
         shareUpdateTimer = null;
-        updateShareUrlNow().catch(error => console.warn('Could not update share URL.', error));
+        try {
+            updateShareUrlNow();
+        } catch (error) {
+            console.warn('Could not update share URL.', error);
+        }
     }, 300);
 }
 
@@ -1018,6 +1040,10 @@ function handleClick(event) {
         return;
     }
     const action = target.dataset.action;
+    if (action === 'share') {
+        copyShareLink();
+        return;
+    }
     if (action === 'toggle-help') {
         event.preventDefault();
         toggleHelp(target);
@@ -1098,15 +1124,3 @@ if (savedActiveComparison && !initialShareState) {
 }
 
 renderApp();
-
-$('#shareButton').addEventListener('click', async () => {
-    const button = $('#shareButton');
-    try {
-        const shareUrl = await updateShareUrlNow();
-        await copyTextToClipboard(shareUrl);
-        button.textContent = 'Copied!';
-        setTimeout(() => { button.textContent = 'Copy Share Link'; }, 1500);
-    } catch (error) {
-        alert('The share link could not be copied. You can copy the current URL from the address bar.');
-    }
-});

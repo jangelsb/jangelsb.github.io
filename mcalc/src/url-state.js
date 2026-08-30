@@ -88,8 +88,16 @@ export function buildShareState(appData, uiState) {
     };
 }
 
+export function encodeShareStateSync(appData, uiState) {
+    const json = JSON.stringify(buildShareState(appData, uiState));
+    return `${SHARE_PREFIX}u.${encodeURIComponent(json)}`;
+}
+
 export async function encodeShareState(appData, uiState) {
     const json = JSON.stringify(buildShareState(appData, uiState));
+    if (typeof TextEncoder === 'undefined' || typeof btoa === 'undefined') {
+        return `${SHARE_PREFIX}u.${encodeURIComponent(json)}`;
+    }
     const rawBytes = new TextEncoder().encode(json);
     const compressedBytes = await gzip(rawBytes);
     const encoding = compressedBytes ? 'g' : 'j';
@@ -108,18 +116,25 @@ export async function decodeShareHash(hash) {
 
     const encoding = encoded.slice(0, separatorIndex);
     const payload = encoded.slice(separatorIndex + 1);
-    if (!payload || !['g', 'j'].includes(encoding)) {
+    if (!payload || !['g', 'j', 'u'].includes(encoding)) {
         throw new Error('The share URL is invalid.');
     }
 
     let parsed;
     try {
-        const encodedBytes = base64UrlToBytes(payload);
-        const bytes = encoding === 'g' ? await gunzip(encodedBytes) : encodedBytes;
-        if (!bytes) throw new Error('This browser cannot open compressed share URLs.');
-        parsed = JSON.parse(new TextDecoder().decode(bytes));
+        if (encoding === 'u') {
+            parsed = JSON.parse(decodeURIComponent(payload));
+        } else {
+            if (typeof atob === 'undefined' || typeof TextDecoder === 'undefined') {
+                throw new Error('This browser cannot open encoded share URLs.');
+            }
+            const encodedBytes = base64UrlToBytes(payload);
+            const bytes = encoding === 'g' ? await gunzip(encodedBytes) : encodedBytes;
+            if (!bytes) throw new Error('This browser cannot open compressed share URLs.');
+            parsed = JSON.parse(new TextDecoder().decode(bytes));
+        }
     } catch (error) {
-        if (error.message === 'This browser cannot open compressed share URLs.') throw error;
+        if (error.message.startsWith('This browser cannot open')) throw error;
         throw new Error('The share URL is invalid.');
     }
     if (!parsed || parsed.version !== 1 || !parsed.appData || !Array.isArray(parsed.appData.homes)) {
