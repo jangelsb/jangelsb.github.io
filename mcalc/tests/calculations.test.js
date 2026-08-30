@@ -99,6 +99,38 @@ test('caps closing-cost and upgrade credits at their eligible costs', () => {
     assert.equal(result.cashToClose, 60000);
 });
 
+test('caps rate buydown points and leaves excess incentive unallocated', () => {
+    const result = calculateScenario({
+        ...home,
+        price: 600000,
+        downType: 'percent',
+        downValue: 20,
+        incentivePool: 70000,
+        closingCostEstimateMode: 'fixed',
+        closingCostEstimateAmount: 12000,
+        tax: 0,
+        hoa: 0,
+        ins: 0
+    }, {
+        ...fixed,
+        rate: 4.5,
+        maxRateBuydownPoints: 4,
+        rateReductionPerPoint: 0.25,
+        incentiveAllocation: {
+            rateBuydown: 70000,
+            closingCosts: 0,
+            priceReduction: 0,
+            designUpgrades: 0
+        }
+    });
+
+    assert.equal(result.pointsPurchased, 4);
+    assert.equal(result.finalRate, 3.5);
+    assert.equal(result.appliedAllocation.rateBuydown, 19200);
+    assert.equal(result.rateBuydownUnapplied, 50800);
+    assert.equal(result.incentiveRemaining, 50800);
+});
+
 test('includes taxes, HOA, and insurance in the total monthly payment', () => {
     const result = calculateAmortization(home, fixed, 240000);
     const expectedFixedCosts = 300000 * 0.012 / 12 + 100 + 150;

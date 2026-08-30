@@ -40,6 +40,8 @@ button { cursor: pointer; border: none; border-radius: 4px; font-weight: bold; t
 .scenario-name-input { flex: 1; min-width: 0; }
 .scenario-name { flex: 1; font-weight: bold; color: #1a73e8; font-size: 16px; padding: 2px; }
 .dynamic-fields { padding: 10px; background: #e8f0fe; border-radius: 4px; margin-top: 10px; border-left: 3px solid #1a73e8; }
+.rate-buydown-settings { margin-top: 10px; padding: 10px; background: #fff8e1; border-radius: 4px; border-left: 3px solid #fbbc04; }
+.rate-buydown-settings .field-help { margin-bottom: 0; }
 .incentive-allocation { margin-top: 16px; padding: 12px; background: #f1f8f4; border: 1px solid #c9e7d2; border-radius: 6px; }
 .allocation-heading, .allocation-label, .allocation-total { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .allocation-heading { color: #137333; }

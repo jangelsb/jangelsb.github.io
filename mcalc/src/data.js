@@ -3,6 +3,8 @@ export const DEFAULT_BUYDOWN_YEAR_1 = 2;
 export const DEFAULT_BUYDOWN_YEAR_2 = 1;
 export const DEFAULT_LOAN_TERM_YEARS = 30;
 export const DEFAULT_CLOSING_COST_PERCENT = 2;
+export const DEFAULT_RATE_REDUCTION_PER_POINT = 0.25;
+export const DEFAULT_MAX_RATE_BUYDOWN_POINTS = 4;
 export const INCENTIVE_BUCKETS = ['rateBuydown', 'closingCosts', 'priceReduction', 'designUpgrades'];
 
 const DEFAULT_SCENARIO = {
@@ -15,6 +17,8 @@ const DEFAULT_SCENARIO = {
     bdY2: DEFAULT_BUYDOWN_YEAR_2,
     armRate: 5,
     armFee: 5000,
+    rateReductionPerPoint: DEFAULT_RATE_REDUCTION_PER_POINT,
+    maxRateBuydownPoints: DEFAULT_MAX_RATE_BUYDOWN_POINTS,
     designCost: 0,
     incentiveAllocation: {
         rateBuydown: 0,
@@ -34,6 +38,8 @@ const DEFAULT_FIXED_SCENARIO = {
     bdY2: 0,
     armRate: 5,
     armFee: 5000,
+    rateReductionPerPoint: DEFAULT_RATE_REDUCTION_PER_POINT,
+    maxRateBuydownPoints: DEFAULT_MAX_RATE_BUYDOWN_POINTS,
     designCost: 0,
     incentiveAllocation: {
         rateBuydown: 0,
@@ -121,6 +127,8 @@ function normalizeScenario(scenario, index) {
         bdY2: numberOr(source.bdY2),
         armRate: numberOr(source.armRate),
         armFee: numberOr(source.armFee),
+        rateReductionPerPoint: Math.max(0, numberOr(source.rateReductionPerPoint, DEFAULT_RATE_REDUCTION_PER_POINT)),
+        maxRateBuydownPoints: Math.max(0, numberOr(source.maxRateBuydownPoints, DEFAULT_MAX_RATE_BUYDOWN_POINTS)),
         designCost: Math.max(0, numberOr(source.designCost ?? source.upgrades?.selectedCost)),
         incentiveAllocation: normalizeAllocation(source)
     };

@@ -1,7 +1,9 @@
 import {
     DEFAULT_BUYDOWN_YEAR_1,
     DEFAULT_BUYDOWN_YEAR_2,
+    DEFAULT_MAX_RATE_BUYDOWN_POINTS,
     DEFAULT_LOAN_TERM_YEARS,
+    DEFAULT_RATE_REDUCTION_PER_POINT,
     INCENTIVE_BUCKETS,
     clone,
     compareChartCalloutValues,
@@ -129,6 +131,7 @@ function renderIncentiveAllocation(home, scenario) {
     const allocation = scenarioAllocation(scenario);
     const total = INCENTIVE_BUCKETS.reduce((sum, bucket) => sum + allocation[bucket], 0);
     const pool = Math.max(0, Number(home.incentivePool) || 0);
+    if (pool === 0) return '';
     const remaining = pool - total;
     const status = remaining >= 0
         ? `${formatCurrency(remaining)} unallocated`
@@ -143,6 +146,7 @@ function renderIncentiveAllocation(home, scenario) {
     return `<div class="incentive-allocation">
         <div class="allocation-heading"><strong>Builder incentive allocation</strong><span>${formatCurrency(pool)} available</span></div>
         <p class="muted">Allocate the pool across the four options. Rate points are separate from closing-cost credits.</p>
+        <p class="muted field-help">Rate cap: ${scenario.maxRateBuydownPoints} points × ${scenario.rateReductionPerPoint.toFixed(2)}% per point. Confirm these values with the lender.</p>
         ${rows}
         <div class="allocation-total"><span>Total allocated</span><strong>${formatCurrency(total)}</strong><span class="allocation-status ${remaining < 0 ? 'allocation-over' : ''}">${status}</span></div>
     </div>`;
@@ -172,6 +176,16 @@ function renderActiveHome() {
             <label>Base / Note Rate (%)</label>
             <input type="number" step="0.1" value="${scenario.rate}"
                 data-scenario-id="${scenario.id}" data-scenario-field="rate">
+
+            ${home.incentivePool > 0 ? `<div class="rate-buydown-settings">
+                <label>Rate Reduction per Point (%)</label>
+                <input type="number" min="0" step="0.05" value="${scenario.rateReductionPerPoint}"
+                    data-scenario-id="${scenario.id}" data-scenario-field="rateReductionPerPoint">
+                <label>Maximum Rate-Buydown Points</label>
+                <input type="number" min="0" step="0.25" value="${scenario.maxRateBuydownPoints}"
+                    data-scenario-id="${scenario.id}" data-scenario-field="maxRateBuydownPoints">
+                <p class="muted field-help">These are lender/product assumptions, not universal limits.</p>
+            </div>` : ''}
 
             <label>Design / Lot Upgrade Cost ($)</label>
             <input type="number" min="0" step="100" value="${scenario.designCost}"
@@ -375,6 +389,8 @@ function addScenario(homeId) {
         armRate: 5,
         armFee: 5000,
         name: 'New Scenario',
+        rateReductionPerPoint: DEFAULT_RATE_REDUCTION_PER_POINT,
+        maxRateBuydownPoints: DEFAULT_MAX_RATE_BUYDOWN_POINTS,
         designCost: 0,
         incentiveAllocation: {
             rateBuydown: 0,
@@ -452,19 +468,22 @@ function renderComparison() {
             </select>
         </div>`).join('');
 
-    const rows = [
-        ['Purchase price', item => formatCurrency(item.finalPrice)],
-        ['Down payment', item => formatCurrency(item.downPayment)],
-        ['Loan amount', item => formatCurrency(item.loanAmount)],
-        ['Interest rate', item => `${item.finalRate.toFixed(3)}%`],
-        ['Rate-buydown points', item => item.pointsPurchased.toFixed(2)],
+    const incentiveRows = comparisonData.some(item => item.incentivePool > 0) ? [
         ['Incentive used', item => formatCurrency(item.incentiveUsed)],
         ['Incentive remaining', item => formatCurrency(item.incentiveRemaining)],
         ['Estimated closing costs', item => formatCurrency(item.estimatedClosingCosts)],
         ['Closing-cost credit', item => formatCurrency(item.closingCredit)],
         ['Remaining closing costs', item => formatCurrency(item.remainingClosingCosts)],
         ['Design/lot credit', item => formatCurrency(item.designCredit)],
-        ['Remaining upgrade cost', item => formatCurrency(item.remainingDesignCost)],
+        ['Remaining upgrade cost', item => formatCurrency(item.remainingDesignCost)]
+    ] : [];
+    const rows = [
+        ['Purchase price', item => formatCurrency(item.finalPrice)],
+        ['Down payment', item => formatCurrency(item.downPayment)],
+        ['Loan amount', item => formatCurrency(item.loanAmount)],
+        ['Interest rate', item => `${item.finalRate.toFixed(3)}%`],
+        ['Rate-buydown points', item => item.pointsPurchased.toFixed(2)],
+        ...incentiveRows,
         ['Cash needed to close', item => formatCurrency(item.cashToClose)],
         ['Purchase scenario', item => escapeHtml(getScenarioDisplayName(item.scenario))],
         ['Loan term', item => `${item.scenario.termYears} years`],
@@ -550,18 +569,20 @@ function renderResults(home) {
     const tabs = `<div class="result-tabs"><button id="tab-summary" class="result-tab ${state.activeResultTab === 'summary' ? 'active' : ''}" data-action="result-tab" data-result-tab="summary">Summary & Graphs</button>${resultsData.map((result, index) => `<button id="tab-data-${index}" class="result-tab ${state.activeResultTab === 'data-' + index ? 'active' : ''}" data-action="result-tab" data-result-tab="data-${index}">${escapeHtml(getScenarioDisplayName(result.scenario))}</button>`).join('')}</div>`;
     const milestone = (result, field, color = '') => `<div class="milestone-box"><div class="milestone-row"><span class="milestone-label">Year 3</span><span class="milestone-val">${formatCurrency(result.data[2][field])}</span></div><hr><div class="milestone-row"><span class="milestone-label">Year 5</span><span class="milestone-val">${formatCurrency(result.data[4][field])}</span></div><hr><div class="milestone-row"><span class="milestone-label">Year 10</span><span class="milestone-val" style="${color ? `color:${color};` : ''}font-weight:bold;">${formatCurrency(result.data[9][field])}</span></div></div>`;
     const finalInterest = result => formatCurrency(result.data[result.data.length - 1].cumulativeInterest);
+    const incentiveSummaryRows = home.incentivePool > 0 ? `
+        <tr><td><b>Builder Incentive Used</b></td>${resultsData.map(result => `<td>${formatCurrency(result.incentiveUsed)}</td>`).join('')}</tr>
+        <tr><td><b>Rate-Buydown Points</b></td>${resultsData.map(result => `<td>${result.pointsPurchased.toFixed(2)}</td>`).join('')}</tr>
+        <tr><td><b>Estimated Closing Costs</b></td>${resultsData.map(result => `<td>${formatCurrency(result.estimatedClosingCosts)}</td>`).join('')}</tr>
+        <tr><td><b>Closing-Cost Credit</b></td>${resultsData.map(result => `<td>${formatCurrency(result.closingCredit)}</td>`).join('')}</tr>
+        <tr><td><b>Remaining Closing Costs</b></td>${resultsData.map(result => `<td>${formatCurrency(result.remainingClosingCosts)}</td>`).join('')}</tr>
+        <tr><td><b>Design/Lot Credit</b></td>${resultsData.map(result => `<td>${formatCurrency(result.designCredit)}</td>`).join('')}</tr>
+        <tr><td><b>Remaining Upgrade Cost</b></td>${resultsData.map(result => `<td>${formatCurrency(result.remainingDesignCost)}</td>`).join('')}</tr>` : '';
     const summary = `<table class="summary-table"><thead><tr><th>Metric</th>${resultsData.map(result => `<th>${escapeHtml(getScenarioDisplayName(result.scenario))}</th>`).join('')}</tr></thead><tbody>
         <tr><td><b>Final Purchase Price</b></td>${resultsData.map(result => `<td>${formatCurrency(result.finalPrice)}</td>`).join('')}</tr>
         <tr><td><b>Down Payment</b></td>${resultsData.map(result => `<td>${formatCurrency(result.downPayment)}</td>`).join('')}</tr>
         <tr><td><b>Loan Amount</b></td>${resultsData.map(result => `<td>${formatCurrency(result.loanAmount)}</td>`).join('')}</tr>
         <tr><td><b>Final Interest Rate</b></td>${resultsData.map(result => `<td>${result.finalRate.toFixed(3)}%</td>`).join('')}</tr>
-        <tr><td><b>Rate-Buydown Points</b></td>${resultsData.map(result => `<td>${result.pointsPurchased.toFixed(2)}</td>`).join('')}</tr>
-        <tr><td><b>Builder Incentive Used</b></td>${resultsData.map(result => `<td>${formatCurrency(result.incentiveUsed)}</td>`).join('')}</tr>
-        <tr><td><b>Estimated Closing Costs</b></td>${resultsData.map(result => `<td>${formatCurrency(result.estimatedClosingCosts)}</td>`).join('')}</tr>
-        <tr><td><b>Closing-Cost Credit</b></td>${resultsData.map(result => `<td>${formatCurrency(result.closingCredit)}</td>`).join('')}</tr>
-        <tr><td><b>Remaining Closing Costs</b></td>${resultsData.map(result => `<td>${formatCurrency(result.remainingClosingCosts)}</td>`).join('')}</tr>
-        <tr><td><b>Design/Lot Credit</b></td>${resultsData.map(result => `<td>${formatCurrency(result.designCredit)}</td>`).join('')}</tr>
-        <tr><td><b>Remaining Upgrade Cost</b></td>${resultsData.map(result => `<td>${formatCurrency(result.remainingDesignCost)}</td>`).join('')}</tr>
+        ${incentiveSummaryRows}
         <tr><td><b>Cash Needed to Close</b></td>${resultsData.map(result => `<td>${formatCurrency(result.cashToClose)}</td>`).join('')}</tr>
         <tr><td><b>Year 1 Monthly Payment</b></td>${resultsData.map(result => `<td>${formatCurrency(result.data[0].totalMonthly)}</td>`).join('')}</tr>
         <tr><td><b>Remaining Balance</b></td>${resultsData.map(result => `<td>${milestone(result, 'balance')}</td>`).join('')}</tr>

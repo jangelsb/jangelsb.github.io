@@ -12,6 +12,8 @@ test('normalizes legacy data and fills safe defaults', () => {
     assert.equal(result.activeHomeId, 4);
     assert.deepEqual(result.scenarioGroups, []);
     assert.equal(result.homes[0].scenarios[0].termYears, 30);
+    assert.equal(result.homes[0].scenarios[0].maxRateBuydownPoints, 4);
+    assert.equal(result.homes[0].scenarios[0].rateReductionPerPoint, 0.25);
 });
 
 test('replaces an empty home list with a usable default property', () => {

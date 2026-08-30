@@ -1,4 +1,9 @@
-import { DEFAULT_LOAN_TERM_YEARS, INCENTIVE_BUCKETS } from './data.js';
+import {
+    DEFAULT_LOAN_TERM_YEARS,
+    DEFAULT_MAX_RATE_BUYDOWN_POINTS,
+    DEFAULT_RATE_REDUCTION_PER_POINT,
+    INCENTIVE_BUCKETS
+} from './data.js';
 
 export function monthlyPayment(principal, annualRate, numberOfMonths) {
     if (numberOfMonths <= 0) return 0;
@@ -64,10 +69,18 @@ export function calculateScenario(home, config) {
     const finalPrice = basePrice - priceReduction;
     const loanInputs = calculateLoanInputs(home, finalPrice);
     const pointCost = loanInputs.principal * 0.01;
-    const pointsPurchased = pointCost > 0 ? allocation.rateBuydown / pointCost : 0;
-    const rateReduction = pointsPurchased * 0.25;
+    const requestedPoints = pointCost > 0 ? allocation.rateBuydown / pointCost : 0;
+    const maxRateBuydownPoints = Number.isFinite(Number(config.maxRateBuydownPoints))
+        ? Math.max(0, Number(config.maxRateBuydownPoints))
+        : DEFAULT_MAX_RATE_BUYDOWN_POINTS;
+    const pointsPurchased = Math.min(requestedPoints, maxRateBuydownPoints);
+    const rateReductionPerPoint = Number.isFinite(Number(config.rateReductionPerPoint))
+        ? Math.max(0, Number(config.rateReductionPerPoint))
+        : DEFAULT_RATE_REDUCTION_PER_POINT;
+    const rateReduction = pointsPurchased * rateReductionPerPoint;
     const baseRate = nonNegativeNumber(config.rate);
     const finalRate = Math.max(0, baseRate - rateReduction);
+    const appliedRateBuydown = Math.min(allocation.rateBuydown, pointsPurchased * pointCost);
     const closingCredit = Math.min(allocation.closingCosts, loanInputs.closingCosts);
     const designCost = nonNegativeNumber(config.designCost);
     const designCredit = Math.min(allocation.designUpgrades, designCost);
@@ -77,7 +90,7 @@ export function calculateScenario(home, config) {
     const effectiveConfig = { ...config, rate: finalRate };
     const amortization = calculateAmortization(effectiveHome, effectiveConfig, loanInputs.principal);
     const appliedAllocation = {
-        rateBuydown: allocation.rateBuydown,
+        rateBuydown: appliedRateBuydown,
         closingCosts: closingCredit,
         priceReduction,
         designUpgrades: designCredit
@@ -101,7 +114,11 @@ export function calculateScenario(home, config) {
         baseRate,
         finalRate,
         pointsPurchased,
+        requestedPoints,
+        maxRateBuydownPoints,
+        rateReductionPerPoint,
         rateReduction,
+        rateBuydownUnapplied: Math.max(0, allocation.rateBuydown - appliedRateBuydown),
         estimatedClosingCosts: loanInputs.closingCosts,
         closingCredit,
         remainingClosingCosts,
