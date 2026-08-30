@@ -97,20 +97,29 @@ function renderComparisonCard() {
         return;
     }
 
+    if (state.activeView !== 'compare') {
+        container.innerHTML = '<div class="card comparison-card comparison-card-compact" data-action="show-comparison" role="button" tabindex="0"><h2>Compare Homes</h2></div>';
+        return;
+    }
+
     const comparison = getActiveComparison();
     const name = comparison?.name ?? state.newComparison.name;
     const description = comparison?.description ?? state.newComparison.description;
     const selectedValue = comparison ? String(comparison.id) : CREATE_NEW_COMPARISON;
     const options = appData.scenarioGroups.map(group => `<option value="${group.id}" ${String(group.id) === selectedValue ? 'selected' : ''}>${escapeHtml(group.name)}</option>`).join('');
 
-    container.innerHTML = `<div class="card comparison-card">
-        <div class="flex-between comparison-card-header"><div><h2>Compare Homes</h2><p class="muted">Save and reuse a comparison of your properties.</p></div><button class="btn-primary" data-action="show-comparison">Open Comparison</button></div>
+    const actions = comparison
+        ? '<button class="btn-danger" data-action="delete-comparison">Delete Comparison</button>'
+        : '<button class="btn-success" data-action="save-comparison">Save New Comparison</button>';
+
+    container.innerHTML = `<div class="card comparison-card comparison-card-expanded">
+        <div class="flex-between comparison-card-header"><div><h2>Compare Homes</h2><p class="muted">Save and reuse a comparison of your properties.</p></div></div>
         <div class="comparison-controls comparison-card-controls">
             <div class="comparison-control"><label for="comparisonSelector">Comparison</label><select id="comparisonSelector" data-action="select-comparison"><option value="${CREATE_NEW_COMPARISON}" ${selectedValue === CREATE_NEW_COMPARISON ? 'selected' : ''}>Create new</option>${options}</select></div>
             <div class="comparison-control comparison-title-control"><label for="comparisonName">Title</label><input id="comparisonName" value="${escapeHtml(name)}" placeholder="Comparison title" data-comparison-field="name"></div>
             <div class="comparison-control comparison-description-control"><label for="comparisonDescription">Description / Notes</label><textarea id="comparisonDescription" placeholder="Add notes about this comparison..." data-comparison-field="description">${escapeHtml(description)}</textarea></div>
         </div>
-        <div class="button-row comparison-card-actions"><button class="btn-success" data-action="save-comparison">Save Comparison</button>${comparison ? '<button class="btn-danger" data-action="delete-comparison">Delete Comparison</button>' : ''}</div>
+        <div class="button-row comparison-card-actions">${actions}</div>
     </div>`;
 }
 
@@ -630,6 +639,7 @@ function handleClick(event) {
         persist();
         renderApp();
     } else if (action === 'show-comparison') {
+        if (event.target.closest('input, textarea, select, button, label')) return;
         state.activeView = 'compare';
         renderApp();
     } else if (action === 'add-home') addHome();

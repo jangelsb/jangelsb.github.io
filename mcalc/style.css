@@ -56,12 +56,15 @@ tr:nth-child(even) { background-color: #f8f9fa; }
 .comparison-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
 .comparison-control { min-width: 220px; }
 .comparison-scenarios { margin-top: 15px; }
-.comparison-card { border-left: 4px solid #1a73e8; }
-.comparison-card-header { gap: 16px; }
-.comparison-card-controls { margin-top: 15px; }
+.comparison-card-compact { cursor: pointer; padding: 16px 20px; }
+.comparison-card-compact:hover { box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+.comparison-card-compact h2 { margin: 0; }
+.comparison-card-expanded { cursor: default; }
+.comparison-card-header { gap: 16px; margin-bottom: 8px; }
+.comparison-card-controls { margin-top: 8px; }
 .comparison-title-control { flex: 1 1 240px; }
 .comparison-description-control { flex: 2 1 320px; }
-.comparison-description-control textarea { min-height: 42px; }
+.comparison-description-control textarea { min-height: 52px; }
 .comparison-card-actions { justify-content: flex-end; margin-top: 15px; }
 .checkbox-label { display: flex; align-items: center; gap: 6px; margin: 0; }
 .checkbox-label input { width: auto; }
