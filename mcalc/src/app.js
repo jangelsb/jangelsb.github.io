@@ -120,6 +120,145 @@ const incentiveBucketLabels = {
     designUpgrades: 'Design / lot upgrades'
 };
 
+const helpTopics = {
+    purchasePrice: {
+        title: 'Purchase price',
+        body: 'The negotiated price of the home before any incentive-based price reduction.',
+        formula: 'Final price = purchase price − price reduction',
+        recommendation: 'Use the builder or seller’s contract price.'
+    },
+    downPayment: {
+        title: 'Down payment',
+        body: 'The money paid toward the home up front. The rest is financed as the loan amount.',
+        formula: 'Loan amount = purchase price − down payment',
+        recommendation: 'Choose dollars when you know the planned cash contribution; choose percent when the lender quoted a percentage.'
+    },
+    loanType: {
+        title: 'Loan type',
+        body: 'The mortgage structure being compared. Standard Fixed keeps the note rate level; Custom Buydown models temporary payment reductions; 7/1 ARM models a fixed period followed by a reset.',
+        formula: 'Loan type changes the rate and payment schedule over time',
+        recommendation: 'Compare the same loan type, term, and lender assumptions when evaluating properties.'
+    },
+    loanTerm: {
+        title: 'Loan term',
+        body: 'The planned number of years used to amortize the loan. A longer term usually lowers the payment but increases total interest.',
+        formula: 'Number of payments = loan term × 12',
+        recommendation: 'Use the term from the lender’s quote, commonly 30 years.'
+    },
+    loanAmount: {
+        title: 'Loan amount',
+        body: 'The principal amount financed after the down payment and any price reduction in the selected scenario.',
+        formula: 'Loan amount = final purchase price − down payment',
+        recommendation: 'Check that this matches the lender’s proposed loan amount.'
+    },
+    incentivePool: {
+        title: 'Builder incentive pool',
+        body: 'The total credit offered by the builder that can be assigned to eligible uses in a scenario.',
+        formula: 'Total allocation cannot exceed the incentive pool',
+        recommendation: 'Use the amount in the builder’s written offer and confirm eligible uses with the lender.'
+    },
+    closingCosts: {
+        title: 'Estimated closing costs',
+        body: 'A planning estimate for lender, title, recording, prepaid tax/insurance, and similar upfront charges. Discount points are modeled separately as rate-buydown incentives.',
+        formula: 'Estimated closing costs = loan amount × closing-cost percentage',
+        recommendation: 'For a serious comparison, enter the lender’s Loan Estimate as a fixed dollar amount.'
+    },
+    rate: {
+        title: 'Base / note rate',
+        body: 'The contractual interest rate before this scenario’s permanent or temporary buydown adjustments.',
+        formula: 'Monthly principal & interest uses the selected note rate',
+        recommendation: 'Use the rate from the lender’s quote for the same loan type and term.'
+    },
+    temporaryBuydown: {
+        title: 'Temporary buydown',
+        body: 'A subsidy that lowers the borrower’s out-of-pocket payment for the first one or two years. The underlying loan still amortizes using the contractual note rate.',
+        formula: 'Temporary payment rate = note rate − year-specific rate drop',
+        recommendation: 'Ask the lender for the subsidy cost and confirm who funds it.'
+    },
+    armReset: {
+        title: 'ARM reset / refinance assumption',
+        body: 'A simplified projection for the rate and fee after the initial ARM period. Actual ARM adjustments follow the loan’s index, margin, caps, and reset dates.',
+        formula: 'Projected post-reset payment uses the entered refinance rate',
+        recommendation: 'Use the lender’s ARM disclosure for a real decision; treat this field as a scenario assumption.'
+    },
+    armFee: {
+        title: 'Refinance fee rolled in',
+        body: 'A hypothetical fee added to the balance at the modeled ARM reset. It is not a prediction of future refinance costs.',
+        formula: 'Post-reset balance = scheduled balance + modeled fee',
+        recommendation: 'Leave this at zero unless you have a specific fee assumption to test.'
+    },
+    rateBuydown: {
+        title: 'Rate buydown',
+        body: 'Builder dollars used to buy permanent discount points. One point costs 1% of the loan amount, but the rate reduction per point varies by lender and product.',
+        formula: 'Point cost = loan amount × 1%; final rate = base rate − points × rate reduction per point',
+        recommendation: 'Enter the lender’s actual points-to-rate quote. Do not assume every point reduces the rate by the same amount.'
+    },
+    rateReductionPerPoint: {
+        title: 'Rate reduction per point',
+        body: 'The assumed permanent rate reduction for each discount point in this scenario. This is a lender/product assumption, not a universal rule.',
+        formula: 'Rate reduction = points purchased × reduction per point',
+        recommendation: 'Get this value from the lender’s rate sheet or Loan Estimate.'
+    },
+    maxRateBuydownPoints: {
+        title: 'Maximum rate-buydown points',
+        body: 'A planning cap on permanent points for this scenario. Actual limits can depend on the lender, loan program, occupancy, loan-to-value, and builder-concession rules.',
+        formula: 'Max rate allocation = loan amount × 1% × max points',
+        recommendation: 'Confirm the cap with the lender. The Max button uses this cap and whatever incentive pool remains.'
+    },
+    designCost: {
+        title: 'Design / lot upgrade cost',
+        body: 'The eligible cost of the selected design options, lot premium, or upgrades that this scenario can credit.',
+        formula: 'Upgrade credit = min(allocation, eligible upgrade cost)',
+        recommendation: 'Enter only the amount the builder confirms can be paid with incentives.'
+    },
+    cashToClose: {
+        title: 'Cash needed to close',
+        body: 'The estimated cash required after applying the selected incentive allocation. It includes the down payment and eligible costs not covered by credits.',
+        formula: 'Cash to close = down payment + remaining closing costs + remaining upgrade cost',
+        recommendation: 'Use the lender’s Loan Estimate and Closing Disclosure for the final number.'
+    },
+    monthlyPayment: {
+        title: 'Monthly payment',
+        body: 'This app’s estimate of principal and interest plus the property tax, HOA, and insurance values entered above. It does not include every possible escrow or loan fee.',
+        formula: 'Total monthly = principal & interest + taxes + HOA + insurance',
+        recommendation: 'Compare against the lender’s projected payment, including mortgage insurance and any other applicable charges.'
+    },
+    propertyTax: {
+        title: 'Property tax',
+        body: 'The annual property-tax assumption used to estimate the monthly payment.',
+        formula: 'Monthly tax = purchase price × annual tax rate ÷ 12',
+        recommendation: 'Use the local assessor’s estimate or the lender’s escrow estimate when available.'
+    },
+    appreciation: {
+        title: 'Annual appreciation',
+        body: 'A hypothetical annual home-value growth rate used only for the equity projections and charts.',
+        formula: 'Estimated value = purchase price × (1 + appreciation)ʸᵉᵃʳ',
+        recommendation: 'Treat this as a sensitivity assumption, not a forecast.'
+    }
+};
+
+function renderHelp(id, topic) {
+    const content = helpTopics[topic];
+    if (!content) return '';
+    return `<span class="help-term">
+        <button class="help-trigger" type="button" aria-label="Learn about ${escapeHtml(content.title)}" aria-expanded="false" aria-controls="${id}" data-action="toggle-help" data-help-id="${id}">?</button>
+        <span class="help-popover" id="${id}" role="tooltip">
+            <strong>${escapeHtml(content.title)}</strong>
+            <span>${escapeHtml(content.body)}</span>
+            <span class="help-formula">${escapeHtml(content.formula)}</span>
+            <span class="help-recommendation"><b>Recommendation:</b> ${escapeHtml(content.recommendation)}</span>
+        </span>
+    </span>`;
+}
+
+function renderFieldLabel(label, topic, id) {
+    return `<label class="field-label">${escapeHtml(label)} ${renderHelp(id, topic)}</label>`;
+}
+
+function renderMetricLabel(label, topic, id) {
+    return `<span class="metric-label">${escapeHtml(label)} ${renderHelp(id, topic)}</span>`;
+}
+
 function scenarioAllocation(scenario) {
     return INCENTIVE_BUCKETS.reduce((result, bucket) => {
         result[bucket] = Math.max(0, Number(scenario.incentiveAllocation?.[bucket]) || 0);
@@ -139,7 +278,7 @@ function renderIncentiveAllocation(home, scenario) {
         ? `${formatCurrency(remaining)} unallocated`
         : `${formatCurrency(Math.abs(remaining))} over the incentive pool`;
     const rows = INCENTIVE_BUCKETS.map(bucket => `<div class="allocation-row">
-            <div class="allocation-label"><label for="allocation-${scenario.id}-${bucket}">${incentiveBucketLabels[bucket]}</label><output>${formatCurrency(allocation[bucket])}</output></div>
+            <div class="allocation-label"><label for="allocation-${scenario.id}-${bucket}">${incentiveBucketLabels[bucket]} ${renderHelp(`help-allocation-${scenario.id}-${bucket}`, bucket === 'rateBuydown' ? 'rateBuydown' : bucket === 'closingCosts' ? 'closingCosts' : bucket === 'priceReduction' ? 'purchasePrice' : 'designCost')}</label><output>${formatCurrency(allocation[bucket])}</output></div>
             <input id="allocation-${scenario.id}-${bucket}" type="range" min="0" max="${pool}" step="100" value="${allocation[bucket]}"
                 data-home-id="${home.id}" data-scenario-id="${scenario.id}" data-allocation-field="${bucket}">
             <input type="number" min="0" max="${pool}" step="100" value="${allocation[bucket]}" aria-label="${incentiveBucketLabels[bucket]} amount"
@@ -167,47 +306,47 @@ function renderActiveHome() {
                 <button class="btn-danger" data-action="delete-scenario"
                     data-home-id="${home.id}" data-scenario-id="${scenario.id}">Delete</button>
             </div>
-            <label>Loan Type</label>
+            ${renderFieldLabel('Loan Type', 'loanType', `help-scenario-${scenario.id}-loan-type`)}
             <select data-scenario-id="${scenario.id}" data-scenario-field="type">
                 <option value="fixed" ${scenario.type === 'fixed' ? 'selected' : ''}>Standard Fixed</option>
                 <option value="buydown" ${scenario.type === 'buydown' ? 'selected' : ''}>Custom Buydown</option>
                 <option value="arm" ${scenario.type === 'arm' ? 'selected' : ''}>7/1 ARM</option>
             </select>
-            <label>Loan Term (years)</label>
+            ${renderFieldLabel('Loan Term (years)', 'loanTerm', `help-scenario-${scenario.id}-term`)}
             <input type="number" min="1" max="50" step="1" value="${scenario.termYears}"
                 data-scenario-id="${scenario.id}" data-scenario-field="termYears">
-            <label>Base / Note Rate (%)</label>
+            ${renderFieldLabel('Base / Note Rate (%)', 'rate', `help-scenario-${scenario.id}-rate`)}
             <input type="number" step="0.1" value="${scenario.rate}"
                 data-scenario-id="${scenario.id}" data-scenario-field="rate">
 
             ${home.incentivePool > 0 ? `<div class="rate-buydown-settings">
-                <label>Rate Reduction per Point (%)</label>
+                ${renderFieldLabel('Rate Reduction per Point (%)', 'rateReductionPerPoint', `help-scenario-${scenario.id}-rate-reduction`)}
                 <input type="number" min="0" step="0.05" value="${scenario.rateReductionPerPoint}"
                     data-scenario-id="${scenario.id}" data-scenario-field="rateReductionPerPoint">
-                <label>Maximum Rate-Buydown Points</label>
+                ${renderFieldLabel('Maximum Rate-Buydown Points', 'maxRateBuydownPoints', `help-scenario-${scenario.id}-max-points`)}
                 <input type="number" min="0" step="0.25" value="${scenario.maxRateBuydownPoints}"
                     data-scenario-id="${scenario.id}" data-scenario-field="maxRateBuydownPoints">
                 <p class="muted field-help">These are lender/product assumptions, not universal limits.</p>
             </div>` : ''}
 
-            <label>Design / Lot Upgrade Cost ($)</label>
+            ${renderFieldLabel('Design / Lot Upgrade Cost ($)', 'designCost', `help-scenario-${scenario.id}-design-cost`)}
             <input type="number" min="0" step="100" value="${scenario.designCost}"
                 data-scenario-id="${scenario.id}" data-scenario-field="designCost">
 
             <div class="dynamic-fields" style="display:${scenario.type === 'buydown' ? 'block' : 'none'}">
-                <label>Year 1 Rate Drop (%)</label>
+                ${renderFieldLabel('Year 1 Rate Drop (%)', 'temporaryBuydown', `help-scenario-${scenario.id}-year-1-drop`)}
                 <input type="number" step="0.5" value="${scenario.bdY1}"
                     data-scenario-id="${scenario.id}" data-scenario-field="bdY1">
-                <label>Year 2 Rate Drop (%)</label>
+                ${renderFieldLabel('Year 2 Rate Drop (%)', 'temporaryBuydown', `help-scenario-${scenario.id}-year-2-drop`)}
                 <input type="number" step="0.5" value="${scenario.bdY2}"
                     data-scenario-id="${scenario.id}" data-scenario-field="bdY2">
             </div>
 
             <div class="dynamic-fields" style="display:${scenario.type === 'arm' ? 'block' : 'none'}">
-                <label>Year 8+ Refi Rate (%)</label>
+                ${renderFieldLabel('Year 8+ Refi Rate (%)', 'armReset', `help-scenario-${scenario.id}-arm-rate`)}
                 <input type="number" step="0.1" value="${scenario.armRate}"
                     data-scenario-id="${scenario.id}" data-scenario-field="armRate">
-                <label>Year 7 Refi Fee Rolled In ($)</label>
+                ${renderFieldLabel('Year 7 Refi Fee Rolled In ($)', 'armFee', `help-scenario-${scenario.id}-arm-fee`)}
                 <input type="number" value="${scenario.armFee}"
                     data-scenario-id="${scenario.id}" data-scenario-field="armFee">
             </div>
@@ -226,16 +365,16 @@ function renderActiveHome() {
             </div>
 
             <div class="grid-globals">
-                <div><label>Purchase Price ($)</label><input type="number" value="${home.price}" data-home-id="${home.id}" data-home-field="price"></div>
-                <div><label>Down Payment</label><div class="input-group">
+                <div>${renderFieldLabel('Purchase Price ($)', 'purchasePrice', `help-home-${home.id}-price`)}<input type="number" value="${home.price}" data-home-id="${home.id}" data-home-field="price"></div>
+                <div>${renderFieldLabel('Down Payment', 'downPayment', `help-home-${home.id}-down-payment`)}<div class="input-group">
                     <select data-home-id="${home.id}" data-home-field="downType">
                         <option value="amount" ${home.downType === 'amount' ? 'selected' : ''}>$</option>
                         <option value="percent" ${home.downType === 'percent' ? 'selected' : ''}>%</option>
                     </select>
                     <input type="number" step="0.1" value="${home.downValue}" data-home-id="${home.id}" data-home-field="downValue">
                 </div></div>
-                <div><label>Builder Incentive Pool ($)</label><input type="number" min="0" step="100" value="${home.incentivePool}" data-home-id="${home.id}" data-home-field="incentivePool"></div>
-                <div><label>Closing Cost Estimate</label><div class="input-group">
+                <div>${renderFieldLabel('Builder Incentive Pool ($)', 'incentivePool', `help-home-${home.id}-incentive-pool`)}<input type="number" min="0" step="100" value="${home.incentivePool}" data-home-id="${home.id}" data-home-field="incentivePool"></div>
+                <div>${renderFieldLabel('Closing Cost Estimate', 'closingCosts', `help-home-${home.id}-closing-costs`)}<div class="input-group">
                     <select data-home-id="${home.id}" data-home-field="closingCostEstimateMode">
                         <option value="percentOfLoan" ${home.closingCostEstimateMode === 'percentOfLoan' ? 'selected' : ''}>% of loan</option>
                         <option value="fixed" ${home.closingCostEstimateMode === 'fixed' ? 'selected' : ''}>$ amount</option>
@@ -243,10 +382,10 @@ function renderActiveHome() {
                     <input type="number" min="0" step="0.1" value="${home.closingCostEstimateMode === 'fixed' ? home.closingCostEstimateAmount : home.closingCostEstimatePercent}"
                         data-home-id="${home.id}" data-home-field="${home.closingCostEstimateMode === 'fixed' ? 'closingCostEstimateAmount' : 'closingCostEstimatePercent'}">
                 </div><p class="muted field-help">Excludes discount points; those use the rate-buydown allocation.</p></div>
-                <div><label>Property Tax (%/yr)</label><input type="number" step="0.01" value="${home.tax}" data-home-id="${home.id}" data-home-field="tax"></div>
-                <div><label>Monthly HOA ($)</label><input type="number" value="${home.hoa}" data-home-id="${home.id}" data-home-field="hoa"></div>
-                <div><label>Monthly Ins. ($)</label><input type="number" value="${home.ins}" data-home-id="${home.id}" data-home-field="ins"></div>
-                <div><label>Annual Appreciation (%)</label><input type="number" step="0.1" value="${home.appreciation}" data-home-id="${home.id}" data-home-field="appreciation"></div>
+                <div>${renderFieldLabel('Property Tax (%/yr)', 'propertyTax', `help-home-${home.id}-tax`)}<input type="number" step="0.01" value="${home.tax}" data-home-id="${home.id}" data-home-field="tax"></div>
+                <div>${renderFieldLabel('Monthly HOA ($)', 'monthlyPayment', `help-home-${home.id}-hoa`)}<input type="number" value="${home.hoa}" data-home-id="${home.id}" data-home-field="hoa"></div>
+                <div>${renderFieldLabel('Monthly Ins. ($)', 'monthlyPayment', `help-home-${home.id}-insurance`)}<input type="number" value="${home.ins}" data-home-id="${home.id}" data-home-field="ins"></div>
+                <div>${renderFieldLabel('Annual Appreciation (%)', 'appreciation', `help-home-${home.id}-appreciation`)}<input type="number" step="0.1" value="${home.appreciation}" data-home-id="${home.id}" data-home-field="appreciation"></div>
             </div>
 
             <label>Property Notes & Thoughts:</label>
@@ -487,25 +626,25 @@ function renderComparison() {
         </div>`).join('');
 
     const incentiveRows = comparisonData.some(item => item.incentivePool > 0) ? [
-        ['Incentive used', item => formatCurrency(item.incentiveUsed)],
-        ['Incentive remaining', item => formatCurrency(item.incentiveRemaining)],
-        ['Estimated closing costs', item => formatCurrency(item.estimatedClosingCosts)],
-        ['Closing-cost credit', item => formatCurrency(item.closingCredit)],
-        ['Remaining closing costs', item => formatCurrency(item.remainingClosingCosts)],
-        ['Design/lot credit', item => formatCurrency(item.designCredit)],
-        ['Remaining upgrade cost', item => formatCurrency(item.remainingDesignCost)]
+        ['Incentive used', item => formatCurrency(item.incentiveUsed), 'incentivePool'],
+        ['Incentive remaining', item => formatCurrency(item.incentiveRemaining), 'incentivePool'],
+        ['Estimated closing costs', item => formatCurrency(item.estimatedClosingCosts), 'closingCosts'],
+        ['Closing-cost credit', item => formatCurrency(item.closingCredit), 'closingCosts'],
+        ['Remaining closing costs', item => formatCurrency(item.remainingClosingCosts), 'closingCosts'],
+        ['Design/lot credit', item => formatCurrency(item.designCredit), 'designCost'],
+        ['Remaining upgrade cost', item => formatCurrency(item.remainingDesignCost), 'designCost']
     ] : [];
     const rows = [
-        ['Purchase price', item => formatCurrency(item.finalPrice)],
-        ['Down payment', item => formatCurrency(item.downPayment)],
-        ['Loan amount', item => formatCurrency(item.loanAmount)],
-        ['Interest rate', item => `${item.finalRate.toFixed(3)}%`],
-        ['Rate-buydown points', item => item.pointsPurchased.toFixed(2)],
+        ['Purchase price', item => formatCurrency(item.finalPrice), 'purchasePrice'],
+        ['Down payment', item => formatCurrency(item.downPayment), 'downPayment'],
+        ['Loan amount', item => formatCurrency(item.loanAmount), 'loanAmount'],
+        ['Interest rate', item => `${item.finalRate.toFixed(3)}%`, 'rate'],
+        ['Rate-buydown points', item => item.pointsPurchased.toFixed(2), 'rateBuydown'],
         ...incentiveRows,
-        ['Cash needed to close', item => formatCurrency(item.cashToClose)],
+        ['Cash needed to close', item => formatCurrency(item.cashToClose), 'cashToClose'],
         ['Purchase scenario', item => escapeHtml(getScenarioDisplayName(item.scenario))],
         ['Loan term', item => `${item.scenario.termYears} years`],
-        ['Year 1 monthly payment', item => formatCurrency(item.data[0].totalMonthly)],
+        ['Year 1 monthly payment', item => formatCurrency(item.data[0].totalMonthly), 'monthlyPayment'],
         ['Remaining balance after 3 years', item => formatCurrency(item.data[2].balance)],
         ['Remaining balance after 5 years', item => formatCurrency(item.data[4].balance)],
         ['Remaining balance after 10 years', item => formatCurrency(item.data[9].balance)],
@@ -517,7 +656,7 @@ function renderComparison() {
         ['Interest paid after 10 years', item => formatCurrency(item.data[9].cumulativeInterest)],
         ['Total interest over loan term', item => formatCurrency(item.data[item.data.length - 1].cumulativeInterest)]
     ];
-    const table = `<div class="comparison-scroll"><table class="comparison-table"><thead><tr><th>Metric</th>${comparisonData.map(item => `<th>${escapeHtml(item.home.name)}</th>`).join('')}</tr></thead><tbody>${rows.map(([label, value]) => `<tr><td>${label}</td>${comparisonData.map(item => `<td>${value(item)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    const table = `<div class="comparison-scroll"><table class="comparison-table"><thead><tr><th>Metric</th>${comparisonData.map(item => `<th>${escapeHtml(item.home.name)}</th>`).join('')}</tr></thead><tbody>${rows.map(([label, value, topic], index) => `<tr><td>${topic ? renderMetricLabel(label, topic, `help-comparison-${topic}-${index}`) : label}</td>${comparisonData.map(item => `<td>${value(item)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
     $('#appContent').innerHTML = `<div class="card comparison-results-card">
         <h2>Compare Homes</h2><p class="muted">Choose one complete purchase scenario for each property.</p>
         ${comparisonManager}
@@ -588,21 +727,21 @@ function renderResults(home) {
     const milestone = (result, field, color = '') => `<div class="milestone-box"><div class="milestone-row"><span class="milestone-label">Year 3</span><span class="milestone-val">${formatCurrency(result.data[2][field])}</span></div><hr><div class="milestone-row"><span class="milestone-label">Year 5</span><span class="milestone-val">${formatCurrency(result.data[4][field])}</span></div><hr><div class="milestone-row"><span class="milestone-label">Year 10</span><span class="milestone-val" style="${color ? `color:${color};` : ''}font-weight:bold;">${formatCurrency(result.data[9][field])}</span></div></div>`;
     const finalInterest = result => formatCurrency(result.data[result.data.length - 1].cumulativeInterest);
     const incentiveSummaryRows = home.incentivePool > 0 ? `
-        <tr><td><b>Builder Incentive Used</b></td>${resultsData.map(result => `<td>${formatCurrency(result.incentiveUsed)}</td>`).join('')}</tr>
-        <tr><td><b>Rate-Buydown Points</b></td>${resultsData.map(result => `<td>${result.pointsPurchased.toFixed(2)}</td>`).join('')}</tr>
-        <tr><td><b>Estimated Closing Costs</b></td>${resultsData.map(result => `<td>${formatCurrency(result.estimatedClosingCosts)}</td>`).join('')}</tr>
-        <tr><td><b>Closing-Cost Credit</b></td>${resultsData.map(result => `<td>${formatCurrency(result.closingCredit)}</td>`).join('')}</tr>
-        <tr><td><b>Remaining Closing Costs</b></td>${resultsData.map(result => `<td>${formatCurrency(result.remainingClosingCosts)}</td>`).join('')}</tr>
-        <tr><td><b>Design/Lot Credit</b></td>${resultsData.map(result => `<td>${formatCurrency(result.designCredit)}</td>`).join('')}</tr>
-        <tr><td><b>Remaining Upgrade Cost</b></td>${resultsData.map(result => `<td>${formatCurrency(result.remainingDesignCost)}</td>`).join('')}</tr>` : '';
+        <tr><td><b>${renderMetricLabel('Builder Incentive Used', 'incentivePool', 'help-summary-incentive-used')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.incentiveUsed)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Rate-Buydown Points', 'rateBuydown', 'help-summary-rate-points')}</b></td>${resultsData.map(result => `<td>${result.pointsPurchased.toFixed(2)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Estimated Closing Costs', 'closingCosts', 'help-summary-closing-costs')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.estimatedClosingCosts)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Closing-Cost Credit', 'closingCosts', 'help-summary-closing-credit')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.closingCredit)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Remaining Closing Costs', 'closingCosts', 'help-summary-remaining-closing-costs')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.remainingClosingCosts)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Design/Lot Credit', 'designCost', 'help-summary-design-credit')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.designCredit)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Remaining Upgrade Cost', 'designCost', 'help-summary-remaining-upgrade-cost')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.remainingDesignCost)}</td>`).join('')}</tr>` : '';
     const summary = `<table class="summary-table"><thead><tr><th>Metric</th>${resultsData.map(result => `<th>${escapeHtml(getScenarioDisplayName(result.scenario))}</th>`).join('')}</tr></thead><tbody>
-        <tr><td><b>Final Purchase Price</b></td>${resultsData.map(result => `<td>${formatCurrency(result.finalPrice)}</td>`).join('')}</tr>
-        <tr><td><b>Down Payment</b></td>${resultsData.map(result => `<td>${formatCurrency(result.downPayment)}</td>`).join('')}</tr>
-        <tr><td><b>Loan Amount</b></td>${resultsData.map(result => `<td>${formatCurrency(result.loanAmount)}</td>`).join('')}</tr>
-        <tr><td><b>Final Interest Rate</b></td>${resultsData.map(result => `<td>${result.finalRate.toFixed(3)}%</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Final Purchase Price', 'purchasePrice', 'help-summary-price')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.finalPrice)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Down Payment', 'downPayment', 'help-summary-down-payment')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.downPayment)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Loan Amount', 'loanAmount', 'help-summary-loan-amount')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.loanAmount)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Final Interest Rate', 'rate', 'help-summary-final-rate')}</b></td>${resultsData.map(result => `<td>${result.finalRate.toFixed(3)}%</td>`).join('')}</tr>
         ${incentiveSummaryRows}
-        <tr><td><b>Cash Needed to Close</b></td>${resultsData.map(result => `<td>${formatCurrency(result.cashToClose)}</td>`).join('')}</tr>
-        <tr><td><b>Year 1 Monthly Payment</b></td>${resultsData.map(result => `<td>${formatCurrency(result.data[0].totalMonthly)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Cash Needed to Close', 'cashToClose', 'help-summary-cash-to-close')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.cashToClose)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Year 1 Monthly Payment', 'monthlyPayment', 'help-summary-monthly-payment')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.data[0].totalMonthly)}</td>`).join('')}</tr>
         <tr><td><b>Remaining Balance</b></td>${resultsData.map(result => `<td>${milestone(result, 'balance')}</td>`).join('')}</tr>
         <tr><td><b>Net Equity (Value - Balance)</b></td>${resultsData.map(result => `<td>${milestone(result, 'equity', '#137333')}</td>`).join('')}</tr>
         <tr><td><b>Contractual Interest</b></td>${resultsData.map(result => `<td>${milestone(result, 'cumulativeInterest', '#c5221f')}</td>`).join('')}</tr>
@@ -713,6 +852,24 @@ function exportJSON() {
     link.remove();
 }
 
+function closeOpenHelp() {
+    document.querySelectorAll('.help-term.is-open').forEach(term => {
+        term.classList.remove('is-open');
+        term.querySelector('.help-trigger')?.setAttribute('aria-expanded', 'false');
+    });
+}
+
+function toggleHelp(button) {
+    const term = button.closest('.help-term');
+    if (!term) return;
+    const wasOpen = term.classList.contains('is-open');
+    closeOpenHelp();
+    if (!wasOpen) {
+        term.classList.add('is-open');
+        button.setAttribute('aria-expanded', 'true');
+    }
+}
+
 function handleInput(event) {
     const target = event.target;
     if (target.dataset.homeField) updateHome(target.dataset.homeId, target.dataset.homeField, target.value);
@@ -776,8 +933,17 @@ function handleChange(event) {
 
 function handleClick(event) {
     const target = event.target.closest('[data-action]');
-    if (!target) return;
+    if (!target) {
+        if (!event.target.closest('.help-term')) closeOpenHelp();
+        return;
+    }
     const action = target.dataset.action;
+    if (action === 'toggle-help') {
+        event.preventDefault();
+        toggleHelp(target);
+        return;
+    }
+    closeOpenHelp();
     if (action === 'switch-home') {
         appData.activeHomeId = Number(target.dataset.homeId);
         state.activeView = 'home';
@@ -806,6 +972,9 @@ function handleClick(event) {
 document.addEventListener('input', handleInput);
 document.addEventListener('change', handleChange);
 document.addEventListener('click', handleClick);
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeOpenHelp();
+});
 $('#importFile').addEventListener('change', event => {
     const file = event.target.files[0];
     if (!file) return;
