@@ -21,7 +21,7 @@ import {
     CREATE_NEW_COMPARISON
 } from './comparisons.js';
 import { loadAppData, parseImportedData, saveAppData } from './storage.js';
-import { decodeShareHash, encodeShareStateSync } from './url-state.js?v=share-links-6';
+import { decodeShareHash, encodeShareState } from './url-state.js?v=share-links-7';
 
 const state = {
     activeResultTab: 'summary',
@@ -43,6 +43,7 @@ let chart = null;
 let resultsData = [];
 let shareUpdateTimer = null;
 let shareUpdateSequence = 0;
+const MAX_SHARE_URL_LENGTH = 8000;
 
 const $ = selector => document.querySelector(selector);
 
@@ -87,18 +88,25 @@ function shareUiState() {
     };
 }
 
-function updateShareUrlNow() {
+async function updateShareUrlNow() {
     if (shareUpdateTimer) {
         clearTimeout(shareUpdateTimer);
         shareUpdateTimer = null;
     }
     const sequence = ++shareUpdateSequence;
-    const hash = encodeShareStateSync(appData, shareUiState());
+    const hash = await encodeShareState(appData, shareUiState());
     if (sequence !== shareUpdateSequence) return window.location.href;
     const baseUrl = window.location.href.split('#', 1)[0];
     const nextUrl = `${baseUrl}${hash}`;
+    if (nextUrl.length > MAX_SHARE_URL_LENGTH) {
+        const error = new Error('The calculator state is too large to fit in a share URL.');
+        error.code = 'share-too-large';
+        setShareStatus('This calculator is too large for a share URL. Use Export Data to send the JSON file, then use Import JSON to load it.');
+        throw error;
+    }
     if (window.history?.replaceState) window.history.replaceState(null, '', nextUrl);
     else window.location.hash = hash.slice(1);
+    setShareStatus('');
     return nextUrl;
 }
 
@@ -128,13 +136,19 @@ async function copyTextToClipboard(value) {
 async function copyShareLink() {
     const button = $('#shareButton');
     try {
-        const shareUrl = updateShareUrlNow();
+        const shareUrl = await updateShareUrlNow();
         await copyTextToClipboard(shareUrl);
         button.textContent = 'Copied!';
         setTimeout(() => { button.textContent = 'Copy Share Link'; }, 1500);
     } catch (error) {
+        if (error.code === 'share-too-large') return;
         alert('The share link could not be copied. You can copy the current URL from the address bar.');
     }
+}
+
+function setShareStatus(message) {
+    const status = $('#shareStatus');
+    if (status) status.textContent = message;
 }
 
 function scheduleShareUrlUpdate() {
@@ -142,7 +156,9 @@ function scheduleShareUrlUpdate() {
     shareUpdateTimer = setTimeout(() => {
         shareUpdateTimer = null;
         try {
-            updateShareUrlNow();
+            updateShareUrlNow().catch(error => {
+                if (error.code !== 'share-too-large') console.warn('Could not update share URL.', error);
+            });
         } catch (error) {
             console.warn('Could not update share URL.', error);
         }
