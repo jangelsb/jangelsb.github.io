@@ -104,6 +104,11 @@ function cancelUrlData() {
     else window.location.hash = '';
 }
 
+function backupThenUseUrlData() {
+    exportJSON();
+    useUrlData();
+}
+
 function shareUiState() {
     return {
         activeResultTab: state.activeResultTab,
@@ -1089,6 +1094,10 @@ function handleClick(event) {
     const action = target.dataset.action;
     if (action === 'use-url-data') {
         useUrlData();
+        return;
+    }
+    if (action === 'backup-then-use-url-data') {
+        backupThenUseUrlData();
         return;
     }
     if (action === 'cancel-url-data') {
