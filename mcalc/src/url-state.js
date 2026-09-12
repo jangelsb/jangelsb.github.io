@@ -22,21 +22,23 @@ function base64UrlToBytes(value) {
 }
 
 async function gzip(bytes) {
-    if (typeof CompressionStream === 'undefined') return null;
-    const stream = new CompressionStream('gzip');
-    const writer = stream.writable.getWriter();
-    await writer.write(bytes);
-    await writer.close();
-    return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+    if (typeof CompressionStream === 'undefined' || typeof Blob === 'undefined') return null;
+    try {
+        const compressed = new Blob([bytes])
+            .stream()
+            .pipeThrough(new CompressionStream('gzip'));
+        return new Uint8Array(await new Response(compressed).arrayBuffer());
+    } catch (error) {
+        return null;
+    }
 }
 
 async function gunzip(bytes) {
-    if (typeof DecompressionStream === 'undefined') return null;
-    const stream = new DecompressionStream('gzip');
-    const writer = stream.writable.getWriter();
-    await writer.write(bytes);
-    await writer.close();
-    return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+    if (typeof DecompressionStream === 'undefined' || typeof Blob === 'undefined') return null;
+    const decompressed = new Blob([bytes])
+        .stream()
+        .pipeThrough(new DecompressionStream('gzip'));
+    return new Uint8Array(await new Response(decompressed).arrayBuffer());
 }
 
 function validString(value, fallback = '') {

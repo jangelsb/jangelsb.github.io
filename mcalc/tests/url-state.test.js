@@ -57,3 +57,20 @@ test('decodes the uncompressed compatibility format', async () => {
 
     assert.equal(result.appData.homes[0].name, 'Compatibility Home');
 });
+
+test('falls back to an uncompressed base64 URL when compression is unavailable', async () => {
+    const originalCompressionStream = globalThis.CompressionStream;
+    globalThis.CompressionStream = undefined;
+
+    try {
+        const appData = createDefaultAppData();
+        appData.homes[0].name = 'Fallback Home';
+        const hash = await encodeShareState(appData, {});
+        const result = await decodeShareHash(hash);
+
+        assert.match(hash, /^#s=1\.j\./);
+        assert.equal(result.appData.homes[0].name, 'Fallback Home');
+    } finally {
+        globalThis.CompressionStream = originalCompressionStream;
+    }
+});
