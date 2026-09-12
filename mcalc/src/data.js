@@ -19,6 +19,9 @@ const DEFAULT_SCENARIO = {
     armFee: 5000,
     rateReductionPerPoint: DEFAULT_RATE_REDUCTION_PER_POINT,
     maxRateBuydownPoints: DEFAULT_MAX_RATE_BUYDOWN_POINTS,
+    quotedFinalRate: 0,
+    buyerRateBuydown: 0,
+    extraDownPayment: 0,
     designCost: 0,
     incentiveAllocation: {
         rateBuydown: 0,
@@ -40,6 +43,9 @@ const DEFAULT_FIXED_SCENARIO = {
     armFee: 5000,
     rateReductionPerPoint: DEFAULT_RATE_REDUCTION_PER_POINT,
     maxRateBuydownPoints: DEFAULT_MAX_RATE_BUYDOWN_POINTS,
+    quotedFinalRate: 0,
+    buyerRateBuydown: 0,
+    extraDownPayment: 0,
     designCost: 0,
     incentiveAllocation: {
         rateBuydown: 0,
@@ -129,6 +135,9 @@ function normalizeScenario(scenario, index) {
         armFee: numberOr(source.armFee),
         rateReductionPerPoint: Math.max(0, numberOr(source.rateReductionPerPoint, DEFAULT_RATE_REDUCTION_PER_POINT)),
         maxRateBuydownPoints: Math.max(0, numberOr(source.maxRateBuydownPoints, DEFAULT_MAX_RATE_BUYDOWN_POINTS)),
+        quotedFinalRate: Math.max(0, numberOr(source.quotedFinalRate)),
+        buyerRateBuydown: Math.max(0, numberOr(source.buyerRateBuydown)),
+        extraDownPayment: Math.max(0, numberOr(source.extraDownPayment)),
         designCost: Math.max(0, numberOr(source.designCost ?? source.upgrades?.selectedCost)),
         incentiveAllocation: normalizeAllocation(source)
     };

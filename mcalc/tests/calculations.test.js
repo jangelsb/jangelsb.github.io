@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { calculateAmortization, calculateLoanInputs, calculateScenario, monthlyPayment } from '../src/calculations.js';
+import { calculateAmortization, calculateDecisionComparison, calculateLoanInputs, calculateScenario, monthlyPayment } from '../src/calculations.js';
 
 const home = {
     price: 300000,
@@ -37,6 +37,14 @@ test('supports a fixed-dollar closing-cost estimate', () => {
 
     assert.equal(result.closingCosts, 9000);
     assert.equal(result.cashToClose, 69000);
+});
+
+test('uses extra buyer down payment to reduce the loan amount', () => {
+    const result = calculateLoanInputs(home, home.price, 10000);
+
+    assert.equal(result.downPayment, 70000);
+    assert.equal(result.principal, 230000);
+    assert.equal(result.cashToClose, 74600);
 });
 
 test('applies incentive allocations to the final scenario without double-counting points', () => {
@@ -129,6 +137,64 @@ test('caps rate buydown points and leaves excess incentive unallocated', () => {
     assert.equal(result.appliedAllocation.rateBuydown, 19200);
     assert.equal(result.rateBuydownUnapplied, 50800);
     assert.equal(result.incentiveRemaining, 50800);
+});
+
+test('uses buyer cash for discount points after builder funds and includes it in cash to close', () => {
+    const result = calculateScenario({ ...home, incentivePool: 2000 }, {
+        ...fixed,
+        rate: 6,
+        maxRateBuydownPoints: 2,
+        rateReductionPerPoint: 0.25,
+        buyerRateBuydown: 6000,
+        extraDownPayment: 10000,
+        incentiveAllocation: {
+            rateBuydown: 2000,
+            closingCosts: 0,
+            priceReduction: 0,
+            designUpgrades: 0
+        }
+    });
+
+    assert.equal(result.loanAmount, 230000);
+    assert.equal(result.pointsPurchased, 2);
+    assert.equal(result.appliedAllocation.rateBuydown, 2000);
+    assert.equal(result.buyerRateBuydownApplied, 2600);
+    assert.equal(result.finalRate, 5.5);
+    assert.equal(result.cashToClose, 77200);
+});
+
+test('uses a lender-quoted final rate instead of the linear point estimate', () => {
+    const result = calculateScenario(home, {
+        ...fixed,
+        rate: 6,
+        maxRateBuydownPoints: 2,
+        rateReductionPerPoint: 0.25,
+        buyerRateBuydown: 4800,
+        quotedFinalRate: 5.625,
+        incentiveAllocation: {}
+    });
+
+    assert.equal(result.pointsPurchased, 2);
+    assert.equal(result.finalRate, 5.625);
+});
+
+test('compares invested cash-flow differences with the equity and interest tradeoff', () => {
+    const baseline = calculateScenario(home, { ...fixed, rate: 6, incentiveAllocation: {} });
+    const candidate = calculateScenario(home, {
+        ...fixed,
+        rate: 6,
+        maxRateBuydownPoints: 2,
+        rateReductionPerPoint: 0.25,
+        buyerRateBuydown: 4800,
+        incentiveAllocation: {}
+    });
+    const decision = calculateDecisionComparison(baseline, candidate, 7);
+
+    assert.equal(decision.length, 30);
+    assert.equal(decision[0].extraCashAtClose, 4800);
+    assert.ok(decision[0].monthlySavings > 0);
+    assert.ok(decision[4].interestSavings > 0);
+    assert.ok(decision[4].equityDifference > 0);
 });
 
 test('includes taxes, HOA, and insurance in the total monthly payment', () => {

@@ -14,7 +14,7 @@ import {
     normalizeAppData,
     sortHomesForDisplay
 } from './data.js';
-import { calculateScenario } from './calculations.js';
+import { calculateDecisionComparison, calculateScenario } from './calculations.js';
 import {
     applyComparisonHomeConfigs,
     buildComparisonHomeConfigs,
@@ -33,11 +33,15 @@ const state = {
     compareHomeIds: {},
     compareChartVisibility: {},
     activeComparisonId: null,
-    newComparison: { name: '', description: '' }
+    newComparison: { name: '', description: '' },
+    decisionBaselineScenarioIds: {},
+    decisionInvestmentReturn: 7,
+    decisionMetric: 'netPositionDifference'
 };
 
 let appData = loadAppData();
 let chart = null;
+let decisionChart = null;
 let resultsData = [];
 let shareUpdateTimer = null;
 let shareUpdateSequence = 0;
@@ -48,9 +52,21 @@ const MAX_SHARE_URL_LENGTH = 8000;
 const $ = selector => document.querySelector(selector);
 
 function destroyChart() {
+    destroyHomeChart();
+    destroyDecisionChart();
+}
+
+function destroyHomeChart() {
     if (chart) {
         chart.destroy();
         chart = null;
+    }
+}
+
+function destroyDecisionChart() {
+    if (decisionChart) {
+        decisionChart.destroy();
+        decisionChart = null;
     }
 }
 
@@ -120,7 +136,10 @@ function shareUiState() {
         compareHomeIds: state.compareHomeIds,
         compareChartVisibility: state.compareChartVisibility,
         activeComparisonId: state.activeComparisonId,
-        newComparison: state.newComparison
+        newComparison: state.newComparison,
+        decisionBaselineScenarioIds: state.decisionBaselineScenarioIds,
+        decisionInvestmentReturn: state.decisionInvestmentReturn,
+        decisionMetric: state.decisionMetric
     };
 }
 
@@ -342,11 +361,29 @@ const helpTopics = {
         formula: 'Point cost = loan amount × 1%; final rate = base rate − points × rate reduction per point',
         recommendation: 'Enter the lender’s actual points-to-rate quote. Do not assume every point reduces the rate by the same amount.'
     },
+    buyerRateBuydown: {
+        title: 'Extra buyer cash for discount points',
+        body: 'Your own cash used to buy permanent discount points after any builder incentive is applied. It is separate from your down payment and increases cash needed to close.',
+        formula: 'Total points paid = builder point funds + buyer point funds',
+        recommendation: 'Use a separate scenario for each exact lender rate-and-points quote.'
+    },
+    extraDownPayment: {
+        title: 'Extra buyer cash toward down payment',
+        body: 'Your own cash paid above the planned down payment. It reduces the initial loan balance but does not directly purchase a lower interest rate.',
+        formula: 'Loan amount = final price − planned down payment − extra down payment',
+        recommendation: 'Keep this separate from discount points so the tradeoff is clear.'
+    },
     rateReductionPerPoint: {
         title: 'Rate reduction per point',
         body: 'The assumed permanent rate reduction for each discount point in this scenario. This is a lender/product assumption, not a universal rule.',
         formula: 'Rate reduction = points purchased × reduction per point',
         recommendation: 'Get this value from the lender’s rate sheet or Loan Estimate.'
+    },
+    quotedFinalRate: {
+        title: 'Lender-quoted final rate',
+        body: 'An optional exact final rate from the lender for this particular point amount. When entered, it overrides the linear rate-reduction estimate for this scenario.',
+        formula: 'Final rate = lender quote for this exact point spend',
+        recommendation: 'Create a separate scenario for each quoted rate-and-points combination.'
     },
     maxRateBuydownPoints: {
         title: 'Maximum rate-buydown points',
@@ -363,7 +400,7 @@ const helpTopics = {
     cashToClose: {
         title: 'Cash needed to close',
         body: 'The estimated cash required after applying the selected incentive allocation. It includes the down payment and eligible costs not covered by credits.',
-        formula: 'Cash to close = down payment + remaining closing costs + remaining upgrade cost',
+        formula: 'Cash to close = down payment + buyer-paid points + remaining closing costs + remaining upgrade cost',
         recommendation: 'Use the lender’s Loan Estimate and Closing Disclosure for the final number.'
     },
     monthlyPayment: {
@@ -468,15 +505,25 @@ function renderActiveHome() {
             <input type="number" step="0.1" value="${scenario.rate}"
                 data-scenario-id="${scenario.id}" data-scenario-field="rate">
 
-            ${home.incentivePool > 0 ? `<div class="rate-buydown-settings">
+            <div class="rate-buydown-settings">
                 ${renderFieldLabel('Rate Reduction per Point (%)', 'rateReductionPerPoint', `help-scenario-${scenario.id}-rate-reduction`)}
                 <input type="number" min="0" step="0.05" value="${scenario.rateReductionPerPoint}"
                     data-scenario-id="${scenario.id}" data-scenario-field="rateReductionPerPoint">
+                ${renderFieldLabel('Lender-Quoted Final Rate (%; optional)', 'quotedFinalRate', `help-scenario-${scenario.id}-quoted-rate`)}
+                <input type="number" min="0" step="0.001" value="${scenario.quotedFinalRate || ''}"
+                    placeholder="Use exact lender quote" data-scenario-id="${scenario.id}" data-scenario-field="quotedFinalRate">
                 ${renderFieldLabel('Maximum Rate-Buydown Points', 'maxRateBuydownPoints', `help-scenario-${scenario.id}-max-points`)}
                 <input type="number" min="0" step="0.25" value="${scenario.maxRateBuydownPoints}"
                     data-scenario-id="${scenario.id}" data-scenario-field="maxRateBuydownPoints">
-                <p class="muted field-help">These are lender/product assumptions, not universal limits.</p>
-            </div>` : ''}
+                ${renderFieldLabel('Extra Buyer Cash for Discount Points ($)', 'buyerRateBuydown', `help-scenario-${scenario.id}-buyer-points`)}
+                <div class="point-cash-input"><input type="number" min="0" step="100" value="${scenario.buyerRateBuydown}"
+                    data-scenario-id="${scenario.id}" data-scenario-field="buyerRateBuydown"><button class="btn-secondary" type="button" data-action="max-buyer-rate-buydown" data-home-id="${home.id}" data-scenario-id="${scenario.id}">Use Point Cap</button></div>
+                <p class="muted field-help">Builder funds apply first. Your extra cash only buys the amount still needed to reach the lender point cap.</p>
+            </div>
+
+            ${renderFieldLabel('Extra Buyer Cash Toward Down Payment ($)', 'extraDownPayment', `help-scenario-${scenario.id}-extra-down-payment`)}
+            <input type="number" min="0" step="100" value="${scenario.extraDownPayment}"
+                data-scenario-id="${scenario.id}" data-scenario-field="extraDownPayment">
 
             ${renderFieldLabel('Design / Lot Upgrade Cost ($)', 'designCost', `help-scenario-${scenario.id}-design-cost`)}
             <input type="number" min="0" step="100" value="${scenario.designCost}"
@@ -630,6 +677,17 @@ function maxScenarioAllocation(homeId, scenarioId, field) {
     renderApp();
 }
 
+function maxBuyerRateBuydown(homeId, scenarioId) {
+    const home = homeById(homeId);
+    const scenario = scenarioById(home, scenarioId);
+    if (!home || !scenario) return;
+    const result = calculateScenario(home, scenario);
+    const builderPointFunds = scenarioAllocation(scenario).rateBuydown;
+    scenario.buyerRateBuydown = Math.max(0, result.allocationCaps.rateBuydown - builderPointFunds);
+    persist();
+    renderApp();
+}
+
 function addHome() {
     const source = appData.homes[0];
     const newHome = clone(source);
@@ -697,6 +755,9 @@ function addScenario(homeId) {
         name: 'New Scenario',
         rateReductionPerPoint: DEFAULT_RATE_REDUCTION_PER_POINT,
         maxRateBuydownPoints: DEFAULT_MAX_RATE_BUYDOWN_POINTS,
+        quotedFinalRate: 0,
+        buyerRateBuydown: 0,
+        extraDownPayment: 0,
         designCost: 0,
         incentiveAllocation: {
             rateBuydown: 0,
@@ -829,6 +890,81 @@ function metricValue(row, metric) {
     return metric === 'monthlyPayment' ? row.totalMonthly : row[metric];
 }
 
+function formatSignedCurrency(value) {
+    const amount = formatCurrency(Math.abs(value));
+    return `${value > 0 ? '+' : value < 0 ? '−' : ''}${amount}`;
+}
+
+function decisionMetricLabel(metric) {
+    return {
+        netPositionDifference: 'Overall Advantage (Equity + Investing)',
+        investmentDifference: 'Cash Invested / Spent Difference',
+        interestSavings: 'Cumulative Interest Saved'
+    }[metric] || 'Scenario Difference';
+}
+
+function decisionMetricValue(row, metric) {
+    return row[metric] || 0;
+}
+
+function decisionBaseline(home) {
+    const selectedId = Number(state.decisionBaselineScenarioIds[home.id]);
+    return resultsData.find(result => result.scenario.id === selectedId) || resultsData[0];
+}
+
+function renderDecisionAnalysis(home) {
+    if (resultsData.length < 2) return '';
+    const baseline = decisionBaseline(home);
+    state.decisionBaselineScenarioIds[home.id] = baseline.scenario.id;
+    const candidates = resultsData.filter(result => result !== baseline).map(result => ({
+        result,
+        data: calculateDecisionComparison(baseline, result, state.decisionInvestmentReturn)
+    }));
+    const atYear = (candidate, year) => candidate.data[Math.min(year, candidate.data.length) - 1];
+    const cells = (value) => candidates.map(candidate => `<td>${formatSignedCurrency(value(candidate))}</td>`).join('');
+    const scenarioOptions = resultsData.map(result => `<option value="${result.scenario.id}" ${result === baseline ? 'selected' : ''}>${escapeHtml(getScenarioDisplayName(result.scenario))}</option>`).join('');
+    const metricOptions = ['netPositionDifference', 'investmentDifference', 'interestSavings'].map(metric => `<option value="${metric}" ${state.decisionMetric === metric ? 'selected' : ''}>${decisionMetricLabel(metric)}</option>`).join('');
+    const table = `<div class="table-scroll"><table class="decision-table"><thead><tr><th>Relative to ${escapeHtml(getScenarioDisplayName(baseline.scenario))}</th>${candidates.map(candidate => `<th>${escapeHtml(getScenarioDisplayName(candidate.result.scenario))}</th>`).join('')}</tr></thead><tbody>
+        <tr><td>Extra cash needed at close</td>${cells(candidate => atYear(candidate, 1).extraCashAtClose)}</tr>
+        <tr><td>Year 1 monthly savings</td>${cells(candidate => atYear(candidate, 1).monthlySavings)}</tr>
+        <tr><td>Interest saved by Year 3</td>${cells(candidate => atYear(candidate, 3).interestSavings)}</tr>
+        <tr><td>Interest saved by Year 5</td>${cells(candidate => atYear(candidate, 5).interestSavings)}</tr>
+        <tr><td>Interest saved by Year 7</td>${cells(candidate => atYear(candidate, 7).interestSavings)}</tr>
+        <tr><td>Interest saved by Year 10</td>${cells(candidate => atYear(candidate, 10).interestSavings)}</tr>
+        <tr><td>Interest saved by Year 30</td>${cells(candidate => atYear(candidate, 30).interestSavings)}</tr>
+        <tr><td>Overall advantage at Year 3</td>${cells(candidate => atYear(candidate, 3).netPositionDifference)}</tr>
+        <tr><td>Overall advantage at Year 5</td>${cells(candidate => atYear(candidate, 5).netPositionDifference)}</tr>
+        <tr><td>Overall advantage at Year 7</td>${cells(candidate => atYear(candidate, 7).netPositionDifference)}</tr>
+        <tr><td>Overall advantage at Year 10</td>${cells(candidate => atYear(candidate, 10).netPositionDifference)}</tr>
+        <tr><td>Overall advantage at Year 30</td>${cells(candidate => atYear(candidate, 30).netPositionDifference)}</tr>
+    </tbody></table></div>`;
+
+    return `<section class="decision-analysis"><div class="flex-between decision-heading"><div><h3>Projected Financial Advantage vs. Baseline</h3><p class="muted">This compares each scenario with the selected baseline. It combines the home-equity difference with the projected value of the upfront and monthly cash-flow difference invested at the selected return.</p><p class="decision-legend"><span class="decision-positive">Above $0: scenario is ahead</span><span class="decision-negative">Below $0: baseline is ahead</span></p></div></div>
+        <div class="decision-controls"><div><label for="decisionBaseline">Compare against</label><select id="decisionBaseline" data-decision-baseline-home-id="${home.id}">${scenarioOptions}</select></div><div><label for="decisionInvestmentReturn">Investment return (%/yr)</label><input id="decisionInvestmentReturn" type="number" min="0" step="0.1" value="${state.decisionInvestmentReturn}" data-decision-investment-return></div><div><label for="decisionMetric">30-year graph</label><select id="decisionMetric" data-decision-metric>${metricOptions}</select></div></div>
+        ${table}<div class="chart-container"><canvas id="decisionChart"></canvas></div></section>`;
+}
+
+function renderDecisionChart(home) {
+    destroyDecisionChart();
+    if (typeof Chart === 'undefined' || resultsData.length < 2) return;
+    const baseline = decisionBaseline(home);
+    const colors = ['#137333', '#7b1fa2', '#ea4335', '#f57c00'];
+    const datasets = resultsData.filter(result => result !== baseline).map((result, index) => {
+        const data = calculateDecisionComparison(baseline, result, state.decisionInvestmentReturn);
+        return {
+            label: `${getScenarioDisplayName(result.scenario)} vs. ${getScenarioDisplayName(baseline.scenario)}`,
+            data: data.map(row => decisionMetricValue(row, state.decisionMetric)),
+            borderColor: colors[index % colors.length],
+            backgroundColor: 'transparent'
+        };
+    });
+    decisionChart = new Chart($('#decisionChart').getContext('2d'), {
+        type: 'line',
+        data: { labels: Array.from({ length: 30 }, (_, index) => `Yr ${index + 1}`), datasets },
+        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { title: { display: true, text: `${decisionMetricLabel(state.decisionMetric)} (assuming ${state.decisionInvestmentReturn}% annual return)` }, tooltip: { callbacks: { label: context => `${context.dataset.label}: ${formatSignedCurrency(context.raw)}` } } }, scales: { y: { ticks: { callback: value => formatCurrency(value) } } } }
+    });
+}
+
 function renderComparisonChart(comparisonData) {
     $('#resultsContainer').innerHTML = `<div class="card"><div class="chart-controls"><h3>${metricLabel(state.compareChartMetric)}</h3>
         <select class="chart-select" data-chart-context="comparison"><option value="monthlyPayment" ${state.compareChartMetric === 'monthlyPayment' ? 'selected' : ''}>Monthly Payment</option><option value="balance" ${state.compareChartMetric === 'balance' ? 'selected' : ''}>Remaining Loan Balance</option><option value="cumulativeInterest" ${state.compareChartMetric === 'cumulativeInterest' ? 'selected' : ''}>Cumulative Interest Paid</option><option value="equity" ${state.compareChartMetric === 'equity' ? 'selected' : ''}>Net Equity</option></select>
@@ -876,6 +1012,9 @@ function renderResults(home) {
     const tabs = `<div class="result-tabs"><button id="tab-summary" class="result-tab ${state.activeResultTab === 'summary' ? 'active' : ''}" data-action="result-tab" data-result-tab="summary">Summary & Graphs</button>${resultsData.map((result, index) => `<button id="tab-data-${index}" class="result-tab ${state.activeResultTab === 'data-' + index ? 'active' : ''}" data-action="result-tab" data-result-tab="data-${index}">${escapeHtml(getScenarioDisplayName(result.scenario))}</button>`).join('')}</div>`;
     const milestone = (result, field, color = '') => `<div class="milestone-box"><div class="milestone-row"><span class="milestone-label">Year 3</span><span class="milestone-val">${formatCurrency(result.data[2][field])}</span></div><hr><div class="milestone-row"><span class="milestone-label">Year 5</span><span class="milestone-val">${formatCurrency(result.data[4][field])}</span></div><hr><div class="milestone-row"><span class="milestone-label">Year 10</span><span class="milestone-val" style="${color ? `color:${color};` : ''}font-weight:bold;">${formatCurrency(result.data[9][field])}</span></div></div>`;
     const finalInterest = result => formatCurrency(result.data[result.data.length - 1].cumulativeInterest);
+    const buyerCashRows = resultsData.some(result => result.extraDownPayment > 0 || result.buyerRateBuydownApplied > 0) ? `
+        <tr><td><b>${renderMetricLabel('Extra Buyer Down Payment', 'extraDownPayment', 'help-summary-extra-down')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.extraDownPayment)}</td>`).join('')}</tr>
+        <tr><td><b>${renderMetricLabel('Buyer-Paid Discount Points', 'buyerRateBuydown', 'help-summary-buyer-points')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.buyerRateBuydownApplied)}</td>`).join('')}</tr>` : '';
     const incentiveSummaryRows = home.incentivePool > 0 ? `
         <tr><td><b>${renderMetricLabel('Builder Incentive Used', 'incentivePool', 'help-summary-incentive-used')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.incentiveUsed)}</td>`).join('')}</tr>
         <tr><td><b>${renderMetricLabel('Rate-Buydown Points', 'rateBuydown', 'help-summary-rate-points')}</b></td>${resultsData.map(result => `<td>${result.pointsPurchased.toFixed(2)}</td>`).join('')}</tr>
@@ -887,6 +1026,7 @@ function renderResults(home) {
     const summary = `<table class="summary-table"><thead><tr><th>Metric</th>${resultsData.map(result => `<th>${escapeHtml(getScenarioDisplayName(result.scenario))}</th>`).join('')}</tr></thead><tbody>
         <tr><td><b>${renderMetricLabel('Final Purchase Price', 'purchasePrice', 'help-summary-price')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.finalPrice)}</td>`).join('')}</tr>
         <tr><td><b>${renderMetricLabel('Down Payment', 'downPayment', 'help-summary-down-payment')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.downPayment)}</td>`).join('')}</tr>
+        ${buyerCashRows}
         <tr><td><b>${renderMetricLabel('Loan Amount', 'loanAmount', 'help-summary-loan-amount')}</b></td>${resultsData.map(result => `<td>${formatCurrency(result.loanAmount)}</td>`).join('')}</tr>
         <tr><td><b>${renderMetricLabel('Final Interest Rate', 'rate', 'help-summary-final-rate')}</b></td>${resultsData.map(result => `<td>${result.finalRate.toFixed(3)}%</td>`).join('')}</tr>
         ${incentiveSummaryRows}
@@ -897,11 +1037,13 @@ function renderResults(home) {
         <tr><td><b>Contractual Interest</b></td>${resultsData.map(result => `<td>${milestone(result, 'cumulativeInterest', '#c5221f')}</td>`).join('')}</tr>
         <tr><td><b>Total Interest (Loan Term)</b></td>${resultsData.map(result => `<td>${finalInterest(result)}</td>`).join('')}</tr>
     </tbody></table>`;
-    const summaryPane = `<div id="res-summary" class="card result-pane" style="display:${state.activeResultTab === 'summary' ? 'block' : 'none'}"><div class="table-scroll">${summary}</div><div class="chart-controls"><h3 id="chartTitle">${chartTitle(state.activeChartMetric)}</h3><select id="chartMetricSelect" class="chart-select" data-chart-context="home"><option value="balance" ${state.activeChartMetric === 'balance' ? 'selected' : ''}>Remaining Balance</option><option value="cumulativeInterest" ${state.activeChartMetric === 'cumulativeInterest' ? 'selected' : ''}>Contractual Interest Paid</option><option value="equity" ${state.activeChartMetric === 'equity' ? 'selected' : ''}>Net Equity (Value - Balance)</option><option value="monthlyPayment" ${state.activeChartMetric === 'monthlyPayment' ? 'selected' : ''}>Monthly Payment (P&I + Fixed)</option></select></div><div class="chart-container"><canvas id="balanceChart"></canvas></div></div>`;
+    const decisionAnalysis = renderDecisionAnalysis(home);
+    const summaryPane = `<div id="res-summary" class="card result-pane" style="display:${state.activeResultTab === 'summary' ? 'block' : 'none'}"><div class="table-scroll">${summary}</div><div class="chart-controls"><h3 id="chartTitle">${chartTitle(state.activeChartMetric)}</h3><select id="chartMetricSelect" class="chart-select" data-chart-context="home"><option value="balance" ${state.activeChartMetric === 'balance' ? 'selected' : ''}>Remaining Balance</option><option value="cumulativeInterest" ${state.activeChartMetric === 'cumulativeInterest' ? 'selected' : ''}>Contractual Interest Paid</option><option value="equity" ${state.activeChartMetric === 'equity' ? 'selected' : ''}>Net Equity (Value - Balance)</option><option value="monthlyPayment" ${state.activeChartMetric === 'monthlyPayment' ? 'selected' : ''}>Monthly Payment (P&I + Fixed)</option></select></div><div class="chart-container"><canvas id="balanceChart"></canvas></div>${decisionAnalysis}</div>`;
     const dataPanes = resultsData.map((result, index) => `<div id="res-data-${index}" class="card result-pane" style="display:${state.activeResultTab === 'data-' + index ? 'block' : 'none'}"><div class="table-scroll"><table><thead><tr><th>Year</th><th>Rate</th><th>Monthly P&I</th><th>Total Monthly</th><th>Principal (Yr)</th><th>Interest (Yr)</th><th>Cum. Principal</th><th>Cum. Interest</th><th>Remaining Balance</th><th>Est. Value</th><th>Net Equity</th></tr></thead><tbody>${result.data.map(row => `<tr><td>${row.year}</td><td>${row.rate}%</td><td>${formatCurrency(row.pi)}</td><td>${formatCurrency(row.totalMonthly)}</td><td>${formatCurrency(row.yearlyPrincipal)}</td><td>${formatCurrency(row.yearlyInterest)}</td><td>${formatCurrency(row.cumulativePrincipal)}</td><td>${formatCurrency(row.cumulativeInterest)}</td><td>${formatCurrency(row.balance)}</td><td>${formatCurrency(row.homeValue)}</td><td>${formatCurrency(row.equity)}</td></tr>`).join('')}</tbody></table></div></div>`).join('');
 
     $('#resultsContainer').innerHTML = tabs + summaryPane + dataPanes;
     renderHomeChart();
+    renderDecisionChart(home);
 }
 
 function chartTitle(metric) {
@@ -909,7 +1051,7 @@ function chartTitle(metric) {
 }
 
 function renderHomeChart() {
-    destroyChart();
+    destroyHomeChart();
     if (typeof Chart === 'undefined') return;
     const colors = ['#1a73e8', '#ea4335', '#34a853', '#fbbc04', '#673ab7'];
     chart = new Chart($('#balanceChart').getContext('2d'), {
@@ -1083,6 +1225,21 @@ function handleChange(event) {
         renderComparison();
         scheduleShareUrlUpdate();
     }
+    if (target.dataset.decisionBaselineHomeId) {
+        state.decisionBaselineScenarioIds[target.dataset.decisionBaselineHomeId] = Number(target.value);
+        renderResults(getActiveHome());
+        scheduleShareUrlUpdate();
+    }
+    if (target.dataset.decisionInvestmentReturn) {
+        state.decisionInvestmentReturn = Math.max(0, Number(target.value) || 0);
+        renderResults(getActiveHome());
+        scheduleShareUrlUpdate();
+    }
+    if (target.dataset.decisionMetric) {
+        state.decisionMetric = target.value;
+        renderResults(getActiveHome());
+        scheduleShareUrlUpdate();
+    }
 }
 
 function handleClick(event) {
@@ -1129,6 +1286,7 @@ function handleClick(event) {
     else if (action === 'add-scenario') addScenario(target.dataset.homeId);
     else if (action === 'delete-scenario') deleteScenario(target.dataset.homeId, target.dataset.scenarioId);
     else if (action === 'max-allocation') maxScenarioAllocation(target.dataset.homeId, target.dataset.scenarioId, target.dataset.allocationField);
+    else if (action === 'max-buyer-rate-buydown') maxBuyerRateBuydown(target.dataset.homeId, target.dataset.scenarioId);
     else if (action === 'save-comparison') saveCurrentComparison();
     else if (action === 'delete-comparison') deleteCurrentComparison();
     else if (action === 'result-tab') {

@@ -4,6 +4,7 @@ const SHARE_PREFIX = '#s=1.';
 const MAX_SHARE_PAYLOAD_LENGTH = 100000;
 const HOME_CHART_METRICS = ['balance', 'cumulativeInterest', 'equity', 'monthlyPayment'];
 const COMPARISON_CHART_METRICS = ['monthlyPayment', 'balance', 'cumulativeInterest', 'equity'];
+const DECISION_METRICS = ['netPositionDifference', 'investmentDifference', 'interestSavings'];
 
 function bytesToBase64Url(bytes) {
     let binary = '';
@@ -62,6 +63,7 @@ function normalizeShareUiState(ui = {}) {
         : 'monthlyPayment';
     const compareChartYears = Number(source.compareChartYears);
     const activeComparisonId = source.activeComparisonId == null ? null : Number(source.activeComparisonId);
+    const decisionInvestmentReturn = Number(source.decisionInvestmentReturn);
 
     return {
         activeResultTab,
@@ -75,6 +77,13 @@ function normalizeShareUiState(ui = {}) {
         compareHomeIds: validMap(source.compareHomeIds),
         compareChartVisibility: validMap(source.compareChartVisibility),
         activeComparisonId: Number.isFinite(activeComparisonId) ? activeComparisonId : null,
+        decisionBaselineScenarioIds: validMap(source.decisionBaselineScenarioIds),
+        decisionInvestmentReturn: Number.isFinite(decisionInvestmentReturn)
+            ? Math.max(0, decisionInvestmentReturn)
+            : 7,
+        decisionMetric: DECISION_METRICS.includes(source.decisionMetric)
+            ? source.decisionMetric
+            : 'netPositionDifference',
         newComparison: {
             name: validString(source.newComparison?.name),
             description: validString(source.newComparison?.description)

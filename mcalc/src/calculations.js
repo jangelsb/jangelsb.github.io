@@ -16,10 +16,11 @@ function nonNegativeNumber(value) {
     return Math.max(0, Number.isFinite(Number(value)) ? Number(value) : 0);
 }
 
-function downPaymentAmount(home, purchasePrice = home.price) {
-    return home.downType === 'percent'
+function downPaymentAmount(home, purchasePrice = home.price, extraDownPayment = 0) {
+    const plannedDownPayment = home.downType === 'percent'
         ? Math.min(purchasePrice, purchasePrice * (nonNegativeNumber(home.downValue) / 100))
         : Math.min(purchasePrice, nonNegativeNumber(home.downValue));
+    return Math.min(purchasePrice, plannedDownPayment + nonNegativeNumber(extraDownPayment));
 }
 
 function closingCostEstimate(home, principal) {
@@ -30,9 +31,9 @@ function closingCostEstimate(home, principal) {
     return principal * (nonNegativeNumber(percent) / 100);
 }
 
-export function calculateLoanInputs(home, purchasePrice = home.price) {
+export function calculateLoanInputs(home, purchasePrice = home.price, extraDownPayment = 0) {
     const finalPrice = nonNegativeNumber(purchasePrice);
-    const downPayment = downPaymentAmount(home, finalPrice);
+    const downPayment = downPaymentAmount(home, finalPrice, extraDownPayment);
     const principal = Math.max(0, finalPrice - downPayment);
     const closingCosts = closingCostEstimate(home, principal);
     return {
@@ -67,9 +68,10 @@ export function calculateScenario(home, config) {
     const basePrice = nonNegativeNumber(home.price);
     const priceReduction = Math.min(basePrice, allocation.priceReduction);
     const finalPrice = basePrice - priceReduction;
-    const loanInputs = calculateLoanInputs(home, finalPrice);
+    const loanInputs = calculateLoanInputs(home, finalPrice, config.extraDownPayment);
     const pointCost = loanInputs.principal * 0.01;
-    const requestedPoints = pointCost > 0 ? allocation.rateBuydown / pointCost : 0;
+    const buyerRateBuydown = nonNegativeNumber(config.buyerRateBuydown);
+    const requestedPoints = pointCost > 0 ? (allocation.rateBuydown + buyerRateBuydown) / pointCost : 0;
     const maxRateBuydownPoints = Number.isFinite(Number(config.maxRateBuydownPoints))
         ? Math.max(0, Number(config.maxRateBuydownPoints))
         : DEFAULT_MAX_RATE_BUYDOWN_POINTS;
@@ -79,8 +81,11 @@ export function calculateScenario(home, config) {
         : DEFAULT_RATE_REDUCTION_PER_POINT;
     const rateReduction = pointsPurchased * rateReductionPerPoint;
     const baseRate = nonNegativeNumber(config.rate);
-    const finalRate = Math.max(0, baseRate - rateReduction);
-    const appliedRateBuydown = Math.min(allocation.rateBuydown, pointsPurchased * pointCost);
+    const quotedFinalRate = nonNegativeNumber(config.quotedFinalRate);
+    const finalRate = quotedFinalRate > 0 ? quotedFinalRate : Math.max(0, baseRate - rateReduction);
+    const totalRateBuydownCost = pointsPurchased * pointCost;
+    const appliedRateBuydown = Math.min(allocation.rateBuydown, totalRateBuydownCost);
+    const buyerRateBuydownApplied = Math.min(buyerRateBuydown, Math.max(0, totalRateBuydownCost - appliedRateBuydown));
     const closingCredit = Math.min(allocation.closingCosts, loanInputs.closingCosts);
     const designCost = nonNegativeNumber(config.designCost);
     const designCredit = Math.min(allocation.designUpgrades, designCost);
@@ -124,7 +129,12 @@ export function calculateScenario(home, config) {
         maxRateBuydownPoints,
         rateReductionPerPoint,
         rateReduction,
+        quotedFinalRate,
         rateBuydownUnapplied: Math.max(0, allocation.rateBuydown - appliedRateBuydown),
+        buyerRateBuydown,
+        buyerRateBuydownApplied,
+        buyerRateBuydownUnapplied: Math.max(0, buyerRateBuydown - buyerRateBuydownApplied),
+        extraDownPayment: Math.max(0, loanInputs.downPayment - downPaymentAmount(home, finalPrice)),
         allocationCaps,
         estimatedClosingCosts: loanInputs.closingCosts,
         closingCredit,
@@ -132,9 +142,37 @@ export function calculateScenario(home, config) {
         designCost,
         designCredit,
         remainingDesignCost,
-        cashToClose: loanInputs.downPayment + remainingClosingCosts + remainingDesignCost,
+        cashToClose: loanInputs.downPayment + remainingClosingCosts + remainingDesignCost + buyerRateBuydownApplied,
         amortization
     };
+}
+
+export function calculateDecisionComparison(baseline, candidate, annualReturn = 7, projectionYears = 30) {
+    const annualRate = nonNegativeNumber(annualReturn) / 100;
+    const monthlyInvestmentRate = Math.pow(1 + annualRate, 1 / 12) - 1;
+    const years = Math.max(1, Math.min(projectionYears, baseline.amortization.length, candidate.amortization.length));
+    let investmentDifference = nonNegativeNumber(baseline.cashToClose) - nonNegativeNumber(candidate.cashToClose);
+
+    return Array.from({ length: years }, (_, index) => {
+        const baselineRow = baseline.amortization[index];
+        const candidateRow = candidate.amortization[index];
+        const monthlySavings = baselineRow.totalMonthly - candidateRow.totalMonthly;
+
+        for (let month = 0; month < 12; month += 1) {
+            investmentDifference = (investmentDifference * (1 + monthlyInvestmentRate)) + monthlySavings;
+        }
+
+        const equityDifference = candidateRow.equity - baselineRow.equity;
+        return {
+            year: index + 1,
+            extraCashAtClose: candidate.cashToClose - baseline.cashToClose,
+            monthlySavings,
+            interestSavings: baselineRow.cumulativeInterest - candidateRow.cumulativeInterest,
+            equityDifference,
+            investmentDifference,
+            netPositionDifference: equityDifference + investmentDifference
+        };
+    });
 }
 
 export function calculateAmortization(home, config, principalAmount, projectionYears = 30) {
