@@ -36,13 +36,13 @@ const state = {
     newComparison: { name: '', description: '' }
 };
 
-const initialShareState = await loadInitialShareState();
-let appData = initialShareState?.appData || loadAppData();
-if (initialShareState?.ui) Object.assign(state, initialShareState.ui);
+let appData = loadAppData();
 let chart = null;
 let resultsData = [];
 let shareUpdateTimer = null;
 let shareUpdateSequence = 0;
+let pendingUrlData = null;
+let pendingUrlHash = '';
 const MAX_SHARE_URL_LENGTH = 8000;
 
 const $ = selector => document.querySelector(selector);
@@ -62,15 +62,46 @@ function persist() {
     }
 }
 
-async function loadInitialShareState() {
-    if (!window.location.hash.startsWith('#s=')) return null;
+function closeUrlDataPrompt() {
+    pendingUrlData = null;
+    pendingUrlHash = '';
+    $('#urlDataPrompt').hidden = true;
+}
+
+async function promptToLoadUrlData(hash = window.location.hash) {
+    if (hash !== pendingUrlHash) closeUrlDataPrompt();
+    if (!hash.startsWith('#s=')) {
+        return;
+    }
+    if (hash === pendingUrlHash) return;
+
     try {
-        return await decodeShareHash(window.location.hash);
+        const sharedState = await decodeShareHash(hash);
+        if (!sharedState || window.location.hash !== hash) return;
+        pendingUrlData = sharedState;
+        pendingUrlHash = hash;
+        $('#urlDataPrompt').hidden = false;
     } catch (error) {
+        if (window.location.hash !== hash) return;
         console.warn('Could not load shared mortgage data; using local data.', error);
         alert('This share link is invalid or unsupported. Your local calculator data was kept.');
-        return null;
     }
+}
+
+function useUrlData() {
+    if (!pendingUrlData) return;
+    const sharedState = pendingUrlData;
+    closeUrlDataPrompt();
+    appData = sharedState.appData;
+    Object.assign(state, sharedState.ui);
+    renderApp();
+}
+
+function cancelUrlData() {
+    closeUrlDataPrompt();
+    const baseUrl = window.location.href.split('#', 1)[0];
+    if (window.history?.replaceState) window.history.replaceState(null, '', baseUrl);
+    else window.location.hash = '';
 }
 
 function shareUiState() {
@@ -1056,6 +1087,14 @@ function handleClick(event) {
         return;
     }
     const action = target.dataset.action;
+    if (action === 'use-url-data') {
+        useUrlData();
+        return;
+    }
+    if (action === 'cancel-url-data') {
+        cancelUrlData();
+        return;
+    }
     if (action === 'share') {
         copyShareLink();
         return;
@@ -1097,7 +1136,10 @@ document.addEventListener('input', handleInput);
 document.addEventListener('change', handleChange);
 document.addEventListener('click', handleClick);
 document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') closeOpenHelp();
+    if (event.key === 'Escape') {
+        if (!$('#urlDataPrompt').hidden) cancelUrlData();
+        else closeOpenHelp();
+    }
 });
 $('#importFile').addEventListener('change', event => {
     const file = event.target.files[0];
@@ -1132,7 +1174,7 @@ $('#exportButton').addEventListener('click', exportJSON);
 $('#importButton').addEventListener('click', () => $('#importFile').click());
 
 const savedActiveComparison = appData.scenarioGroups.find(group => group.id === Number(appData.activeGroupId));
-if (savedActiveComparison && !initialShareState) {
+if (savedActiveComparison) {
     const applied = applyComparisonHomeConfigs(savedActiveComparison.homeConfigs);
     state.compareHomeIds = applied.compareHomeIds;
     state.compareScenarioIds = applied.compareScenarioIds;
@@ -1140,3 +1182,5 @@ if (savedActiveComparison && !initialShareState) {
 }
 
 renderApp();
+promptToLoadUrlData();
+window.addEventListener('hashchange', () => promptToLoadUrlData());

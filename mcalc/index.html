@@ -22,6 +22,16 @@
     <nav id="homeTabsContainer" class="home-tabs" aria-label="Properties"></nav>
     <main id="appContent"></main>
     <section id="resultsContainer" aria-live="polite"></section>
+    <div id="urlDataPrompt" class="url-data-prompt" role="dialog" aria-modal="true" aria-labelledby="urlDataPromptTitle" hidden>
+        <div class="url-data-prompt-card">
+            <h2 id="urlDataPromptTitle">Load shared calculator data?</h2>
+            <p>This link contains mortgage calculator data. Choose whether to use it or keep the data already in this browser.</p>
+            <div class="button-row url-data-prompt-actions">
+                <button class="btn-primary" data-action="use-url-data">Use URL data</button>
+                <button class="btn-secondary" data-action="cancel-url-data">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="./src/app.js?v=share-links-7"></script>
 </body>
