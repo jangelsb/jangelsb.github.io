@@ -153,6 +153,7 @@ export function calculateDecisionComparison(baseline, candidate, annualReturn = 
     const years = Math.max(1, Math.min(projectionYears, baseline.amortization.length, candidate.amortization.length));
     let baselineUpfrontInvestment = nonNegativeNumber(candidate.cashToClose) - nonNegativeNumber(baseline.cashToClose);
     let candidateMonthlySavingsInvestment = 0;
+    let candidateSavingsContributions = 0;
 
     return Array.from({ length: years }, (_, index) => {
         const baselineRow = baseline.amortization[index];
@@ -162,6 +163,7 @@ export function calculateDecisionComparison(baseline, candidate, annualReturn = 
         for (let month = 0; month < 12; month += 1) {
             baselineUpfrontInvestment *= 1 + monthlyInvestmentRate;
             candidateMonthlySavingsInvestment = (candidateMonthlySavingsInvestment * (1 + monthlyInvestmentRate)) + monthlySavings;
+            candidateSavingsContributions += monthlySavings;
         }
 
         const equityDifference = candidateRow.equity - baselineRow.equity;
@@ -170,9 +172,14 @@ export function calculateDecisionComparison(baseline, candidate, annualReturn = 
             year: index + 1,
             extraCashAtClose: candidate.cashToClose - baseline.cashToClose,
             monthlySavings,
+            baselineInterestPaid: baselineRow.cumulativeInterest,
+            candidateInterestPaid: candidateRow.cumulativeInterest,
             interestSavings: baselineRow.cumulativeInterest - candidateRow.cumulativeInterest,
             equityDifference,
+            baselineInvestmentGrowth: baselineUpfrontInvestment - Math.max(0, candidate.cashToClose - baseline.cashToClose),
             baselineUpfrontInvestment,
+            candidateSavingsContributions,
+            candidateSavingsInvestmentGrowth: candidateMonthlySavingsInvestment - candidateSavingsContributions,
             candidateMonthlySavingsInvestment,
             candidateAssets: equityDifference + candidateMonthlySavingsInvestment,
             investmentDifference,

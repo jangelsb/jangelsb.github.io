@@ -193,14 +193,24 @@ test('compares invested cash-flow differences with the equity and interest trade
     assert.equal(decision.length, 30);
     assert.equal(decision[0].extraCashAtClose, 4800);
     assert.ok(decision[0].monthlySavings > 0);
+    assert.ok(decision[0].baselineInterestPaid > decision[0].candidateInterestPaid);
     assert.ok(decision[4].interestSavings > 0);
     assert.ok(decision[4].equityDifference > 0);
     assert.ok(decision[4].baselineUpfrontInvestment > 4800);
+    assert.ok(decision[4].baselineInvestmentGrowth > 0);
+    assert.ok(decision[4].candidateSavingsContributions > 0);
+    assert.ok(decision[4].candidateSavingsInvestmentGrowth > 0);
     assert.ok(decision[4].candidateMonthlySavingsInvestment > 0);
     assert.equal(
         decision[4].candidateAssets,
         decision[4].equityDifference + decision[4].candidateMonthlySavingsInvestment
     );
+    assert.ok(Math.abs(
+        decision[4].candidateAssets - decision[4].interestSavings - decision[4].candidateSavingsInvestmentGrowth
+    ) < 0.01);
+    assert.ok(Math.abs(
+        decision[4].interestSavings - decision[4].candidateSavingsContributions - decision[4].equityDifference
+    ) < 0.01);
     assert.equal(
         decision[4].investmentDifference,
         decision[4].candidateMonthlySavingsInvestment - decision[4].baselineUpfrontInvestment

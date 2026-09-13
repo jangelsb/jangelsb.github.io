@@ -64,6 +64,7 @@ function normalizeShareUiState(ui = {}) {
     const compareChartYears = Number(source.compareChartYears);
     const activeComparisonId = source.activeComparisonId == null ? null : Number(source.activeComparisonId);
     const decisionInvestmentReturn = Number(source.decisionInvestmentReturn);
+    const decisionReceiptYear = Number(source.decisionReceiptYear);
 
     return {
         activeResultTab,
@@ -84,6 +85,9 @@ function normalizeShareUiState(ui = {}) {
         decisionMetric: DECISION_METRICS.includes(source.decisionMetric)
             ? source.decisionMetric
             : 'netPositionDifference',
+        decisionReceiptYear: Number.isFinite(decisionReceiptYear)
+            ? Math.min(30, Math.max(1, Math.round(decisionReceiptYear)))
+            : 5,
         newComparison: {
             name: validString(source.newComparison?.name),
             description: validString(source.newComparison?.description)

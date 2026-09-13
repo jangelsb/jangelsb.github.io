@@ -75,6 +75,26 @@ tr:nth-child(even) { background-color: #f8f9fa; }
 .decision-controls { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 14px; margin: 16px 0; }
 .decision-table td:first-child { text-align: left; font-weight: 600; }
 .decision-chart-title { margin: 24px 0 -8px; color: #333; }
+.decision-receipt { margin-top: 28px; padding: 20px; border: 1px solid #dbeafe; border-radius: 10px; background: #f8fbff; }
+.decision-receipt-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.decision-receipt-heading h4 { margin: 0 0 4px; font-size: 18px; }
+.decision-receipt-heading p { margin: 0; max-width: 720px; }
+.decision-receipt-heading label { display: grid; gap: 4px; min-width: 130px; font-weight: 700; }
+.decision-receipt-heading select { min-width: 130px; }
+.decision-receipt-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
+.decision-receipt-card { padding: 16px; border: 1px solid #d8e2ee; border-radius: 8px; background: white; }
+.decision-receipt-card h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 17px; }
+.decision-receipt-swatch { width: 12px; height: 12px; border-radius: 2px; flex: 0 0 auto; }
+.decision-receipt-rows { margin: 0; }
+.decision-receipt-rows > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #edf1f5; }
+.decision-receipt-rows > div:first-child { border-top: 0; padding-top: 0; }
+.decision-receipt-rows dt { color: #4d5966; }
+.decision-receipt-rows dd { margin: 0; text-align: right; font-weight: 700; }
+.decision-receipt-total { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 2px solid #aab8c7; font-weight: 700; }
+.decision-receipt-total strong { color: #137333; }
+.decision-receipt-net { margin: 12px 0 0; padding: 10px 12px; border-radius: 6px; font-weight: 700; }
+.decision-receipt-net.is-ahead { background: #e6f4ea; color: #137333; }
+.decision-receipt-net.is-behind { background: #fce8e6; color: #a50e0e; }
 .chart-range { width: min(520px, 100%); }
 .chart-range label { margin: 0; }
 .comparison-table { min-width: 720px; }
@@ -122,4 +142,4 @@ tr:nth-child(even) { background-color: #f8f9fa; }
 .help-term:hover .help-popover, .help-term:focus-within .help-popover, .help-term.is-open .help-popover { display: block; }
 td:first-child .help-popover { left: 0; }
 @media (max-width: 820px) { .comparison-results-card > .comparison-card-controls { grid-template-columns: repeat(2, minmax(220px, 1fr)); } .comparison-description-control { grid-column: 1 / -1; } }
-@media (max-width: 640px) { body { padding: 12px; } .top-bar { align-items: flex-start; flex-direction: column; } .property-header { align-items: flex-start; flex-direction: column; } .property-name { width: 100%; } .comparison-results-card > .comparison-card-controls { display: flex; flex-direction: column; align-items: stretch; } .allocation-row { grid-template-columns: 1fr 90px 52px; } .allocation-row input[type="range"] { grid-column: 1 / -1; grid-row: 2; } .decision-controls { grid-template-columns: 1fr; } .point-cash-input { align-items: stretch; } }
+@media (max-width: 640px) { body { padding: 12px; } .top-bar { align-items: flex-start; flex-direction: column; } .property-header { align-items: flex-start; flex-direction: column; } .property-name { width: 100%; } .comparison-results-card > .comparison-card-controls { display: flex; flex-direction: column; align-items: stretch; } .allocation-row { grid-template-columns: 1fr 90px 52px; } .allocation-row input[type="range"] { grid-column: 1 / -1; grid-row: 2; } .decision-controls { grid-template-columns: 1fr; } .decision-receipt { padding: 16px; } .decision-receipt-heading { align-items: stretch; flex-direction: column; } .decision-receipt-heading label, .decision-receipt-heading select { width: 100%; } .decision-receipt-rows > div { align-items: flex-start; flex-direction: column; gap: 2px; } .decision-receipt-rows dd { text-align: left; } .point-cash-input { align-items: stretch; } }

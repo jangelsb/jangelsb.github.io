@@ -36,7 +36,8 @@ const state = {
     newComparison: { name: '', description: '' },
     decisionBaselineScenarioIds: {},
     decisionInvestmentReturn: 7,
-    decisionMetric: 'netPositionDifference'
+    decisionMetric: 'netPositionDifference',
+    decisionReceiptYear: 5
 };
 
 let appData = loadAppData();
@@ -139,7 +140,8 @@ function shareUiState() {
         newComparison: state.newComparison,
         decisionBaselineScenarioIds: state.decisionBaselineScenarioIds,
         decisionInvestmentReturn: state.decisionInvestmentReturn,
-        decisionMetric: state.decisionMetric
+        decisionMetric: state.decisionMetric,
+        decisionReceiptYear: state.decisionReceiptYear
     };
 }
 
@@ -895,28 +897,38 @@ function formatSignedCurrency(value) {
     return `${value > 0 ? '+' : value < 0 ? '−' : ''}${amount}`;
 }
 
-function decisionReceiptSavingsMessage(row) {
-    if (row.monthlySavings > 0) return `${formatCurrency(row.monthlySavings)}/mo saved → ${formatCurrency(row.candidateMonthlySavingsInvestment)} invested`;
-    if (row.monthlySavings < 0) return `${formatCurrency(Math.abs(row.monthlySavings))}/mo more spent → ${formatSignedCurrency(row.candidateMonthlySavingsInvestment)} invested`;
-    return `No monthly savings → ${formatSignedCurrency(row.candidateMonthlySavingsInvestment)} invested`;
-}
-
-function decisionReceiptCashMessage(row) {
-    return row.extraCashAtClose >= 0
-        ? `${formatCurrency(row.extraCashAtClose)} invested`
-        : `${formatCurrency(Math.abs(row.extraCashAtClose))} kept at closing`;
-}
-
-function decisionReceiptEquityMessage(row) {
-    return row.equityDifference >= 0
-        ? `+ ${formatCurrency(row.equityDifference)} more home equity`
-        : `− ${formatCurrency(Math.abs(row.equityDifference))} home equity`;
-}
-
 function decisionReceiptOutcome(row) {
     return row.netPositionDifference >= 0
         ? `NET: Buy down rate is ahead by ${formatCurrency(row.netPositionDifference)}`
         : `NET: Invest cash is ahead by ${formatCurrency(Math.abs(row.netPositionDifference))}`;
+}
+
+function decisionReceiptMarkup(candidates) {
+    const year = Math.min(30, Math.max(1, Math.round(Number(state.decisionReceiptYear) || 5)));
+    state.decisionReceiptYear = year;
+    const yearOptions = Array.from({ length: 30 }, (_, index) => index + 1)
+        .map(value => `<option value="${value}" ${value === year ? 'selected' : ''}>Year ${value}</option>`)
+        .join('');
+    const colors = ['#137333', '#7b1fa2', '#ea4335', '#f57c00'];
+    const cards = candidates.map((candidate, index) => {
+        const row = candidate.data[Math.min(year, candidate.data.length) - 1];
+        const outcomeClass = row.netPositionDifference >= 0 ? 'is-ahead' : 'is-behind';
+        return `<article class="decision-receipt-card">
+            <h4><span class="decision-receipt-swatch" style="background:${colors[index % colors.length]}"></span>${escapeHtml(getScenarioDisplayName(candidate.result.scenario))}</h4>
+            <dl class="decision-receipt-rows">
+                <div><dt>Invest cash instead</dt><dd>${formatCurrency(row.extraCashAtClose)} → ${formatCurrency(row.baselineUpfrontInvestment)}</dd></div>
+                <div><dt>Interest paid</dt><dd>${formatCurrency(row.candidateInterestPaid)} vs. ${formatCurrency(row.baselineInterestPaid)}</dd></div>
+                <div><dt>Literal interest saved</dt><dd>${formatSignedCurrency(row.interestSavings)}</dd></div>
+                <div><dt>Lower payments saved</dt><dd>${formatSignedCurrency(row.candidateSavingsContributions)} (${formatCurrency(row.monthlySavings)}/mo)</dd></div>
+                <div><dt>Lower loan balance</dt><dd>${formatSignedCurrency(row.equityDifference)}</dd></div>
+                <div><dt>Market growth on savings</dt><dd>${formatSignedCurrency(row.candidateSavingsInvestmentGrowth)}</dd></div>
+            </dl>
+            <div class="decision-receipt-total"><span>Lower-rate value</span><strong>${formatSignedCurrency(row.candidateAssets)}</strong></div>
+            <p class="decision-receipt-net ${outcomeClass}">${decisionReceiptOutcome(row)}</p>
+        </article>`;
+    }).join('');
+
+    return `<section class="decision-receipt" aria-live="polite"><div class="decision-receipt-heading"><div><h4>Decision receipt</h4><p class="muted">The baseline alternative invests the extra upfront cash instead of using it to buy down the rate.</p></div><label>Show <select data-decision-receipt-year>${yearOptions}</select></label></div><div class="decision-receipt-cards">${cards}</div></section>`;
 }
 
 function decisionMetricLabel(metric) {
@@ -963,9 +975,9 @@ function renderDecisionAnalysis(home) {
         <tr><td>Overall advantage at Year 30</td>${cells(candidate => atYear(candidate, 30).netPositionDifference)}</tr>
     </tbody></table></div>`;
 
-    return `<section class="decision-analysis"><div class="flex-between decision-heading"><div><h3>Projected Financial Advantage vs. Baseline</h3><p class="muted">Baseline path: invest the candidate’s extra cash needed at closing. Lower-rate path: spend that cash on points, then invest its monthly payment savings. The graph compares the lower-rate path’s ending assets (extra equity + savings account) against the baseline path’s ending investment account.</p><p class="decision-legend"><span class="decision-positive">Above $0: scenario is ahead</span><span class="decision-negative">Below $0: baseline is ahead</span><span>Hover or tap a point for the receipt.</span></p></div></div>
+    return `<section class="decision-analysis"><div class="flex-between decision-heading"><div><h3>Projected Financial Advantage vs. Baseline</h3><p class="muted">Baseline path: invest the candidate’s extra cash needed at closing. Lower-rate path: spend that cash on points, then invest its monthly payment savings. The graph compares the lower-rate path’s ending assets (extra equity + savings account) against the baseline path’s ending investment account.</p><p class="decision-legend"><span class="decision-positive">Above $0: scenario is ahead</span><span class="decision-negative">Below $0: baseline is ahead</span><span>Click or tap a graph point to choose the receipt year.</span></p></div></div>
         <div class="decision-controls"><div><label for="decisionBaseline">Compare against</label><select id="decisionBaseline" data-decision-baseline-home-id="${home.id}">${scenarioOptions}</select></div><div><label for="decisionInvestmentReturn">Investment return (%/yr)</label><input id="decisionInvestmentReturn" type="number" min="0" step="0.1" value="${state.decisionInvestmentReturn}" data-decision-investment-return></div><div><label for="decisionMetric">30-year graph</label><select id="decisionMetric" data-decision-metric>${metricOptions}</select></div></div>
-        ${table}<h4 id="decisionChartTitle" class="decision-chart-title">Showing: ${decisionMetricLabel(state.decisionMetric)}</h4><div class="chart-container"><canvas id="decisionChart"></canvas></div></section>`;
+        ${table}<h4 id="decisionChartTitle" class="decision-chart-title">Showing: ${decisionMetricLabel(state.decisionMetric)}</h4><div class="chart-container"><canvas id="decisionChart"></canvas></div>${decisionReceiptMarkup(candidates)}</section>`;
 }
 
 function renderDecisionChart(home) {
@@ -986,19 +998,14 @@ function renderDecisionChart(home) {
     decisionChart = new Chart($('#decisionChart').getContext('2d'), {
         type: 'line',
         data: { labels: Array.from({ length: 30 }, (_, index) => `Yr ${index + 1}`), datasets },
-        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { title: { display: true, text: `${decisionMetricLabel(state.decisionMetric)} (assuming ${state.decisionInvestmentReturn}% annual return)` }, tooltip: { itemSort: compareChartCalloutValues, callbacks: { label: context => context.dataset.label, afterLabel: context => {
+        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, onClick: (event, elements) => {
+            if (!elements.length) return;
+            state.decisionReceiptYear = elements[0].index + 1;
+            renderResults(home);
+            scheduleShareUrlUpdate();
+        }, plugins: { title: { display: true, text: `${decisionMetricLabel(state.decisionMetric)} (assuming ${state.decisionInvestmentReturn}% annual return)` }, tooltip: { itemSort: compareChartCalloutValues, callbacks: { label: context => {
             const row = context.dataset.decisionRows[context.dataIndex];
-            return [
-                'BASELINE:',
-                `  ${decisionReceiptCashMessage(row)}`,
-                `  = ${formatCurrency(row.baselineUpfrontInvestment)} after ${row.year} year${row.year === 1 ? '' : 's'}`,
-                'THIS RATE:',
-                `  ${decisionReceiptSavingsMessage(row)}`,
-                `  ${decisionReceiptEquityMessage(row)}`,
-                `  = ${formatSignedCurrency(row.candidateAssets)} total value`,
-                '────────────────────',
-                decisionReceiptOutcome(row)
-            ];
+            return `${context.dataset.label}: ${formatSignedCurrency(row.netPositionDifference)} net`;
         } } } }, scales: { y: { ticks: { callback: value => formatCurrency(value) } } } }
     });
 }
@@ -1275,6 +1282,11 @@ function handleChange(event) {
     }
     if (target.dataset.decisionMetric) {
         state.decisionMetric = target.value;
+        renderResults(getActiveHome());
+        scheduleShareUrlUpdate();
+    }
+    if (target.dataset.decisionReceiptYear) {
+        state.decisionReceiptYear = Math.min(30, Math.max(1, Math.round(Number(target.value) || 5)));
         renderResults(getActiveHome());
         scheduleShareUrlUpdate();
     }

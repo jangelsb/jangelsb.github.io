@@ -14,7 +14,8 @@ test('encodes and decodes calculator data and UI state', async () => {
         compareHomeIds: { 1: true },
         decisionBaselineScenarioIds: { 1: 2 },
         decisionInvestmentReturn: 7.5,
-        decisionMetric: 'interestSavings'
+        decisionMetric: 'interestSavings',
+        decisionReceiptYear: 7
     };
 
     const hash = await encodeShareState(appData, uiState);
@@ -29,6 +30,7 @@ test('encodes and decodes calculator data and UI state', async () => {
     assert.deepEqual(result.ui.decisionBaselineScenarioIds, { 1: 2 });
     assert.equal(result.ui.decisionInvestmentReturn, 7.5);
     assert.equal(result.ui.decisionMetric, 'interestSavings');
+    assert.equal(result.ui.decisionReceiptYear, 7);
 });
 
 test('rejects malformed share URLs', async () => {
@@ -48,6 +50,7 @@ test('normalizes unsafe UI values from a share URL', async () => {
     assert.equal(result.ui.activeView, 'home');
     assert.equal(result.ui.activeChartMetric, 'balance');
     assert.equal(result.ui.compareChartYears, 30);
+    assert.equal(result.ui.decisionReceiptYear, 5);
 });
 
 test('decodes the uncompressed compatibility format', async () => {
