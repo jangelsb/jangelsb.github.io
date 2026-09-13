@@ -1275,17 +1275,17 @@ function handleChange(event) {
         renderResults(getActiveHome());
         scheduleShareUrlUpdate();
     }
-    if (target.dataset.decisionInvestmentReturn) {
+    if (target.dataset.decisionInvestmentReturn !== undefined) {
         state.decisionInvestmentReturn = Math.max(0, Number(target.value) || 0);
         renderResults(getActiveHome());
         scheduleShareUrlUpdate();
     }
-    if (target.dataset.decisionMetric) {
+    if (target.dataset.decisionMetric !== undefined) {
         state.decisionMetric = target.value;
         renderResults(getActiveHome());
         scheduleShareUrlUpdate();
     }
-    if (target.dataset.decisionReceiptYear) {
+    if (target.dataset.decisionReceiptYear !== undefined) {
         state.decisionReceiptYear = Math.min(30, Math.max(1, Math.round(Number(target.value) || 5)));
         renderResults(getActiveHome());
         scheduleShareUrlUpdate();
