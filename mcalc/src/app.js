@@ -5,6 +5,7 @@ import {
     DEFAULT_LOAN_TERM_YEARS,
     DEFAULT_RATE_REDUCTION_PER_POINT,
     INCENTIVE_BUCKETS,
+    appDataMatches,
     clone,
     compareChartCalloutValues,
     escapeHtml,
@@ -95,6 +96,7 @@ async function promptToLoadUrlData(hash = window.location.hash) {
     try {
         const sharedState = await decodeShareHash(hash);
         if (!sharedState || window.location.hash !== hash) return;
+        if (appDataMatches(sharedState.appData, appData)) return;
         pendingUrlData = sharedState;
         pendingUrlHash = hash;
         $('#urlDataPrompt').hidden = false;
@@ -111,6 +113,7 @@ function useUrlData() {
     closeUrlDataPrompt();
     appData = sharedState.appData;
     Object.assign(state, sharedState.ui);
+    persist();
     renderApp();
 }
 

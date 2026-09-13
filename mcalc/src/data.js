@@ -196,6 +196,28 @@ export function normalizeAppData(data) {
     };
 }
 
+function valuesMatch(left, right) {
+    if (Object.is(left, right)) return true;
+    if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false;
+
+    if (Array.isArray(left) || Array.isArray(right)) {
+        return Array.isArray(left)
+            && Array.isArray(right)
+            && left.length === right.length
+            && left.every((value, index) => valuesMatch(value, right[index]));
+    }
+
+    const leftKeys = Object.keys(left).sort();
+    const rightKeys = Object.keys(right).sort();
+    return leftKeys.length === rightKeys.length
+        && leftKeys.every((key, index) => key === rightKeys[index] && valuesMatch(left[key], right[key]));
+}
+
+// Compare the canonical saved form so equivalent data does not trigger a shared-link prompt.
+export function appDataMatches(left, right) {
+    return valuesMatch(normalizeAppData(left), normalizeAppData(right));
+}
+
 export function clone(value) {
     return JSON.parse(JSON.stringify(value));
 }

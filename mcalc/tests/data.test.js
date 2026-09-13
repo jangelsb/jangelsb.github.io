@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { compareChartCalloutValues, getScenarioLabel, normalizeAppData, sortHomesForDisplay } from '../src/data.js';
+import { appDataMatches, compareChartCalloutValues, createDefaultAppData, getScenarioLabel, normalizeAppData, sortHomesForDisplay } from '../src/data.js';
 import { parseImportedData } from '../src/storage.js';
 
 test('normalizes legacy data and fills safe defaults', () => {
@@ -22,6 +22,16 @@ test('replaces an empty home list with a usable default property', () => {
     const result = normalizeAppData({ homes: [] });
     assert.equal(result.homes.length, 1);
     assert.equal(result.homes[0].name, 'Lake Elsinore Build');
+});
+
+test('matches equivalent saved calculator data regardless of object key order', () => {
+    const saved = createDefaultAppData();
+    const shared = JSON.parse(JSON.stringify(saved));
+    shared.homes[0] = Object.fromEntries(Object.entries(shared.homes[0]).reverse());
+
+    assert.equal(appDataMatches(saved, shared), true);
+    shared.homes[0].price += 1;
+    assert.equal(appDataMatches(saved, shared), false);
 });
 
 test('rejects imported data without a homes array', () => {
