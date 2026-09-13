@@ -174,6 +174,7 @@ export function calculateDecisionComparison(baseline, candidate, annualReturn = 
             equityDifference,
             baselineUpfrontInvestment,
             candidateMonthlySavingsInvestment,
+            candidateAssets: equityDifference + candidateMonthlySavingsInvestment,
             investmentDifference,
             netPositionDifference: equityDifference + investmentDifference
         };

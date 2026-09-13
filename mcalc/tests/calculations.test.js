@@ -198,6 +198,10 @@ test('compares invested cash-flow differences with the equity and interest trade
     assert.ok(decision[4].baselineUpfrontInvestment > 4800);
     assert.ok(decision[4].candidateMonthlySavingsInvestment > 0);
     assert.equal(
+        decision[4].candidateAssets,
+        decision[4].equityDifference + decision[4].candidateMonthlySavingsInvestment
+    );
+    assert.equal(
         decision[4].investmentDifference,
         decision[4].candidateMonthlySavingsInvestment - decision[4].baselineUpfrontInvestment
     );
