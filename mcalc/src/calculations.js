@@ -151,7 +151,8 @@ export function calculateDecisionComparison(baseline, candidate, annualReturn = 
     const annualRate = nonNegativeNumber(annualReturn) / 100;
     const monthlyInvestmentRate = Math.pow(1 + annualRate, 1 / 12) - 1;
     const years = Math.max(1, Math.min(projectionYears, baseline.amortization.length, candidate.amortization.length));
-    let investmentDifference = nonNegativeNumber(baseline.cashToClose) - nonNegativeNumber(candidate.cashToClose);
+    let baselineUpfrontInvestment = nonNegativeNumber(candidate.cashToClose) - nonNegativeNumber(baseline.cashToClose);
+    let candidateMonthlySavingsInvestment = 0;
 
     return Array.from({ length: years }, (_, index) => {
         const baselineRow = baseline.amortization[index];
@@ -159,16 +160,20 @@ export function calculateDecisionComparison(baseline, candidate, annualReturn = 
         const monthlySavings = baselineRow.totalMonthly - candidateRow.totalMonthly;
 
         for (let month = 0; month < 12; month += 1) {
-            investmentDifference = (investmentDifference * (1 + monthlyInvestmentRate)) + monthlySavings;
+            baselineUpfrontInvestment *= 1 + monthlyInvestmentRate;
+            candidateMonthlySavingsInvestment = (candidateMonthlySavingsInvestment * (1 + monthlyInvestmentRate)) + monthlySavings;
         }
 
         const equityDifference = candidateRow.equity - baselineRow.equity;
+        const investmentDifference = candidateMonthlySavingsInvestment - baselineUpfrontInvestment;
         return {
             year: index + 1,
             extraCashAtClose: candidate.cashToClose - baseline.cashToClose,
             monthlySavings,
             interestSavings: baselineRow.cumulativeInterest - candidateRow.cumulativeInterest,
             equityDifference,
+            baselineUpfrontInvestment,
+            candidateMonthlySavingsInvestment,
             investmentDifference,
             netPositionDifference: equityDifference + investmentDifference
         };

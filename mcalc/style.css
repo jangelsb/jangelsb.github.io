@@ -74,6 +74,7 @@ tr:nth-child(even) { background-color: #f8f9fa; }
 .decision-negative { color: #c5221f; }
 .decision-controls { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 14px; margin: 16px 0; }
 .decision-table td:first-child { text-align: left; font-weight: 600; }
+.decision-chart-title { margin: 24px 0 -8px; color: #333; }
 .chart-range { width: min(520px, 100%); }
 .chart-range label { margin: 0; }
 .comparison-table { min-width: 720px; }
